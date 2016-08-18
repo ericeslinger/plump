@@ -1,0 +1,41 @@
+{
+  "name": "guild",
+  "version": "0.0.1",
+  "description": "Typescript-based Pluggable Datastore",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kstf/guild.git"
+  },
+  "keywords": [
+    "typescript",
+    "orm",
+    "datastore",
+    "activerecord"
+  ],
+  "author": "Eric Eslinger <eric.eslinger@gmail.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/kstf/guild/issues"
+  },
+  "homepage": "https://github.com/kstf/guild#readme",
+  "devDependencies": {
+    "babel": "^6.5.2",
+    "babel-preset-es2015": "^6.13.2",
+    "chai": "^3.5.0",
+    "chai-as-promised": "^5.3.0",
+    "del": "^2.2.2",
+    "gulp": "^3.9.1",
+    "gulp-babel": "^6.1.2",
+    "gulp-mocha": "^3.0.1",
+    "gulp-sourcemaps": "^1.6.0",
+    "gulp-typescript": "^2.13.6",
+    "merge2": "^1.0.2",
+    "mocha": "^3.0.2",
+    "tslint-microsoft-contrib": "^2.0.10",
+    "typescript": "^2.0.0"
+  }
+}
