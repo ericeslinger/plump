@@ -6,7 +6,8 @@
     "noResolve": true,
     "sourceMap": true,
     "removeComments": true,
-    "declaration": true
+    "declaration": true,
+    "experimentalDecorators": true
   },
   "externalTranspiler": "babel",
   "compileOnSave": false,
