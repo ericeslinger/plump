@@ -14,18 +14,19 @@ var __decorate = undefined && undefined.__decorate || function (decorators, targ
 };
 var hasMany_1 = require('./mixins/hasMany');
 
-var TestAnnotation = function TestAnnotation(o) {
-    _classCallCheck(this, TestAnnotation);
+var TestAnnotated = function TestAnnotated(o) {
+    _classCallCheck(this, TestAnnotated);
 
     this.otherGuys = o;
 };
 
 __decorate([hasMany_1.hasMany({
     modelTable: 'other_guys'
-})], TestAnnotation.prototype, "otherGuys", void 0);
-exports.TestAnnotation = TestAnnotation;
+})], TestAnnotated.prototype, "otherGuys", void 0);
+exports.TestAnnotated = TestAnnotated;
 function go() {
-    var ta = new TestAnnotation('foobar');
+    var ta = new TestAnnotated('foobar');
     console.log(JSON.stringify(ta));
+    console.log(ta._storage.foo);
 }
 exports.go = go;

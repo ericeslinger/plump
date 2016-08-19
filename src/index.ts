@@ -1,5 +1,7 @@
 import {hasMany} from './mixins/hasMany';
+// import {dataModel} from './mixins/common';
 
+// @dataModel
 export class TestAnnotated {
   @hasMany({
     modelTable: 'other_guys',

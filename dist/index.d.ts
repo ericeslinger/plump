@@ -1,4 +1,4 @@
-export declare class TestAnnotation {
+export declare class TestAnnotated {
     otherGuys: string;
     constructor(o: any);
 }
