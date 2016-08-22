@@ -1,4 +1,5 @@
 import {StorageService} from './storage/storageService';
+import * as Promise from 'bluebird';
 
 export class Model {
   private _storage: {
