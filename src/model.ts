@@ -1,9 +1,13 @@
+import {StorageService} from './storage/storageService';
+
 export class Model {
-  private $storage: {
+  private _storage: {
     [key: string]: any;
-  };
-  constructor() {
-    this.$storage = {};
+  } = {};
+
+  private static _dataServices: [StorageService];
+  public static addStorageService(ds: StorageService) {
+    this._dataServices.push(ds);
   }
 }
 
