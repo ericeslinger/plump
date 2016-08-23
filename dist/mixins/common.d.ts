@@ -1,1 +1,1 @@
-export declare function ensureStorage(proto: any): void;
+export declare function dataModel(): void;

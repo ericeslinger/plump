@@ -1,20 +1,7 @@
-import {StorageService} from './storage/storageService';
-import * as Promise from 'bluebird';
+const Promise = require('bluebird');
 
 export class Model {
-  private _storage: {
-    [key: string]: any;
-  } = {};
-
-  public tableName = 'models';
-
-  private _id: number;
-  private static _storageServices: [StorageService];
-  public static addStorageService(ds: StorageService) {
-    this._storageServices.push(ds);
-  }
-
-  constructor(opts: any = {}) {
+  constructor(opts = {}) {
     if (opts.id) {
       this._id = opts.id;
     } else {
@@ -22,21 +9,21 @@ export class Model {
     }
   }
 
-  public set(opts: any)
-  public set(key: string, val: any)
-  public set(a: string | any, val?: any) {
+  set(a, val) {
     if (typeof a === 'string') {
       this._storage[a] = val;
     } else {
-      Object.keys(a).forEach((k) => this._storage[k] = a[k]);
+      Object.keys(a).forEach((k) => {
+        this._storage[k] = a[k];
+      });
     }
   }
 
-  private getStorageServices(): [StorageService] {
-    return this.constructor['_storageServices'];
+  getStorageServices() {
+    return this.constructor._storageServices;
   }
 
-  public resolve(key: string) {
+  resolve(key) {
     if (this._storage[key]) {
       return Promise.resolve(this._storage[key]);
     } else {

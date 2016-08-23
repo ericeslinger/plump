@@ -6,5 +6,7 @@ module.exports = {
   tests: 'tests',
   types: 'types',
   scripts: ['**/*.js', '**/*.ts'],
-  tsConfig: ts.createProject('src/tsconfig.json'),
+  tsConfig: ts.createProject('tsconfig.json', {
+    typescript: require('typescript'),
+  }),
 };
