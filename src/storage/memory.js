@@ -26,33 +26,21 @@ export class MemoryStorage extends Storage {
   }
 
   read(t, id) {
-    if (this.$ensure(t) === undefined) {
-      return Promise.reject(new Error(`cannot find storage for type ${t}`));
-    } else {
-      return Promise.resolve(this.$ensure(t)[id] || null);
-    }
+    return Promise.resolve(this.$ensure(t)[id] || null);
   }
 
   update(t, id, v) {
-    if (this.$ensure(t) === undefined) {
-      return Promise.reject(new Error(`cannot find storage for type ${t}`));
-    } else {
-      this.$ensure(t)[id] = v;
-      return Promise.resolve(this.$ensure(t)[id]);
-    }
+    this.$ensure(t)[id] = v;
+    return Promise.resolve(this.$ensure(t)[id]);
   }
 
   delete(t, id) {
-    if (this.$ensure(t) === undefined) {
-      return Promise.reject(new Error(`cannot find storage for type ${t}`));
-    } else {
-      const retVal = this.$ensure(t)[id];
-      delete this.$ensure(t)[id];
-      return Promise.resolve(retVal);
-    }
+    const retVal = this.$ensure(t)[id];
+    delete this.$ensure(t)[id];
+    return Promise.resolve(retVal);
   }
 
   query() {
-    return Promise.reject('Query interface not supported on MemoryStorage');
+    return Promise.reject(new Error('Query interface not supported on MemoryStorage'));
   }
 }
