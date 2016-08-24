@@ -1,8 +1,10 @@
 import * as Promise from 'bluebird';
 import * as Knex from 'knex';
+import {Storage} from './storage';
 
-export class SQLStorage {
+export class SQLStorage extends Storage {
   constructor(dbOpts = {}) {
+    super();
     const options = Object.assign(
       {},
       {

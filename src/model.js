@@ -1,7 +1,9 @@
 const Promise = require('bluebird');
+const $store = Symbol('$store');
 
 export class Model {
-  constructor(opts = {}) {
+  constructor(opts, dataStore) {
+    this[$store] = dataStore;
     if (opts.id) {
       this._id = opts.id;
     } else {
@@ -19,15 +21,11 @@ export class Model {
     }
   }
 
-  getStorageServices() {
-    return this.constructor._storageServices;
-  }
-
   resolve(key) {
     if (this._storage[key]) {
       return Promise.resolve(this._storage[key]);
     } else {
-      return this.getStorageServices().reduce((thenable, service) => {
+      return this[$store].getStorage().reduce((thenable, service) => {
         return thenable.then((v) => {
           if (v === null) {
             return service.read(this.tableName, this._id);

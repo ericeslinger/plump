@@ -1,39 +1,39 @@
-import * as axios from 'axios';
+import * as localforage from 'localforage';
+import * as Promise from 'bluebird';
+import {Storage} from './storage';
 
-export class LocalForageStorage {
+export class LocalForageStorage extends Storage {
 
   constructor(opts = {}) {
+    super();
+    this.isCache = true;
+    localforage.config({
+      name: opts.name || 'Trellis Storage',
+      storeName: opts.storeName || 'localCache',
+    });
   }
 
   create(t, v) {
-    return this._axios.post(`/${t}`, v);
+    if (v.id === undefined) {
+      return Promise.reject('This service cannot allocate ID values');
+    } else {
+      return localforage.setItem(`${t}:${v.id}`, v);
+    }
   }
 
   read(t, id) {
-    return this._axios.get(`/${t}/${id}`)
-    .then((response) => {
-      return response.data;
-    });
+    return localforage.getItem(`${t}:${id}`);
   }
 
   update(t, id, v) {
-    return this._axios.put(`/${t}/${id}`, v)
-    .then((response) => {
-      return response.data;
-    });
+    return this.create(t, v);
   }
 
   delete(t, id) {
-    return this._axios.delete(`/${t}/${id}`)
-    .then((response) => {
-      return response.data;
-    });
+    return localforage.removeItem(`${t}:${id}`);
   }
 
-  query(q) {
-    return this._axios.get(`/${q.type}`, {params: q.query})
-    .then((response) => {
-      return response.data;
-    });
+  query() {
+    return Promise.reject('Query interface not supported on LocalForageStorage');
   }
 }

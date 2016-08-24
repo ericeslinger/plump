@@ -1,8 +1,10 @@
 import * as axios from 'axios';
+import {Storage} from './storage';
 
-export class RestStorage {
+export class RestStorage extends Storage {
 
   constructor(opts = {}) {
+    super();
     const options = Object.assign(
       {},
       {

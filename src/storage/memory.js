@@ -1,8 +1,11 @@
 import * as Promise from 'bluebird';
+import {Storage} from './storage';
 
-export class MemoryStorage {
+export class MemoryStorage extends Storage {
 
   constructor() {
+    super();
+    this.isCache = true;
     this._storage = [];
   }
 
