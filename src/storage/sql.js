@@ -1,12 +1,8 @@
-import {StorageService} from './storageService';
-import {Dictionary, Storable} from './storable';
 import * as Promise from 'bluebird';
 import * as Knex from 'knex';
 
-export class SQLStorage implements StorageService {
-  private _knex: Knex;
-
-  constructor(dbOpts: any = {}) {
+export class SQLStorage {
+  constructor(dbOpts = {}) {
     const options = Object.assign(
       {},
       {
@@ -26,39 +22,36 @@ export class SQLStorage implements StorageService {
       },
       dbOpts
     );
-    this._knex = Knex(options);
+    this._knex = Knex(options); // eslint-disable-line new-cap
   }
 
   /*
     note that knex.js "then" functions aren't actually promises the way you think they are.
-    you can return knex.insert().into(), which has a thenable on it, but that thenable isn't
+    you can return knex.insert().into(), which has a then() on it, but that thenable isn't
     an actual promise yet. So instead we're returning Promise.resolve(thenable);
   */
 
-  public create(t: string, v: Dictionary) {
+  create(t, v) {
     return Promise.resolve(this._knex.insert(v).into(t));
   }
 
-  public read(t: string, id: number) {
+  read(t, id) {
     return Promise.resolve(this._knex(t).where({id: id})
     .select());
   }
 
-  public update(t: string, id: number, v: Storable) {
+  update(t, id, v) {
     return Promise.resolve(this._knex(t).where({id: id})
     .update(v));
   }
 
-  public delete(t: string, id: number) {
+  delete(t, id) {
     return Promise.resolve(this._knex(t).where({id: id})
     .delete());
   }
 
-  public query(q: {type: string, query: any}) {
+  query(q) {
     return Promise.resolve(this._knex.raw(q.query))
     .then((d) => d.rows);
   }
-
-  public name: 'SQLStorage';
-
 }

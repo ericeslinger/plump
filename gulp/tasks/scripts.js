@@ -8,12 +8,11 @@ function build() {
   .pipe(sourcemaps.init())
   .pipe(babel({
     presets: ['babel-preset-es2015'],
-    plugins: ['transform-es2015-modules-commonjs'],
+    plugins: ['transform-es2015-modules-commonjs', 'add-module-exports'],
   }))
   .pipe(sourcemaps.write())
   .pipe(gulp.dest(config.dest));
 }
-
 
 gulp.task('build', build);
 

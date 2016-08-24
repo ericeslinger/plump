@@ -1,14 +1,8 @@
-import {StorageService} from './storageService';
-import {Dictionary, Storable} from './storable';
-import * as Promise from 'bluebird';
-import {AxiosInstance, InstanceOptions} from 'axios';
 import * as axios from 'axios';
 
-export class RestStorage implements StorageService {
+export class RestStorage {
 
-  private _axios;
-
-  constructor(opts: InstanceOptions = {}) {
+  constructor(opts = {}) {
     const options = Object.assign(
       {},
       {
@@ -19,38 +13,35 @@ export class RestStorage implements StorageService {
     this._axios = axios.create(options);
   }
 
-  public create(t: string, v: Dictionary) {
+  create(t, v) {
     return this._axios.post(`/${t}`, v);
   }
 
-  public read(t: string, id: number) {
+  read(t, id) {
     return this._axios.get(`/${t}/${id}`)
     .then((response) => {
       return response.data;
     });
   }
 
-  public update(t: string, id: number, v: Storable) {
+  update(t, id, v) {
     return this._axios.put(`/${t}/${id}`, v)
     .then((response) => {
       return response.data;
     });
   }
 
-  public delete(t: string, id: number) {
+  delete(t, id) {
     return this._axios.delete(`/${t}/${id}`)
     .then((response) => {
       return response.data;
     });
   }
 
-  public query(q: {type: string, query: any}) {
+  query(q) {
     return this._axios.get(`/${q.type}`, {params: q.query})
     .then((response) => {
       return response.data;
     });
   }
-
-  public name: 'RestStorage';
-
 }
