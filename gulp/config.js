@@ -1,7 +1,7 @@
 module.exports = {
   dest: 'dist',
   src: 'src',
-  tests: 'tests',
+  tests: 'test',
   types: 'types',
   scripts: ['**/*.js'],
 };
