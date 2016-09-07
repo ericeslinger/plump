@@ -25,6 +25,8 @@ TestType.$fields = {
   },
 };
 
+TestType.$id = 'id';
+
 TestType.$name = 'Test';
 
 DS.defineType(TestType);
@@ -41,7 +43,7 @@ describe('model', () => {
   });
 
   it('should load data from datastores', () => {
-    return memstore2.create(TestType, {
+    return memstore2.write(TestType, {
       id: 2,
       name: 'potato',
     }).then(() => {
@@ -56,12 +58,7 @@ describe('model', () => {
     return expect(one.$get('name')).to.eventually.equal('rutabaga');
   });
 
-  it('should save updates to datastores', () => {
-    const one = new TestType({id: 1, name: 'potato'});
-    return one.$set({name: 'rutabaga'}).then(() => {
-      return expect(DS.find('Test', 1).$get('name')).to.eventually.equal('rutabaga');
-    });
-  });
+  it('should save updates to datastores');
 
   it('should lazy-load hasMany lists');
   it('should add hasMany elements');

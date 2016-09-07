@@ -1,6 +1,7 @@
 import * as Promise from 'bluebird';
-import * as Knex from 'knex';
+import knex from 'knex';
 import {Storage} from './storage';
+const $knex = Symbol('$knex');
 
 export class SQLStorage extends Storage {
   constructor(dbOpts = {}) {
@@ -24,7 +25,7 @@ export class SQLStorage extends Storage {
       },
       dbOpts
     );
-    this._knex = Knex(options); // eslint-disable-line new-cap
+    this[$knex] = knex(options);
   }
 
   /*
@@ -33,27 +34,31 @@ export class SQLStorage extends Storage {
     an actual promise yet. So instead we're returning Promise.resolve(thenable);
   */
 
+  teardown() {
+    return this[$knex].destroy();
+  }
+
   create(t, v) {
-    return Promise.resolve(this._knex.insert(v).into(t));
+    return Promise.resolve(this[$knex].insert(v).into(t));
   }
 
   read(t, id) {
-    return Promise.resolve(this._knex(t).where({id: id})
+    return Promise.resolve(this[$knex](t).where({id: id})
     .select());
   }
 
   update(t, id, v) {
-    return Promise.resolve(this._knex(t).where({id: id})
+    return Promise.resolve(this[$knex](t).where({id: id})
     .update(v));
   }
 
   delete(t, id) {
-    return Promise.resolve(this._knex(t).where({id: id})
+    return Promise.resolve(this[$knex](t).where({id: id})
     .delete());
   }
 
   query(q) {
-    return Promise.resolve(this._knex.raw(q.query))
+    return Promise.resolve(this[$knex].raw(q.query))
     .then((d) => d.rows);
   }
 }

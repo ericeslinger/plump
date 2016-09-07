@@ -5,9 +5,10 @@ const $store = Symbol('$store');
 
 export class MemoryStorage extends Storage {
 
-  constructor() {
-    super();
-    this[$store] = [];
+  constructor(...args) {
+    super(...args);
+    this[$store] = {};
+    this.maxId = 0;
   }
 
   $$ensure(t) {
@@ -17,35 +18,36 @@ export class MemoryStorage extends Storage {
     return this[$store][t.$name];
   }
 
-  create(t, v) {
-    if (this.$$ensure(t)[v.id] === undefined) {
-      this.$$ensure(t)[v.id] = v;
-      return Promise.resolve(v);
-    } else {
-      return Promise.reject(new Error('Cannot overwrite existing value in memstore'));
-    }
-  }
-
   read(t, id) {
     return Promise.resolve(this.$$ensure(t)[id] || null);
   }
 
-  update(t, v) {
-    if (this.$$ensure(t)[t.$id] === undefined) {
-      this.$$ensure(t)[t.$id] = {
-        [t.constructor.$id]: t.$id,
-      };
+  write(t, v) {
+    let id = v[t.$id];
+    if (id === undefined) {
+      if (this.terminal) {
+        id = this.maxId + 1;
+      } else {
+        throw new Error('Cannot create new content in a non-terminal store');
+      }
     }
-    const updateObject = this.$$ensure(t)[t.$id];
-    Object.keys(t.constructor.$fields).forEach((fieldName) => {
+    let updateObject = this.$$ensure(t)[id];
+    if (updateObject === undefined) {
+      this.maxId = id;
+      updateObject = {
+        [t.$id]: id,
+      };
+      this.$$ensure(t)[id] = updateObject;
+    }
+    Object.keys(t.$fields).forEach((fieldName) => {
       if (v[fieldName] !== undefined) {
         // copy from v to the best of our ability
         if (
-          (t.constructor.$fields[fieldName].type === 'array') ||
-          (t.constructor.$fields[fieldName].type === 'hasMany')
+          (t.$fields[fieldName].type === 'array') ||
+          (t.$fields[fieldName].type === 'hasMany')
         ) {
           updateObject[fieldName] = v[fieldName].concat();
-        } else if (t.constructor.$fields[fieldName].type === 'object') {
+        } else if (t.$fields[fieldName].type === 'object') {
           updateObject[fieldName] = Object.assign({}, v[fieldName]);
         } else {
           updateObject[fieldName] = v[fieldName];
@@ -59,6 +61,34 @@ export class MemoryStorage extends Storage {
     const retVal = this.$$ensure(t)[id];
     delete this.$$ensure(t)[id];
     return Promise.resolve(retVal);
+  }
+
+  add(t, id, relationship, childId) {
+    let relationshipArray = this.$$ensure(t)[`${relationship}:${id}`];
+    if (relationshipArray === undefined) {
+      relationshipArray = [];
+      this.$$ensure(t)[`${relationship}:${id}`] = relationshipArray;
+    }
+    if (relationshipArray.indexOf(childId) < 0) {
+      relationshipArray.push(childId);
+    }
+    return Promise.resolve(relationshipArray.concat());
+  }
+
+  has(t, id, relationship) {
+    return Promise.resolve((this.$$ensure(t)[`${relationship}:${id}`] || []).concat());
+  }
+
+  remove(t, id, relationship, childId) {
+    const relationshipArray = this.$$ensure(t)[`${relationship}:${id}`];
+    if (relationshipArray !== undefined) {
+      const idx = relationshipArray.indexOf(childId);
+      if (idx >= 0) {
+        relationshipArray.splice(idx, 1);
+        return Promise.resolve(relationshipArray.concat());
+      }
+    }
+    return Promise.reject(new Error(`Item ${childId} not found in ${relationship} of ${t.$name}`));
   }
 
   query() {

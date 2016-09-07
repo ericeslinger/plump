@@ -45,7 +45,7 @@ export class Model {
           if (v !== null) {
             return v;
           } else {
-            return storage.read(this, this.$id)
+            return storage.read(this.constructor, this.$id)
             .then((value) => {
               if (value !== null) {
                 this.$$copyValuesFrom(value);
@@ -60,10 +60,16 @@ export class Model {
     }
   }
 
-  $set(update) {
-    this.$$copyValuesFrom(update);
+  $save() {
     return Promise.all(this.constructor.$storage.map((storage) => {
-      return storage.update(this, update);
+      return storage.write(this.constructor, this[$store]);
+    }));
+  }
+
+  $set(update) {
+    this.$$copyValuesFrom(update); // this is the optimistic update;
+    return Promise.all(this.constructor.$storage.map((storage) => {
+      return storage.write(this.constructor, update);
     }));
   }
 
@@ -77,7 +83,7 @@ export class Model {
       }
       if ((typeof id === 'number') && (id > 1)) {
         return Promise.all(this.constructor.$storage.map((storage) => {
-          return storage.$add(this, key, item);
+          return storage.add(this.constructor, this.$id, key, item);
         }));
       } else {
         return Promise.reject(new Error('Invalid item added to hasMany'));
@@ -97,7 +103,7 @@ export class Model {
       }
       if ((typeof id === 'number') && (id > 1)) {
         return Promise.all(this.constructor.$storage.map((storage) => {
-          return storage.$remove(this, key, item);
+          return storage.remove(this.constructor, this.$id, key, item);
         }));
       } else {
         return Promise.reject(new Error('Invalid item $removed from hasMany'));

@@ -2,38 +2,73 @@
 
 import * as Promise from 'bluebird';
 
+// type: an object that defines the type. typically this will be
+// part of the Model class hierarchy, but Storage objects call no methods
+// on the type object. We only are interested in Type.$name, Type.$id and Type.$fields.
+// Note that Type.$id is the *name of the id field* on instances
+//    and NOT the actual id field (e.g., in most cases, Type.$id === 'id').
+// id: unique id. Often an integer, but not necessary (could be an oid)
+
+
+// hasMany relationships are treated like id arrays. So, add / remove / has
+// just stores and removes integers.
+
 export class Storage {
 
-  constructor() {
-    this.isCache = false;
+  constructor(opts = {}) {
+    // a "terminal" storage facility is the end of the storage chain.
+    // usually sql on the server side and rest on the client side, it *must*
+    // receive the writes, and is the final authoritative answer on whether
+    // something is 404.
+
+    // terminal facilities are also the only ones that can authoritatively answer
+    // authorization questions, but the design may allow for authorization to be
+    // cached.
+    this.terminal = opts.terminal || false;
   }
 
-  create(t, v) {
-    // t: type (string) v: value
-    // if v.id === undefined, this is a true create otherwise it is a store
-    return Promise.reject(new Error('Create not implemented'));
+  hot(type, id) {
+    // t: type, id: id (integer).
+    // if hot, then consider this value authoritative, no need to go down
+    // the datastore chain. Consider a memorystorage used as a top-level cache.
+    // if the memstore has the value, it's hot and up-to-date. OTOH, a
+    // localstorage cache may be an out-of-date value (updated since last seen)
+
+    // this design lets hot be set by type and id. In particular, the goal for the
+    // front-end is to have profile objects be hot-cached in the memstore, but nothing
+    // else (in order to not run the browser out of memory)
+    return false;
   }
 
-  store(t, key, v) {
-    // t: type (string), key: key (primitive), v: value
-    // often (but not always, v.id === key)
-    return Promise.reject(new Error('Store not implemented'));
+  write(type, value) {
+    // if value.id exists, this is an update. If it doesn't, it is an
+    // insert. In the case of an update, it should merge down the tree.
+    return Promise.reject(new Error('Write not implemented'));
   }
 
-  read(t, id) {
-    // t: type (string), id: id (usually int)
+  read(type, id) {
     return Promise.reject(new Error('Read not implemented'));
   }
 
-  update(t, v) {
-    // t: type (string) v: value
-    // v.id must not be undefined
-    return Promise.reject(new Error('Update not implemented'));
+  delete(type, id) {
+    return Promise.reject(new Error('Delete not implemented'));
   }
 
-  delete(t, id) {
-    // t: type (string), id: id (usually int)
-    return Promise.reject(new Error('Delete not implemented'));
+  add(type, id, relationship, childId, valence = {}) {
+    // add to a hasMany relationship
+    // note that hasMany fields can have (impl-specific) valence data
+    // example: membership between profile and community can have perm 1, 2, 3
+    return Promise.reject(new Error('Add not implemented'));
+  }
+
+  remove(type, id, relationship, childId) {
+    // remove from a hasMany relationship
+    return Promise.reject(new Error('remove not implemented'));
+  }
+
+  has(type, id, relationship) {
+    // load a hasMany relationship
+    return Promise.reject(new Error('has not implemented'));
   }
 
   query(q) {

@@ -1,4 +1,3 @@
-import * as localforage from 'localforage';
 import * as Promise from 'bluebird';
 import * as Redis from 'redis';
 import {Storage} from './storage';
@@ -38,10 +37,10 @@ export class RedisStorage extends Storage {
     );
     this[$redis] = RedisService.createClient(options);
     this.isCache = true;
-    localforage.config({
-      name: opts.name || 'Trellis Storage',
-      storeName: opts.storeName || 'localCache',
-    });
+  }
+
+  teardown() {
+    return this[$redis].quitAsync();
   }
 
   create(t, v) {
