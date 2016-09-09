@@ -3,9 +3,13 @@ import knex from 'knex';
 import {Storage} from './storage';
 const $knex = Symbol('$knex');
 
+Promise.config({
+  longStackTraces: true,
+});
+
 export class SQLStorage extends Storage {
-  constructor(dbOpts = {}) {
-    super();
+  constructor(opts = {}) {
+    super(opts);
     const options = Object.assign(
       {},
       {
@@ -23,7 +27,7 @@ export class SQLStorage extends Storage {
           min: 0,
         },
       },
-      dbOpts
+      opts.sql
     );
     this[$knex] = knex(options);
   }
@@ -38,23 +42,102 @@ export class SQLStorage extends Storage {
     return this[$knex].destroy();
   }
 
-  create(t, v) {
-    return Promise.resolve(this[$knex].insert(v).into(t));
+  write(t, v) {
+    const id = v[t.$id];
+    const updateObject = {};
+    Object.keys(t.$fields).forEach((fieldName) => {
+      if (v[fieldName] !== undefined) {
+        // copy from v to the best of our ability
+        if (
+          (t.$fields[fieldName].type === 'array') ||
+          (t.$fields[fieldName].type === 'hasMany')
+        ) {
+          updateObject[fieldName] = v[fieldName].concat();
+        } else if (t.$fields[fieldName].type === 'object') {
+          updateObject[fieldName] = Object.assign({}, v[fieldName]);
+        } else {
+          updateObject[fieldName] = v[fieldName];
+        }
+      }
+    });
+    if ((id === undefined) && (this.terminal)) {
+      return this[$knex](t.$name).insert(updateObject).returning(t.$id)
+      .then((createdId) => {
+        return this.read(t, createdId[0]);
+      });
+    } else if (id !== undefined) {
+      return this[$knex](t.$name).where({[t.$id]: id}).update(updateObject)
+      .then(() => {
+        return this.read(t, id);
+      });
+    } else {
+      throw new Error('Cannot create new content in a non-terminal store');
+    }
   }
 
   read(t, id) {
-    return Promise.resolve(this[$knex](t).where({id: id})
-    .select());
-  }
-
-  update(t, id, v) {
-    return Promise.resolve(this[$knex](t).where({id: id})
-    .update(v));
+    return this[$knex](t.$name).where({[t.$id]: id}).select()
+    .then((o) => o[0] || null);
   }
 
   delete(t, id) {
-    return Promise.resolve(this[$knex](t).where({id: id})
-    .delete());
+    return this[$knex](t.$name).where({[t.$id]: id}).delete()
+    .then((o) => o);
+  }
+
+  add(t, id, relationship, childId) {
+    const fieldInfo = t.$fields[relationship];
+    if (fieldInfo === undefined) {
+      return Promise.reject(new Error(`Unknown field ${relationship}`));
+    } else {
+      return this[$knex](fieldInfo.joinTable)
+      .where({
+        [fieldInfo.parentColumn]: id,
+        [fieldInfo.childColumn]: childId,
+      }).select()
+      .then((l) => {
+        if (l.length > 0) {
+          return Promise.reject(new Error(`Item ${childId} already in ${relationship} of ${t.$name}:${id}`));
+        } else {
+          return this[$knex](fieldInfo.joinTable)
+          .insert({
+            [fieldInfo.parentColumn]: id,
+            [fieldInfo.childColumn]: childId,
+          }).then(() => {
+            return this.has(t, id, relationship);
+          });
+        }
+      });
+    }
+  }
+
+  has(t, id, relationship) {
+    const fieldInfo = t.$fields[relationship];
+    if (fieldInfo === undefined) {
+      return Promise.reject(new Error(`Unknown field ${relationship}`));
+    } else {
+      return this[$knex](fieldInfo.joinTable)
+      .where({
+        [fieldInfo.parentColumn]: id,
+      }).select(fieldInfo.childColumn)
+      .then((l) => l.map((v) => v[fieldInfo.childColumn]));
+    }
+  }
+
+  remove(t, id, relationship, childId) {
+    const fieldInfo = t.$fields[relationship];
+    if (fieldInfo === undefined) {
+      return Promise.reject(new Error(`Unknown field ${relationship}`));
+    } else {
+      return this[$knex](fieldInfo.joinTable)
+      .where({
+        [fieldInfo.parentColumn]: id,
+        [fieldInfo.childColumn]: childId,
+      }).delete()
+      .then(() => {
+        return this.has(t, id, relationship);
+      });
+    }
   }
 
   query(q) {

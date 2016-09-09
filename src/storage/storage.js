@@ -76,4 +76,16 @@ export class Storage {
     // q.query is impl defined - a string for sql (raw sql)
     return Promise.reject(new Error('Query not implemented'));
   }
+
+  $$testIndex(...args) {
+    if (args.length === 1) {
+      if (args[0].$id === undefined) {
+        throw new Error('Illegal operation on an unsaved new model');
+      }
+    } else {
+      if (args[1][args[0].$id] === undefined) {
+        throw new Error('Illegal operation on an unsaved new model');
+      }
+    }
+  }
 }

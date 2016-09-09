@@ -61,16 +61,32 @@ export class Model {
   }
 
   $save() {
-    return Promise.all(this.constructor.$storage.map((storage) => {
-      return storage.write(this.constructor, this[$store]);
-    }));
+    return this.$set();
   }
 
-  $set(update) {
+  $set(update = this[$store]) {
     this.$$copyValuesFrom(update); // this is the optimistic update;
-    return Promise.all(this.constructor.$storage.map((storage) => {
-      return storage.write(this.constructor, update);
-    }));
+    let setupPromise = Promise.resolve(update);
+    let skipTerminal = null;
+    if ((this.$id === undefined) && (update[this.constructor.$id] === undefined)) {
+      // need to get an ID.
+      const terminals = this.constructor.$storage.filter((s) => s.terminal);
+      if (terminals.length === 1) {
+        skipTerminal = terminals[0];
+        setupPromise = terminals[0].write(this.constructor, update);
+      } else {
+        return Promise.reject(new Error('Model can only have one terminal store'));
+      }
+    }
+    return setupPromise.then((toUpdate) => {
+      return Promise.all(this.constructor.$storage.map((storage) => {
+        if (storage !== skipTerminal) {
+          return storage.write(this.constructor, toUpdate);
+        } else {
+          return toUpdate;
+        }
+      }));
+    }).then((updates) => updates[0]);
   }
 
   $add(key, item) {

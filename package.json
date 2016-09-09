@@ -24,6 +24,7 @@
   "homepage": "https://github.com/kstf/guild#readme",
   "devDependencies": {
     "axios": "^0.13.1",
+    "axios-mock-adapter": "^1.6.1",
     "babel": "^6.5.2",
     "babel-plugin-add-module-exports": "^0.2.1",
     "babel-preset-es2015": "^6.13.2",

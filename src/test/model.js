@@ -7,7 +7,7 @@ import { Datastore } from '../dataStore';
 import { MemoryStorage } from '../storage/memory';
 
 const memstore1 = new MemoryStorage();
-const memstore2 = new MemoryStorage();
+const memstore2 = new MemoryStorage({terminal: true});
 const DS = new Datastore({storage: [memstore1, memstore2]});
 
 class TestType extends DS.Base {}
@@ -52,10 +52,16 @@ describe('model', () => {
     });
   });
 
+  it('should create an id when one is unset', () => {
+    const noID = new TestType({name: 'potato'});
+    return expect(noID.$save()).to.eventually.have.all.keys('name', 'id');
+  });
+
   it('should optimistically update on field updates', () => {
-    const one = new TestType({id: 1, name: 'potato'});
-    one.$set({name: 'rutabaga'});
-    return expect(one.$get('name')).to.eventually.equal('rutabaga');
+    const one = new TestType({name: 'potato'});
+    return one.$save()
+    .then(() => one.$set({name: 'rutabaga'}))
+    .then(() => expect(one.$get('name')).to.eventually.equal('rutabaga'));
   });
 
   it('should save updates to datastores');

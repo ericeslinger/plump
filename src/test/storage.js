@@ -6,9 +6,12 @@ import chaiAsPromised from 'chai-as-promised';
 import { MemoryStorage } from '../storage/memory';
 import { RedisStorage } from '../storage/redis';
 import { RestStorage } from '../storage/rest';
+import MockAdapter from 'axios-mock-adapter';
 import { SQLStorage } from '../storage/sql';
+import * as axios from 'axios';
 import Promise from 'bluebird';
 import * as pg from 'pg';
+import * as Redis from 'redis';
 
 function runSQL(command, opts = {}) {
   const connOptions = Object.assign(
@@ -37,22 +40,47 @@ function runSQL(command, opts = {}) {
   });
 }
 
+function flushRedis() {
+  const r = Redis.createClient({
+    port: 6379,
+    host: 'localhost',
+    db: 0,
+  });
+  return new Promise((resolve) => {
+    r.flushdb((err) => {
+      if (err) throw err;
+      r.quit((err) => {
+        if (err) throw err;
+        resolve();
+      });
+    });
+  });
+}
+
 const storageTypes = [
   {
     name: 'redis',
     constructor: RedisStorage,
-    opts: {},
+    opts: {
+      terminal: true,
+    },
+    before: () => {
+      return flushRedis();
+    },
     after: (driver) => {
-      return driver.teardown();
+      return flushRedis().then(() => driver.teardown());
     },
   },
   {
     name: 'sql',
     constructor: SQLStorage,
     opts: {
-      connection: {
-        database: 'guild_test',
+      sql: {
+        connection: {
+          database: 'guild_test',
+        },
       },
+      terminal: true,
     },
     before: () => {
       return runSQL('DROP DATABASE if exists guild_test;')
@@ -83,7 +111,16 @@ const storageTypes = [
   {
     name: 'rest',
     constructor: RestStorage,
-    opts: {},
+    opts: {
+      terminal: true,
+    },
+    before: () => {
+      const mock = new MockAdapter(axios);
+      mock.onPost('/tests').reply((v) => {
+        return [200, JSON.parse(v.data)];
+      });
+      return Promise.resolve(true);
+    },
   },
   {
     name: 'memory',
@@ -115,8 +152,9 @@ const testType = {
     },
     children: {
       type: 'hasMany',
-      parentIdField: 'parent_id',
-      childIdField: 'child_id',
+      joinTable: 'children',
+      parentColumn: 'parent_id',
+      childColumn: 'child_id',
       childType: 'tests',
     },
   },
@@ -124,10 +162,6 @@ const testType = {
 
 chai.use(chaiAsPromised);
 const expect = chai.expect;
-
-storageTypes.shift();
-storageTypes.shift();
-storageTypes.shift();
 
 storageTypes.forEach((store) => {
   describe(store.name, () => {
