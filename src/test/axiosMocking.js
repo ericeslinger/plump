@@ -1,6 +1,7 @@
 import { MemoryStorage } from '../storage/memory';
 import * as axios from 'axios';
 import MockAdapter from 'axios-mock-adapter';
+import Promise from 'bluebird';
 
 const backingStore = new MemoryStorage({terminal: true});
 
@@ -23,23 +24,22 @@ function getVal(t, id) {
 
 function mockup(t) {
   const mockedAxios = axios.create({baseURL: ''});
-  const mock = new MockAdapter(mockedAxios);
-  mock.onGet(new RegExp(`\/${t.$name}\/d+`)).reply((data) => {
-    console.log('GET');
-    console.log(data);
-    const id = parseInt(data.config.url.substring(0, t.$name.length + 2), 10);
-    return getVal(t, id);
-  });
-  mock.onPost(`/${t.$name}`).reply((data) => {
-    console.log('POST');
-    console.log(data);
-    return setVal(t, data.data);
-  });
-  mock.onPut(new RegExp(`\/${t.$name}\/d+`)).reply((data) => {
-    console.log('PUT');
-    console.log(data);
-    return setVal(t, data.data);
-  });
+  mockedAxios.defaults.adapter = (config) => {
+    return Promise.resolve().then(() => {
+      console.log(config);
+      if (config.method === 'get') {
+        const id = parseInt(config.url.substring(0, t.$name.length + 2), 10);
+        return getVal(t, id);
+      } else if (config.method === 'post') {
+        return setVal(t, config.data);
+      } else if (config.method === 'put') {
+        const id = parseInt(config.url.substring(0, t.$name.length + 2), 10);
+        return setVal(t, Object.assign({}, config.data, {[t.$id]: id}));
+      } else {
+        return Promise.reject(new Error('ILLEGAL DATA'));
+      }
+    });
+  };
   return mockedAxios;
 }
 
