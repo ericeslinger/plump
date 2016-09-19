@@ -6,9 +6,8 @@ import chaiAsPromised from 'chai-as-promised';
 import { MemoryStorage } from '../storage/memory';
 import { RedisStorage } from '../storage/redis';
 import { RestStorage } from '../storage/rest';
-import MockAdapter from 'axios-mock-adapter';
 import { SQLStorage } from '../storage/sql';
-import * as axios from 'axios';
+import axiosMock from './axiosMocking';
 import Promise from 'bluebird';
 import * as pg from 'pg';
 import * as Redis from 'redis';
@@ -35,10 +34,6 @@ const testType = {
     },
   },
 };
-
-const mockAxios = axios.create({
-  baseURL: '',
-});
 
 function runSQL(command, opts = {}) {
   const connOptions = Object.assign(
@@ -140,21 +135,7 @@ const storageTypes = [
     constructor: RestStorage,
     opts: {
       terminal: true,
-      axios: mockAxios,
-    },
-    before: () => {
-      const mock = new MockAdapter(mockAxios);
-      mock.onGet(/\/tests\/\d+/).reply((c) => {
-        console.log('GET');
-        console.log(c);
-        return [200, {}];
-      });
-      mock.onPost('/tests').reply((v) => {
-        console.log('SET');
-        console.log(JSON.parse(v.data));
-        return [200, {}];
-      });
-      return Promise.resolve(true);
+      axios: axiosMock.mockup(testType),
     },
   },
   {
