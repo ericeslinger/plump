@@ -2,6 +2,7 @@ import * as axios from 'axios';
 import {Storage} from './storage';
 
 const $axios = Symbol('$axios');
+import Promise from 'bluebird';
 
 export class RestStorage extends Storage {
 
@@ -18,21 +19,32 @@ export class RestStorage extends Storage {
   }
 
   write(t, v) {
-    if (v[t.$id]) {
-      return this[$axios].put(`/${t.$name}/${v[t.$id]}`, v);
-    } else {
-      if (this.terminal) {
-        return this[$axios].post(`/${t.$name}`, v);
+    return Promise.resolve()
+    .then(() => {
+      if (v[t.$id]) {
+        return this[$axios].put(`/${t.$name}/${v[t.$id]}`, v);
       } else {
-        throw new Error('Cannot create new content in a non-terminal store');
+        if (this.terminal) {
+          return this[$axios].post(`/${t.$name}`, v);
+        } else {
+          throw new Error('Cannot create new content in a non-terminal store');
+        }
       }
-    }
+    }).then((d) => d.data[t.$name][0]);
   }
 
   read(t, id) {
     return this[$axios].get(`/${t.$name}/${id}`)
     .then((response) => {
-      return response.data[t.$name][id];
+      console.log('AXIOS RESPONSE');
+      console.log(JSON.stringify(response));
+      return response.data[t.$name][0];
+    }).catch((err) => {
+      if (err === 404) {
+        return null;
+      } else {
+        throw err;
+      }
     });
 
     // TODO: cahceable read

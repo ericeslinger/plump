@@ -100,6 +100,9 @@ const storageTypes = [
       sql: {
         connection: {
           database: 'guild_test',
+          user: 'postgres',
+          host: 'localhost',
+          port: 5432,
         },
       },
       terminal: true,
