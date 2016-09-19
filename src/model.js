@@ -60,6 +60,16 @@ export class Model {
     }
   }
 
+  $load(opts = {}) {
+    const options = Object.assign({}, {self: true}, opts);
+    if (options.self) {
+      this.getSelf()
+      .then((data) => {
+        this.$$copyValuesFrom(data);
+      });
+    }
+  }
+
   $save() {
     return this.$set();
   }

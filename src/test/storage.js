@@ -13,6 +13,33 @@ import Promise from 'bluebird';
 import * as pg from 'pg';
 import * as Redis from 'redis';
 
+const testType = {
+  $name: 'tests',
+  $id: 'id',
+  $fields: {
+    id: {
+      type: 'number',
+    },
+    name: {
+      type: 'string',
+    },
+    extended: {
+      type: 'object',
+    },
+    children: {
+      type: 'hasMany',
+      joinTable: 'children',
+      parentColumn: 'parent_id',
+      childColumn: 'child_id',
+      childType: 'tests',
+    },
+  },
+};
+
+const mockAxios = axios.create({
+  baseURL: '',
+});
+
 function runSQL(command, opts = {}) {
   const connOptions = Object.assign(
     {},
@@ -113,11 +140,19 @@ const storageTypes = [
     constructor: RestStorage,
     opts: {
       terminal: true,
+      axios: mockAxios,
     },
     before: () => {
-      const mock = new MockAdapter(axios);
+      const mock = new MockAdapter(mockAxios);
+      mock.onGet(/\/tests\/\d+/).reply((c) => {
+        console.log('GET');
+        console.log(c);
+        return [200, {}];
+      });
       mock.onPost('/tests').reply((v) => {
-        return [200, JSON.parse(v.data)];
+        console.log('SET');
+        console.log(JSON.parse(v.data));
+        return [200, {}];
       });
       return Promise.resolve(true);
     },
@@ -134,29 +169,6 @@ const sampleObject = {
   extended: {
     actual: 'rutabaga',
     otherValue: 42,
-  },
-};
-
-const testType = {
-  $name: 'tests',
-  $id: 'id',
-  $fields: {
-    id: {
-      type: 'number',
-    },
-    name: {
-      type: 'string',
-    },
-    extended: {
-      type: 'object',
-    },
-    children: {
-      type: 'hasMany',
-      joinTable: 'children',
-      parentColumn: 'parent_id',
-      childColumn: 'child_id',
-      childType: 'tests',
-    },
   },
 };
 
@@ -197,7 +209,7 @@ storageTypes.forEach((store) => {
       return actualStore.write(testType, sampleObject)
       .then((createdObject) => {
         return actualStore.delete(testType, createdObject.id)
-        .then(() => expect(actualStore.read(testType, createdObject.id)).to.eventually.be.null);
+        .then(() => expect(actualStore.read(testType, createdObject.id)).to.eventually.deep.equal(null));
       });
     });
 
