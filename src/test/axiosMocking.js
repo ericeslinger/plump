@@ -4,67 +4,76 @@ import Promise from 'bluebird';
 
 const backingStore = new MemoryStorage({terminal: true});
 
-
-function setVal(t, v) {
-  return backingStore.write(t, v)
-  .then((r) => {
-    if (r) {
-      return {
-        status: 200,
-        data: r,
-      };
-    } else {
-      return {
-        status: 404,
-      };
-    }
-  });
-}
-
-function getVal(t, id) {
-  return backingStore.read(t, id)
-  .then((r) => {
-    if (r) {
-      return {
-        status: 200,
-        data: r,
-      };
-    } else {
-      return {
-        status: 404,
-      };
-    }
-  });
-}
-
 function mockup(t) {
   const mockedAxios = axios.create({baseURL: ''});
   mockedAxios.defaults.adapter = (config) => {
+    let apiWrap = true; // should we wrap in standard JSON API at the bottom
     return Promise.resolve().then(() => {
+      const matchBase = config.url.match(new RegExp(`^/${t.$name}$`));
+      const matchItem = config.url.match(new RegExp(`^/${t.$name}/(\\d+)$`));
+      const matchSideBase = config.url.match(new RegExp(`^/${t.$name}/(\\d+)/(\\w+)$`));
+      const matchSideItem = config.url.match(new RegExp(`^/${t.$name}/(\\d+)/(\\w+)/(\\d+)$`));
+
+
       if (config.method === 'get') {
-        const id = parseInt(config.url.substring(t.$name.length + 2), 10);
-        return backingStore.read(t, id);
+        if (matchBase) {
+          return backingStore.query();
+        } else if (matchItem) {
+          return backingStore.read(t, parseInt(matchItem[1], 10));
+        } else if (matchSideBase) {
+          apiWrap = false;
+          return backingStore.has(t, parseInt(matchSideBase[1], 10), matchSideBase[2]);
+        }
       } else if (config.method === 'post') {
-        return backingStore.write(t, JSON.parse(config.data));
+        if (matchBase) {
+          return backingStore.write(t, JSON.parse(config.data));
+        }
+      } else if (config.method === 'patch') {
+        if (matchItem) {
+          return backingStore.write(
+            t,
+            Object.assign(
+              {},
+              JSON.parse(config.data),
+              {[t.$id]: parseInt(matchItem[1], 10)}
+            )
+          );
+        }
       } else if (config.method === 'put') {
-        const id = parseInt(config.url.substring(t.$name.length + 2), 10);
-        return backingStore.write(t, Object.assign({}, JSON.parse(config.data), {[t.$id]: id}));
+        if (matchSideBase) {
+          apiWrap = false;
+          return backingStore.add(t, parseInt(matchSideBase[1], 10), matchSideBase[2], JSON.parse(config.data));
+        }
       } else if (config.method === 'delete') {
-        const id = parseInt(config.url.substring(t.$name.length + 2), 10);
-        return backingStore.delete(t, id);
-      } else {
-        return Promise.reject(new Error('ILLEGAL DATA'));
+        if (matchItem) {
+          return backingStore.delete(t, parseInt(matchItem[1], 10));
+        } else if (matchSideItem) {
+          apiWrap = false;
+          return backingStore.remove(
+            t,
+            parseInt(matchSideItem[1], 10),
+            matchSideItem[2],
+            parseInt(matchSideItem[3], 10)
+          );
+        }
       }
+      return Promise.reject(new Error(404));
     }).then((d) => {
       // console.log('FOR');
       // console.log(config);
       // console.log(`RESOLVING ${JSON.stringify(d)}`);
       if (d) {
-        return {
-          data: {
-            [t.$name]: [d],
-          },
-        };
+        if (apiWrap) {
+          return {
+            data: {
+              [t.$name]: [d],
+            },
+          };
+        } else {
+          return {
+            data: d,
+          };
+        }
       } else {
         return Promise.reject(404);
       }

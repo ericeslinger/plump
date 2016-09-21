@@ -22,7 +22,7 @@ export class RestStorage extends Storage {
     return Promise.resolve()
     .then(() => {
       if (v[t.$id]) {
-        return this[$axios].put(`/${t.$name}/${v[t.$id]}`, v);
+        return this[$axios].patch(`/${t.$name}/${v[t.$id]}`, v);
       } else {
         if (this.terminal) {
           return this[$axios].post(`/${t.$name}`, v);
@@ -47,7 +47,7 @@ export class RestStorage extends Storage {
       }
     });
 
-    // TODO: cahceable read
+    // TODO: cacheable read
     // {
     //   const retVal = {
     //     main: ,
@@ -64,6 +64,19 @@ export class RestStorage extends Storage {
     //   });
     //   return retVal;
     // });
+  }
+
+  has(t, id, relationship) {
+    return this[$axios].get(`/${t.$name}/${id}/${relationship}`)
+    .then((response) => response.data);
+  }
+
+  add(t, id, relationship, childId) {
+    return this[$axios].put(`/${t.$name}/${id}/${relationship}`, childId);
+  }
+
+  remove(t, id, relationship, childId) {
+    return this[$axios].delete(`/${t.$name}/${id}/${relationship}/${childId}`);
   }
 
   delete(t, id) {
