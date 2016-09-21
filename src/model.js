@@ -1,13 +1,21 @@
 const Promise = require('bluebird');
 const $store = Symbol('$store');
+const $guild = Symbol('$guild');
 
 // TODO: figure out where error events originate (storage or model)
 // and who keeps a roll-backable delta
 
 export class Model {
-  constructor(opts = {}) {
+  constructor(opts = {}, guild) {
     this[$store] = {};
     this.$$copyValuesFrom(opts);
+    if (guild) {
+      this.connectToGuild(guild);
+    }
+  }
+
+  $$connectToGuild(guild) {
+    this[$guild] = guild;
   }
 
   get $name() {
