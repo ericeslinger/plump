@@ -1,6 +1,7 @@
 const Promise = require('bluebird');
 const $store = Symbol('$store');
 const $guild = Symbol('$guild');
+const $self = Symbol('$self');
 
 // TODO: figure out where error events originate (storage or model)
 // and who keeps a roll-backable delta
@@ -48,23 +49,11 @@ export class Model {
     if (this[$store][key] !== undefined) {
       return Promise.resolve(this[$store][key]);
     } else {
-      return this.constructor.$storage.reduce((thenable, storage) => {
-        return thenable.then((v) => {
-          if (v !== null) {
-            return v;
-          } else {
-            return storage.read(this.constructor, this.$id)
-            .then((value) => {
-              if (value !== null) {
-                this.$$copyValuesFrom(value);
-                return this[$store][key];
-              } else {
-                return null;
-              }
-            });
-          }
-        });
-      }, Promise.resolve(null));
+      return this[$guild].get(this.constructor, this.$id)
+      .then((v) => {
+        this.$$copyValuesFrom(v);
+        return this[$store][key];
+      });
     }
   }
 
@@ -150,6 +139,7 @@ export class Model {
 
 Model.$id = 'id';
 Model.$name = 'Base';
+Model.$self = $self;
 Model.$fields = {
   id: {
     type: 'number',
