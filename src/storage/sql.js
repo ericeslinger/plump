@@ -42,6 +42,8 @@ export class SQLStorage extends Storage {
     return this[$knex].destroy();
   }
 
+  onCacheableRead() {}
+
   write(t, v) {
     const id = v[t.$id];
     const updateObject = {};

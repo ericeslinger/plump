@@ -18,6 +18,8 @@ export class RestStorage extends Storage {
     this[$axios] = options.axios || axios.create(options);
   }
 
+  onCacheableRead() {}
+
   write(t, v) {
     return Promise.resolve()
     .then(() => {

@@ -1,6 +1,9 @@
 /* eslint no-unused-vars: 0 */
 
 import * as Promise from 'bluebird';
+import Rx from 'rxjs/Rx';
+
+const $emitter = Symbol('$emitter');
 
 // type: an object that defines the type. typically this will be
 // part of the Model class hierarchy, but Storage objects call no methods
@@ -25,6 +28,7 @@ export class Storage {
     // authorization questions, but the design may allow for authorization to be
     // cached.
     this.terminal = opts.terminal || false;
+    this[$emitter] = new Rx.Subject();
   }
 
   hot(type, id) {
@@ -44,6 +48,11 @@ export class Storage {
     // if value.id exists, this is an update. If it doesn't, it is an
     // insert. In the case of an update, it should merge down the tree.
     return Promise.reject(new Error('Write not implemented'));
+  }
+
+  onCacheableRead(type, value) {
+    // override this if you want to not react to cacheableRead events.
+    return this.write(type, value);
   }
 
   read(type, id) {
@@ -75,6 +84,19 @@ export class Storage {
     // q: {type: string, query: any}
     // q.query is impl defined - a string for sql (raw sql)
     return Promise.reject(new Error('Query not implemented'));
+  }
+
+  onUpdate(observer) {
+    // observer follows the RxJS pattern - it is either a function (for next())
+    // or {next, error, complete};
+    // returns an unsub hook (retVal.unsubscribe())
+    return this[$emitter].subscribe(observer);
+  }
+
+  update(type, id, value) {
+    this[$emitter]({
+      type, id, value,
+    });
   }
 
   $$testIndex(...args) {

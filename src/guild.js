@@ -1,12 +1,16 @@
 const $types = Symbol('$types');
 const $storage = Symbol('$storage');
 const $terminal = Symbol('$terminal');
+const $subscriptions = Symbol('$subscriptions');
+
+import Rx from 'rxjs/Rx';
 
 export class Guild {
   constructor(opts = {}) {
     const options = Object.assign({}, {
       storage: [],
     }, opts);
+    this[$subscriptions] = {};
     options.storage.forEach((s) => this.addStore(s));
   }
 
@@ -18,8 +22,17 @@ export class Guild {
         throw new Error('cannot have more than one terminal store');
       }
     } else {
-      this[$storage].concat(store);
+      this[$storage].push(store);
     }
+    store.onUpdate((u) => {
+      this[$storage].forEach((storage) => {
+        const Type = this[$types][u.type];
+        storage.onCacheableRead(Type, Object.assign({}, u.value, {[Type.$id]: u.id}));
+      });
+      if (this[$subscriptions][u.type] && this[$subscriptions][u.type][u.id]) {
+        this[$subscriptions][u.type][u.id].next(u.value);
+      }
+    });
   }
 
   find(t, id) {
@@ -34,6 +47,15 @@ export class Guild {
   // LOAD (type/id), SIDELOAD (type/id/side)? Or just LOADALL?
   // LOAD needs to scrub through hot caches first
 
+  subscribe(typeName, id, handler) {
+    if (this[$subscriptions][typeName] === undefined) {
+      this[$subscriptions][typeName] = {};
+    }
+    if (this[$subscriptions][typeName][id] === undefined) {
+      this[$subscriptions][typeName][id] = new Rx.Subject();
+    }
+    return this[$subscriptions][typeName][id].subscribe(handler);
+  }
 
   get(type, id) {
     return this[$storage].reduce((thenable, storage) => {

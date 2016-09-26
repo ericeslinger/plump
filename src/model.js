@@ -1,7 +1,8 @@
-const Promise = require('bluebird');
+import * as Promise from 'bluebird';
 const $store = Symbol('$store');
 const $guild = Symbol('$guild');
 const $self = Symbol('$self');
+const $unsubscribe = Symbol('$unsubscribe');
 
 // TODO: figure out where error events originate (storage or model)
 // and who keeps a roll-backable delta
@@ -17,6 +18,9 @@ export class Model {
 
   $$connectToGuild(guild) {
     this[$guild] = guild;
+    this[$unsubscribe] = guild.subscribe(this.constructor.$name, this.$id, (v) => {
+      this.$$copyValuesFrom(v);
+    });
   }
 
   get $name() {
@@ -135,6 +139,11 @@ export class Model {
       return Promise.reject(new Error('Cannot $remove except from hasMany field'));
     }
   }
+
+  $teardown() {
+    this[$unsubscribe].unsubscribe();
+  }
+
 }
 
 Model.$id = 'id';
