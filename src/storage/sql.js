@@ -3,10 +3,6 @@ import knex from 'knex';
 import {Storage} from './storage';
 const $knex = Symbol('$knex');
 
-Promise.config({
-  longStackTraces: true,
-});
-
 export class SQLStorage extends Storage {
   constructor(opts = {}) {
     super(opts);
