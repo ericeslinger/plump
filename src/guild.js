@@ -3,7 +3,7 @@ const $storage = Symbol('$storage');
 const $terminal = Symbol('$terminal');
 const $subscriptions = Symbol('$subscriptions');
 
-import Rx from 'rxjs-es/Rx';
+import Rx from 'rxjs/Rx';
 
 export class Guild {
   constructor(opts = {}) {
