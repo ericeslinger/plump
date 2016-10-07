@@ -57,6 +57,14 @@ export class Guild {
     return this[$subscriptions][typeName][id].subscribe(handler);
   }
 
+  has(type, id, field) {
+    return this[$storage].reduce((thenable, storage) => {
+      return thenable.then((v) => {
+        return (v !== null) ? v : storage.has(type, id, field);
+      });
+    }, Promise.resolve(null));
+  }
+
   get(type, id) {
     return this[$storage].reduce((thenable, storage) => {
       return thenable.then((v) => {
