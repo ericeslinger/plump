@@ -1,7 +1,7 @@
 /* eslint no-unused-vars: 0 */
 
 import * as Promise from 'bluebird';
-import Rx from 'rxjs/Rx';
+import Rx from 'rxjs-es/Rx';
 
 const $emitter = Symbol('$emitter');
 
