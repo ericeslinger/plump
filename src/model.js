@@ -12,7 +12,7 @@ export class Model {
     this[$store] = {};
     this.$$copyValuesFrom(opts);
     if (guild) {
-      this.connectToGuild(guild);
+      this.$$connectToGuild(guild);
     }
   }
 
