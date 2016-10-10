@@ -11,6 +11,7 @@ export class Guild {
       storage: [],
     }, opts);
     this[$subscriptions] = {};
+    this[$storage] = [];
     options.storage.forEach((s) => this.addStore(s));
   }
 
