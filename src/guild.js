@@ -9,11 +9,13 @@ export class Guild {
   constructor(opts = {}) {
     const options = Object.assign({}, {
       storage: [],
+      types: [],
     }, opts);
     this[$subscriptions] = {};
     this[$storage] = [];
     this[$types] = {};
     options.storage.forEach((s) => this.addStore(s));
+    options.types.forEach((t) => this.addType(t));
   }
 
   addType(T) {
