@@ -38,8 +38,6 @@ export class RestStorage extends Storage {
   read(t, id) {
     return this[$axios].get(`/${t.$name}/${id}`)
     .then((response) => {
-      console.log('AXIOS RESPONSE');
-      console.log(JSON.stringify(response));
       return response.data[t.$name][0];
     }).catch((err) => {
       if (err === 404) {
