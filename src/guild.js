@@ -12,7 +12,16 @@ export class Guild {
     }, opts);
     this[$subscriptions] = {};
     this[$storage] = [];
+    this[$types] = {};
     options.storage.forEach((s) => this.addStore(s));
+  }
+
+  addType(T) {
+    if (this[$types][T.$name] === undefined) {
+      this[$types][T.$name] = T;
+    } else {
+      throw new Error(`Duplicate Type registered: ${T.$name}`);
+    }
   }
 
   addStore(store) {
