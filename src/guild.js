@@ -77,6 +77,22 @@ export class Guild {
     }, Promise.resolve(null));
   }
 
+  save(type, val) {
+    if (this[$terminal]) {
+      return this[$terminal].write(type, val);
+    } else {
+      return Promise.reject(new Error('Guild has no terminal store'));
+    }
+  }
+
+  forge(t, val) {
+    let Type = t;
+    if (typeof t === 'string') {
+      Type = this[$types][t];
+    }
+    return new Type(val, this);
+  }
+
   get(type, id) {
     return this[$storage].reduce((thenable, storage) => {
       return thenable.then((v) => {
@@ -86,6 +102,13 @@ export class Guild {
           return storage.read(type, id);
         }
       });
-    }, Promise.resolve(null));
+    }, Promise.resolve(null))
+    .then((v) => {
+      if ((v === null) && (this[$terminal])) {
+        return this[$terminal].read(type, id);
+      } else {
+        return v;
+      }
+    });
   }
 }

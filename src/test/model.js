@@ -2,16 +2,18 @@
 
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
-import { Datastore } from '../dataStore';
 
 import { MemoryStorage } from '../storage/memory';
+import { Guild } from '../guild';
+import { Model } from '../model';
 
 const memstore1 = new MemoryStorage();
 const memstore2 = new MemoryStorage({terminal: true});
-const DS = new Datastore({storage: [memstore1, memstore2]});
 
-class TestType extends DS.Base {}
+class TestType extends Model {}
 
+TestType.$name = 'tests';
+TestType.$id = 'id';
 TestType.$fields = {
   id: {
     type: 'number',
@@ -19,17 +21,22 @@ TestType.$fields = {
   name: {
     type: 'string',
   },
+  extended: {
+    type: 'object',
+  },
   children: {
     type: 'hasMany',
-    childType: 'TestType',
+    joinTable: 'children',
+    parentColumn: 'parent_id',
+    childColumn: 'child_id',
+    childType: 'tests',
   },
 };
 
-TestType.$id = 'id';
-
-TestType.$name = 'Test';
-
-DS.defineType(TestType);
+const guild = new Guild({
+  storage: [memstore1, memstore2],
+  types: [TestType],
+});
 
 chai.use(chaiAsPromised);
 const expect = chai.expect;
@@ -47,18 +54,18 @@ describe('model', () => {
       id: 2,
       name: 'potato',
     }).then(() => {
-      const two = DS.find('Test', 2);
+      const two = guild.find('tests', 2);
       return expect(two.$get('name')).to.eventually.equal('potato');
     });
   });
 
   it('should create an id when one is unset', () => {
-    const noID = new TestType({name: 'potato'});
+    const noID = new TestType({name: 'potato'}, guild);
     return expect(noID.$save()).to.eventually.have.all.keys('name', 'id');
   });
 
   it('should optimistically update on field updates', () => {
-    const one = new TestType({name: 'potato'});
+    const one = new TestType({name: 'potato'}, guild);
     return one.$save()
     .then(() => one.$set({name: 'rutabaga'}))
     .then(() => expect(one.$get('name')).to.eventually.equal('rutabaga'));

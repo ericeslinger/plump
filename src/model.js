@@ -1,16 +1,15 @@
 import * as Promise from 'bluebird';
 const $store = Symbol('$store');
 const $guild = Symbol('$guild');
-const $self = Symbol('$self');
 const $unsubscribe = Symbol('$unsubscribe');
 
 // TODO: figure out where error events originate (storage or model)
 // and who keeps a roll-backable delta
 
 export class Model {
-  constructor(opts = {}, guild) {
+  constructor(opts, guild) {
     this[$store] = {};
-    this.$$copyValuesFrom(opts);
+    this.$$copyValuesFrom(opts || {});
     if (guild) {
       this.$$connectToGuild(guild);
     }
@@ -49,15 +48,21 @@ export class Model {
     });
   }
 
+  // TODO: don't fetch if we $get() something that we already have
+
   $get(key) {
-    if (this[$store][key] !== undefined) {
-      return Promise.resolve(this[$store][key]);
-    } else {
+    if ((key === undefined) || (this[$store][key] === undefined)) {
       return this[$guild].get(this.constructor, this.$id)
       .then((v) => {
         this.$$copyValuesFrom(v);
-        return this[$store][key];
+        if (key) {
+          return this[$store][key];
+        } else {
+          return Object.assign({}, this[$store]);
+        }
       });
+    } else {
+      return Promise.resolve(this[$store][key]);
     }
   }
 
@@ -77,27 +82,10 @@ export class Model {
 
   $set(update = this[$store]) {
     this.$$copyValuesFrom(update); // this is the optimistic update;
-    let setupPromise = Promise.resolve(update);
-    let skipTerminal = null;
-    if ((this.$id === undefined) && (update[this.constructor.$id] === undefined)) {
-      // need to get an ID.
-      const terminals = this.constructor.$storage.filter((s) => s.terminal);
-      if (terminals.length === 1) {
-        skipTerminal = terminals[0];
-        setupPromise = terminals[0].write(this.constructor, update);
-      } else {
-        return Promise.reject(new Error('Model can only have one terminal store'));
-      }
-    }
-    return setupPromise.then((toUpdate) => {
-      return Promise.all(this.constructor.$storage.map((storage) => {
-        if (storage !== skipTerminal) {
-          return storage.write(this.constructor, toUpdate);
-        } else {
-          return toUpdate;
-        }
-      }));
-    }).then((updates) => updates[0]);
+    return this[$guild].save(this.constructor, update);
+    // .then((updates) => {
+    //   return updates;
+    // });
   }
 
   $add(key, item) {
@@ -156,7 +144,6 @@ export class Model {
 
 Model.$id = 'id';
 Model.$name = 'Base';
-Model.$self = $self;
 Model.$fields = {
   id: {
     type: 'number',
