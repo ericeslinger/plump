@@ -56,8 +56,8 @@ export class Model {
     return Promise.resolve()
     .then(() => {
       if (
-        ((this[$loaded] === false) && (key === undefined)) ||
-        (this[$store][key] === undefined)
+        ((key === undefined) && (this[$loaded] === false)) ||
+        (key && (this[$store][key] === undefined))
       ) {
         if (this.constructor.$fields[key].type === 'hasMany') {
           return this[$guild].has(this.constructor, this.$id, key)
