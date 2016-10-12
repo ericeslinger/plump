@@ -31,6 +31,14 @@ TestType.$fields = {
     childField: 'child_id',
     childType: 'tests',
   },
+  valenceChildren: {
+    type: 'hasMany',
+    relationship: 'children',
+    parentField: 'parent_id',
+    childField: 'child_id',
+    childType: 'tests',
+    extras: ['perm'],
+  },
 };
 
 const guild = new Guild({
@@ -90,14 +98,17 @@ describe('model', () => {
     const one = new TestType({name: 'frotato'}, guild);
     return one.$save()
     .then(() => one.$add('children', 100))
-    .then(() => expect(one.$get('children')).to.eventually.deep.equal([100]));
+    .then(() => {
+      return expect(one.$get('children'))
+      .to.eventually.deep.equal([{id: 100}])
+    });
   });
 
   it('should remove hasMany elements', () => {
     const one = new TestType({name: 'frotato'}, guild);
     return one.$save()
     .then(() => one.$add('children', 100))
-    .then(() => expect(one.$get('children')).to.eventually.deep.equal([100]))
+    .then(() => expect(one.$get('children')).to.eventually.deep.equal([{id: 100}]))
     .then(() => one.$remove('children', 100))
     .then(() => expect(one.$get('children')).to.eventually.deep.equal([]));
   });

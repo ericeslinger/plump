@@ -32,6 +32,14 @@ const testType = {
       childField: 'child_id',
       childType: 'tests',
     },
+    valenceChildren: {
+      type: 'hasMany',
+      relationship: 'children',
+      parentField: 'parent_id',
+      childField: 'child_id',
+      childType: 'tests',
+      extras: ['perm'],
+    },
   },
 };
 
@@ -203,7 +211,21 @@ storageTypes.forEach((store) => {
       return actualStore.write(testType, sampleObject)
       .then((createdObject) => {
         return actualStore.add(testType, createdObject.id, 'children', 100)
-        .then(() => expect(actualStore.read(testType, createdObject.id, 'children')).to.eventually.deep.equal({children: [100]}));
+        .then(() => {
+          return expect(actualStore.read(testType, createdObject.id, 'children'))
+          .to.eventually.deep.equal({children: [{id: 100}]});
+        });
+      });
+    });
+
+    it('can add to a hasMany relationship with extras', () => {
+      return actualStore.write(testType, sampleObject)
+      .then((createdObject) => {
+        return actualStore.add(testType, createdObject.id, 'children', 100, {perm: 1})
+        .then(() => {
+          return expect(actualStore.read(testType, createdObject.id, 'children'))
+          .to.eventually.deep.equal({children: [{id: 100, perm: 1}]});
+        });
       });
     });
 
@@ -211,9 +233,15 @@ storageTypes.forEach((store) => {
       return actualStore.write(testType, sampleObject)
       .then((createdObject) => {
         return actualStore.add(testType, createdObject.id, 'children', 100)
-        .then(() => expect(actualStore.read(testType, createdObject.id, 'children')).to.eventually.deep.equal({children: [100]}))
+        .then(() => {
+          return expect(actualStore.read(testType, createdObject.id, 'children'))
+          .to.eventually.deep.equal({children: [{id: 100}]});
+        })
         .then(() => actualStore.remove(testType, createdObject.id, 'children', 100))
-        .then(() => expect(actualStore.read(testType, createdObject.id, 'children')).to.eventually.deep.equal({children: []}));
+        .then(() => {
+          return expect(actualStore.read(testType, createdObject.id, 'children'))
+          .to.eventually.deep.equal({children: []});
+        });
       });
     });
 
