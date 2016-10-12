@@ -144,14 +144,6 @@ export class Model {
     }
   }
 
-  $has(key) {
-    if (this.constructor.$fields[key].type === 'hasMany') {
-      return this[$guild].has(this.constructor, this.$id, key);
-    } else {
-      return Promise.reject(new Error('Cannot $has only valid on hasMany field'));
-    }
-  }
-
   $teardown() {
     this[$unsubscribe].unsubscribe();
   }
