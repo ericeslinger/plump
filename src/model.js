@@ -40,7 +40,7 @@ export class Model {
           (this.constructor.$fields[fieldName].type === 'array') ||
           (this.constructor.$fields[fieldName].type === 'hasMany')
         ) {
-          this[$store][fieldName] = opts[fieldName].concat();
+          this[$store][fieldName] = (opts[fieldName] || []).concat();
         } else if (this.constructor.$fields[fieldName].type === 'object') {
           this[$store][fieldName] = Object.assign({}, opts[fieldName]);
         } else {
@@ -135,9 +135,8 @@ export class Model {
         id = item.$id;
       }
       if ((typeof id === 'number') && (id > 1)) {
-        return Promise.all(this.constructor.$storage.map((storage) => {
-          return storage.remove(this.constructor, this.$id, key, item);
-        }));
+        delete this[$store][key];
+        return this[$guild].remove(this.constructor, this.$id, key, id);
       } else {
         return Promise.reject(new Error('Invalid item $removed from hasMany'));
       }

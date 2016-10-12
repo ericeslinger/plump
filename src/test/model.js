@@ -7,7 +7,7 @@ import { MemoryStorage } from '../storage/memory';
 import { Guild } from '../guild';
 import { Model } from '../model';
 
-const memstore1 = new MemoryStorage();
+// const memstore1 = new MemoryStorage();
 const memstore2 = new MemoryStorage({terminal: true});
 
 class TestType extends Model {}
@@ -34,7 +34,7 @@ TestType.$fields = {
 };
 
 const guild = new Guild({
-  storage: [memstore1, memstore2],
+  storage: [memstore2],
   types: [TestType],
 });
 
@@ -73,15 +73,28 @@ describe('model', () => {
 
   it('should save updates to datastores');
 
-  it('should lazy-load hasMany lists', () => {
+  it('should show empty hasMany lists as []', () => {
+    const one = new TestType({name: 'frotato'}, guild);
+    return one.$save()
+    .then(() => expect(one.$get('children')).to.eventually.deep.equal([]));
+  });
+
+  it('should add hasMany elements', () => {
     const one = new TestType({name: 'frotato'}, guild);
     return one.$save()
     .then(() => one.$add('children', 100))
     .then(() => expect(one.$get('children')).to.eventually.deep.equal([100]));
   });
 
-  it('should add hasMany elements');
-  it('should remove hasMany elements');
+  it('should remove hasMany elements', () => {
+    const one = new TestType({name: 'frotato'}, guild);
+    return one.$save()
+    .then(() => one.$add('children', 100))
+    .then(() => expect(one.$get('children')).to.eventually.deep.equal([100]))
+    .then(() => one.$remove('children', 100))
+    .then(() => expect(one.$get('children')).to.eventually.deep.equal([]));
+  });
+
   it('should update an inflated version of its hasMany relations');
   it('should optimistically update hasMany changes');
   it('should roll back optimistic changes on error');

@@ -100,6 +100,14 @@ export class Guild {
     }
   }
 
+  remove(type, parentId, relationship, childId) {
+    if (this[$terminal]) {
+      return this[$terminal].remove(type, parentId, relationship, childId);
+    } else {
+      return Promise.reject(new Error('Guild has no terminal store'));
+    }
+  }
+
   forge(t, val) {
     let Type = t;
     if (typeof t === 'string') {
