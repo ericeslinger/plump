@@ -73,7 +73,13 @@ describe('model', () => {
 
   it('should save updates to datastores');
 
-  it('should lazy-load hasMany lists');
+  it('should lazy-load hasMany lists', () => {
+    const one = new TestType({name: 'frotato'}, guild);
+    return one.$save()
+    .then(() => one.$add('children', 100))
+    .then(() => expect(one.$get('children')).to.eventually.deep.equal([100]));
+  });
+
   it('should add hasMany elements');
   it('should remove hasMany elements');
   it('should update an inflated version of its hasMany relations');

@@ -76,7 +76,12 @@ export class MemoryStorage extends Storage {
   }
 
   has(t, id, relationship) {
-    return Promise.resolve((this.$$ensure(t)[`${relationship}:${id}`] || []).concat());
+    const retVal = this.$$ensure(t)[`${relationship}:${id}`];
+    if (retVal) {
+      return Promise.resolve(retVal.concat());
+    } else {
+      return Promise.resolve(null);
+    }
   }
 
   remove(t, id, relationship, childId) {

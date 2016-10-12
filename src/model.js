@@ -56,11 +56,15 @@ export class Model {
     return Promise.resolve()
     .then(() => {
       if (
-        ((this[$loaded] === true) && (key === undefined)) ||
+        ((this[$loaded] === false) && (key === undefined)) ||
         (this[$store][key] === undefined)
       ) {
         if (this.constructor.$fields[key].type === 'hasMany') {
-          return this[$guild].has(this.constructor, this.$id, key);
+          return this[$guild].has(this.constructor, this.$id, key)
+          .then((v) => {
+            // TODO: this is a hack due to copyValuesFrom wanting a JSON obj
+            return {[key]: v};
+          });
         } else {
           return this[$guild].get(this.constructor, this.$id);
         }
@@ -113,9 +117,7 @@ export class Model {
         id = item.$id;
       }
       if ((typeof id === 'number') && (id > 1)) {
-        return Promise.all(this.constructor.$storage.map((storage) => {
-          return storage.add(this.constructor, this.$id, key, item);
-        }));
+        return this[$guild].add(this.constructor, this.$id, key, id);
       } else {
         return Promise.reject(new Error('Invalid item added to hasMany'));
       }

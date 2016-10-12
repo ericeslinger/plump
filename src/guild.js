@@ -74,12 +74,27 @@ export class Guild {
       return thenable.then((v) => {
         return (v !== null) ? v : storage.has(type, id, field);
       });
-    }, Promise.resolve(null));
+    }, Promise.resolve(null))
+    .then((v) => {
+      if ((v === null) && (this[$terminal])) {
+        return this[$terminal].has(type, id, field);
+      } else {
+        return v;
+      }
+    });
   }
 
   save(type, val) {
     if (this[$terminal]) {
       return this[$terminal].write(type, val);
+    } else {
+      return Promise.reject(new Error('Guild has no terminal store'));
+    }
+  }
+
+  add(type, parentId, relationship, childId) {
+    if (this[$terminal]) {
+      return this[$terminal].add(type, parentId, relationship, childId);
     } else {
       return Promise.reject(new Error('Guild has no terminal store'));
     }
