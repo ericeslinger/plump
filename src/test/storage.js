@@ -203,7 +203,7 @@ storageTypes.forEach((store) => {
       return actualStore.write(testType, sampleObject)
       .then((createdObject) => {
         return actualStore.add(testType, createdObject.id, 'children', 100)
-        .then(() => expect(actualStore.has(testType, createdObject.id, 'children')).to.eventually.deep.equal([100]));
+        .then(() => expect(actualStore.read(testType, createdObject.id, 'children')).to.eventually.deep.equal({children: [100]}));
       });
     });
 
@@ -211,9 +211,9 @@ storageTypes.forEach((store) => {
       return actualStore.write(testType, sampleObject)
       .then((createdObject) => {
         return actualStore.add(testType, createdObject.id, 'children', 100)
-        .then(() => expect(actualStore.has(testType, createdObject.id, 'children')).to.eventually.deep.equal([100]))
+        .then(() => expect(actualStore.read(testType, createdObject.id, 'children')).to.eventually.deep.equal({children: [100]}))
         .then(() => actualStore.remove(testType, createdObject.id, 'children', 100))
-        .then(() => expect(actualStore.has(testType, createdObject.id, 'children')).to.eventually.deep.equal([]));
+        .then(() => expect(actualStore.read(testType, createdObject.id, 'children')).to.eventually.deep.equal({children: []}));
       });
     });
 

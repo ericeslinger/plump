@@ -18,10 +18,6 @@ export class MemoryStorage extends Storage {
     return this[$store][t.$name];
   }
 
-  read(t, id) {
-    return Promise.resolve(this.$$ensure(t)[id] || null);
-  }
-
   write(t, v) {
     let id = v[t.$id];
     if (id === undefined) {
@@ -75,13 +71,15 @@ export class MemoryStorage extends Storage {
     return Promise.resolve(relationshipArray.concat());
   }
 
-  has(t, id, relationship) {
-    const retVal = this.$$ensure(t)[`${relationship}:${id}`];
-    if (retVal) {
-      return Promise.resolve(retVal.concat());
-    } else {
-      return Promise.resolve(null);
-    }
+  read(t, id, relationship) {
+    return Promise.resolve()
+    .then(() => {
+      if (relationship && (t.$fields[relationship].type === 'hasMany')) {
+        return {[relationship]: (this.$$ensure(t)[`${relationship}:${id}`] || []).concat()};
+      } else {
+        return Promise.resolve(this.$$ensure(t)[id] || null);
+      }
+    });
   }
 
   remove(t, id, relationship, childId) {

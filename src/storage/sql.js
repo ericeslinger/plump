@@ -73,9 +73,24 @@ export class SQLStorage extends Storage {
     }
   }
 
-  read(t, id) {
-    return this[$knex](t.$name).where({[t.$id]: id}).select()
-    .then((o) => o[0] || null);
+  read(t, id, relationship) {
+    if (relationship && (t.$fields[relationship].type === 'hasMany')) {
+      const fieldInfo = t.$fields[relationship];
+      if (fieldInfo === undefined) {
+        return Promise.reject(new Error(`Unknown field ${relationship}`));
+      } else {
+        return this[$knex](fieldInfo.relationship)
+        .where({
+          [fieldInfo.parentField]: id,
+        }).select(fieldInfo.childField)
+        .then((l) => {
+          return {[relationship]: l.map((v) => v[fieldInfo.childField])};
+        });
+      }
+    } else {
+      return this[$knex](t.$name).where({[t.$id]: id}).select()
+      .then((o) => o[0] || null);
+    }
   }
 
   delete(t, id) {
@@ -102,23 +117,10 @@ export class SQLStorage extends Storage {
             [fieldInfo.parentField]: id,
             [fieldInfo.childField]: childId,
           }).then(() => {
-            return this.has(t, id, relationship);
+            return this.read(t, id, relationship);
           });
         }
       });
-    }
-  }
-
-  has(t, id, relationship) {
-    const fieldInfo = t.$fields[relationship];
-    if (fieldInfo === undefined) {
-      return Promise.reject(new Error(`Unknown field ${relationship}`));
-    } else {
-      return this[$knex](fieldInfo.relationship)
-      .where({
-        [fieldInfo.parentField]: id,
-      }).select(fieldInfo.childField)
-      .then((l) => l.map((v) => v[fieldInfo.childField]));
     }
   }
 
@@ -133,7 +135,7 @@ export class SQLStorage extends Storage {
         [fieldInfo.childField]: childId,
       }).delete()
       .then(() => {
-        return this.has(t, id, relationship);
+        return this.read(t, id, relationship);
       });
     }
   }

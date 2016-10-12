@@ -69,18 +69,24 @@ export class Guild {
     return this[$subscriptions][typeName][id].subscribe(handler);
   }
 
-  has(type, id, field) {
+  get(type, id, field) {
     return this[$storage].reduce((thenable, storage) => {
       return thenable.then((v) => {
-        return (v !== null) ? v : storage.has(type, id, field);
+        if (v !== null) {
+          return v;
+        } else {
+          return storage.read(type, id, field);
+        }
       });
     }, Promise.resolve(null))
     .then((v) => {
       if ((v === null) && (this[$terminal])) {
-        return this[$terminal].has(type, id, field);
+        return this[$terminal].read(type, id, field);
       } else {
         return v;
       }
+    }).then((v) => {
+      return v;
     });
   }
 
@@ -114,24 +120,5 @@ export class Guild {
       Type = this[$types][t];
     }
     return new Type(val, this);
-  }
-
-  get(type, id) {
-    return this[$storage].reduce((thenable, storage) => {
-      return thenable.then((v) => {
-        if (v !== null) {
-          return v;
-        } else {
-          return storage.read(type, id);
-        }
-      });
-    }, Promise.resolve(null))
-    .then((v) => {
-      if ((v === null) && (this[$terminal])) {
-        return this[$terminal].read(type, id);
-      } else {
-        return v;
-      }
-    });
   }
 }

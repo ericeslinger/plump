@@ -55,6 +55,9 @@ export class Storage {
     return this.write(type, value);
   }
 
+  // TODO: write the two-way has/get logic into this method
+  // and provide override hooks for readOne readMany
+
   read(type, id) {
     return Promise.reject(new Error('Read not implemented'));
   }
@@ -73,11 +76,6 @@ export class Storage {
   remove(type, id, relationship, childId) {
     // remove from a hasMany relationship
     return Promise.reject(new Error('remove not implemented'));
-  }
-
-  has(type, id, relationship) {
-    // load a hasMany relationship
-    return Promise.reject(new Error('has not implemented'));
   }
 
   query(q) {

@@ -17,12 +17,23 @@ export class LocalForageStorage extends Storage {
     if (v.id === undefined) {
       return Promise.reject('This service cannot allocate ID values');
     } else {
-      return localforage.setItem(`${t}:${v.id}`, v);
+      return localforage.setItem(`${t.$name}:${v.id}`, v);
     }
   }
 
-  read(t, id) {
-    return localforage.getItem(`${t}:${id}`);
+  // TODO: fix this whole file.
+
+  read(t, id, relationship) {
+    if (relationship) {
+      const retVal = localforage.getItem[`${t.$name}:${relationship}:${id}`];
+      if (retVal) {
+        return Promise.resolve(retVal.concat());
+      } else {
+        return Promise.resolve(null);
+      }
+    } else {
+      return localforage.getItem(`${t}:${id}`);
+    }
   }
 
   update(t, id, v) {

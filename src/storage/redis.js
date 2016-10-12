@@ -108,9 +108,16 @@ export class RedisStorage extends Storage {
     }
   }
 
-  read(t, id) {
-    return this[$redis].getAsync(keyString(t, id))
-    .then((d) => JSON.parse(d));
+  read(t, id, relationship) {
+    if (relationship && (t.$fields[relationship].type === 'hasMany')) {
+      return this[$redis].getAsync(keyString(t, id, relationship))
+      .then((arrayString) => {
+        return {[relationship]: (JSON.parse(arrayString) || [])};
+      });
+    } else {
+      return this[$redis].getAsync(keyString(t, id))
+      .then((d) => JSON.parse(d));
+    }
   }
 
   delete(t, id) {
@@ -129,17 +136,6 @@ export class RedisStorage extends Storage {
       }
       return this[$redis].setAsync(keyString(t, id, relationship), JSON.stringify(relationshipArray))
       .then(() => relationshipArray);
-    });
-  }
-
-  has(t, id, relationship) {
-    return this[$redis].getAsync(keyString(t, id, relationship))
-    .then((arrayString) => {
-      let relationshipArray = JSON.parse(arrayString);
-      if (relationshipArray === null) {
-        relationshipArray = [];
-      }
-      return relationshipArray;
     });
   }
 

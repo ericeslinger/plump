@@ -53,21 +53,18 @@ export class Model {
   // TODO: don't fetch if we $get() something that we already have
 
   $get(key) {
+    // three cases.
+    // key === undefined - fetch all, unless $loaded, but return all.
+    // fields[key] === 'hasMany' - fetch children (perhaps move this decision to store)
+    // otherwise - fetch all, unless $store[key], return $store[key].
+
     return Promise.resolve()
     .then(() => {
       if (
         ((key === undefined) && (this[$loaded] === false)) ||
         (key && (this[$store][key] === undefined))
       ) {
-        if (this.constructor.$fields[key].type === 'hasMany') {
-          return this[$guild].has(this.constructor, this.$id, key)
-          .then((v) => {
-            // TODO: this is a hack due to copyValuesFrom wanting a JSON obj
-            return {[key]: v};
-          });
-        } else {
-          return this[$guild].get(this.constructor, this.$id);
-        }
+        return this[$guild].get(this.constructor, this.$id, key);
       } else {
         return true;
       }
@@ -102,7 +99,11 @@ export class Model {
 
   $set(update = this[$store]) {
     this.$$copyValuesFrom(update); // this is the optimistic update;
-    return this[$guild].save(this.constructor, update);
+    return this[$guild].save(this.constructor, update)
+    .then((updated) => {
+      this.$$copyValuesFrom(updated);
+      return updated;
+    });
     // .then((updates) => {
     //   return updates;
     // });

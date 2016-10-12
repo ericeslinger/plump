@@ -35,18 +35,22 @@ export class RestStorage extends Storage {
     }).then((d) => d.data[t.$name][0]);
   }
 
-  read(t, id) {
-    return this[$axios].get(`/${t.$name}/${id}`)
-    .then((response) => {
-      return response.data[t.$name][0];
-    }).catch((err) => {
-      if (err === 404) {
-        return null;
-      } else {
-        throw err;
-      }
-    });
-
+  read(t, id, relationship) {
+    if (!relationship) {
+      return this[$axios].get(`/${t.$name}/${id}`)
+      .then((response) => {
+        return response.data[t.$name][0];
+      }).catch((err) => {
+        if (err === 404) {
+          return null;
+        } else {
+          throw err;
+        }
+      });
+    } else {
+      return this[$axios].get(`/${t.$name}/${id}/${relationship}`)
+      .then((response) => response.data);
+    }
     // TODO: cacheable read
     // {
     //   const retVal = {
@@ -64,11 +68,6 @@ export class RestStorage extends Storage {
     //   });
     //   return retVal;
     // });
-  }
-
-  has(t, id, relationship) {
-    return this[$axios].get(`/${t.$name}/${id}/${relationship}`)
-    .then((response) => response.data);
   }
 
   add(t, id, relationship, childId) {

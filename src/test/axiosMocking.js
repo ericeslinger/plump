@@ -22,7 +22,7 @@ function mockup(t) {
           return backingStore.read(t, parseInt(matchItem[1], 10));
         } else if (matchSideBase) {
           apiWrap = false;
-          return backingStore.has(t, parseInt(matchSideBase[1], 10), matchSideBase[2]);
+          return backingStore.read(t, parseInt(matchSideBase[1], 10), matchSideBase[2]);
         }
       } else if (config.method === 'post') {
         if (matchBase) {

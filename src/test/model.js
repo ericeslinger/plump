@@ -64,6 +64,13 @@ describe('model', () => {
     return expect(noID.$save()).to.eventually.have.all.keys('name', 'id');
   });
 
+  it('should allow fields to be loaded', () => {
+    const one = new TestType({name: 'potato'}, guild);
+    return one.$save()
+    .then(() => expect(guild.find('tests', one.$id).$get('name')).to.eventually.equal('potato'))
+    .then(() => expect(guild.find('tests', one.$id).$get()).to.eventually.deep.equal({name: 'potato', id: one.$id}));
+  });
+
   it('should optimistically update on field updates', () => {
     const one = new TestType({name: 'potato'}, guild);
     return one.$save()
