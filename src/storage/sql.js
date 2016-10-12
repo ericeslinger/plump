@@ -88,19 +88,19 @@ export class SQLStorage extends Storage {
     if (fieldInfo === undefined) {
       return Promise.reject(new Error(`Unknown field ${relationship}`));
     } else {
-      return this[$knex](fieldInfo.joinTable)
+      return this[$knex](fieldInfo.relationship)
       .where({
-        [fieldInfo.parentColumn]: id,
-        [fieldInfo.childColumn]: childId,
+        [fieldInfo.parentField]: id,
+        [fieldInfo.childField]: childId,
       }).select()
       .then((l) => {
         if (l.length > 0) {
           return Promise.reject(new Error(`Item ${childId} already in ${relationship} of ${t.$name}:${id}`));
         } else {
-          return this[$knex](fieldInfo.joinTable)
+          return this[$knex](fieldInfo.relationship)
           .insert({
-            [fieldInfo.parentColumn]: id,
-            [fieldInfo.childColumn]: childId,
+            [fieldInfo.parentField]: id,
+            [fieldInfo.childField]: childId,
           }).then(() => {
             return this.has(t, id, relationship);
           });
@@ -114,11 +114,11 @@ export class SQLStorage extends Storage {
     if (fieldInfo === undefined) {
       return Promise.reject(new Error(`Unknown field ${relationship}`));
     } else {
-      return this[$knex](fieldInfo.joinTable)
+      return this[$knex](fieldInfo.relationship)
       .where({
-        [fieldInfo.parentColumn]: id,
-      }).select(fieldInfo.childColumn)
-      .then((l) => l.map((v) => v[fieldInfo.childColumn]));
+        [fieldInfo.parentField]: id,
+      }).select(fieldInfo.childField)
+      .then((l) => l.map((v) => v[fieldInfo.childField]));
     }
   }
 
@@ -127,10 +127,10 @@ export class SQLStorage extends Storage {
     if (fieldInfo === undefined) {
       return Promise.reject(new Error(`Unknown field ${relationship}`));
     } else {
-      return this[$knex](fieldInfo.joinTable)
+      return this[$knex](fieldInfo.relationship)
       .where({
-        [fieldInfo.parentColumn]: id,
-        [fieldInfo.childColumn]: childId,
+        [fieldInfo.parentField]: id,
+        [fieldInfo.childField]: childId,
       }).delete()
       .then(() => {
         return this.has(t, id, relationship);

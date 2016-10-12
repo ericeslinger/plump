@@ -27,9 +27,9 @@ const testType = {
     },
     children: {
       type: 'hasMany',
-      joinTable: 'children',
-      parentColumn: 'parent_id',
-      childColumn: 'child_id',
+      relationship: 'children',
+      parentField: 'parent_id',
+      childField: 'child_id',
       childType: 'tests',
     },
   },
