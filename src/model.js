@@ -1,6 +1,7 @@
 import * as Promise from 'bluebird';
 const $store = Symbol('$store');
 const $guild = Symbol('$guild');
+const $loaded = Symbol('$loaded');
 const $unsubscribe = Symbol('$unsubscribe');
 
 // TODO: figure out where error events originate (storage or model)
@@ -10,6 +11,7 @@ export class Model {
   constructor(opts, guild) {
     this[$store] = {};
     this.$$copyValuesFrom(opts || {});
+    this[$loaded] = false;
     if (guild) {
       this.$$connectToGuild(guild);
     }
@@ -51,19 +53,33 @@ export class Model {
   // TODO: don't fetch if we $get() something that we already have
 
   $get(key) {
-    if ((key === undefined) || (this[$store][key] === undefined)) {
-      return this[$guild].get(this.constructor, this.$id)
-      .then((v) => {
+    return Promise.resolve()
+    .then(() => {
+      if (
+        ((this[$loaded] === true) && (key === undefined)) ||
+        (this[$store][key] === undefined)
+      ) {
+        if (this.constructor.$fields[key].type === 'hasMany') {
+          return this[$guild].has(this.constructor, this.$id, key);
+        } else {
+          return this[$guild].get(this.constructor, this.$id);
+        }
+      } else {
+        return true;
+      }
+    }).then((v) => {
+      if (v === true) {
+        return this[$store][key];
+      } else {
         this.$$copyValuesFrom(v);
+        this[$loaded] = true;
         if (key) {
           return this[$store][key];
         } else {
           return Object.assign({}, this[$store]);
         }
-      });
-    } else {
-      return Promise.resolve(this[$store][key]);
-    }
+      }
+    });
   }
 
   $load(opts = {}) {
