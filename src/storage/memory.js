@@ -59,14 +59,18 @@ export class MemoryStorage extends Storage {
     return Promise.resolve(retVal);
   }
 
-  add(t, id, relationship, childId) {
+  add(t, id, relationship, childId, extras) {
     let relationshipArray = this.$$ensure(t)[`${relationship}:${id}`];
     if (relationshipArray === undefined) {
       relationshipArray = [];
       this.$$ensure(t)[`${relationship}:${id}`] = relationshipArray;
     }
     if (relationshipArray.indexOf(childId) < 0) {
-      relationshipArray.push(childId);
+      const newRelationship = {[t.$id]: childId};
+      (t.$fields[relationship].extras || []).forEach((e) => {
+        newRelationship[e] = extras[e];
+      });
+      relationshipArray.push(newRelationship);
     }
     return Promise.resolve(relationshipArray.concat());
   }
@@ -82,10 +86,28 @@ export class MemoryStorage extends Storage {
     });
   }
 
+  modifyRelationship(t, id, relationship, childId, extras) {
+    return Promise.resolve()
+    .then(() => {
+      const relationshipArray = this.$$ensure(t)[`${relationship}:${id}`];
+      const idx = relationshipArray.findIndex((v) => v[t.$id] === childId);
+      if (idx >= 0) {
+        relationshipArray[idx] = Object.assign(
+          {},
+          relationshipArray[idx],
+          extras
+        );
+        return Promise.resolve(relationshipArray.concat());
+      } else {
+        return Promise.reject(new Error(`Item ${childId} not found in ${relationship} of ${t.$name}`));
+      }
+    });
+  }
+
   remove(t, id, relationship, childId) {
     const relationshipArray = this.$$ensure(t)[`${relationship}:${id}`];
     if (relationshipArray !== undefined) {
-      const idx = relationshipArray.indexOf(childId);
+      const idx = relationshipArray.findIndex((v) => v[t.$id] === childId);
       if (idx >= 0) {
         relationshipArray.splice(idx, 1);
         return Promise.resolve(relationshipArray.concat());

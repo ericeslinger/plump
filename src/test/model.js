@@ -33,7 +33,7 @@ TestType.$fields = {
   },
   valenceChildren: {
     type: 'hasMany',
-    relationship: 'children',
+    relationship: 'valence_children',
     parentField: 'parent_id',
     childField: 'child_id',
     childType: 'tests',
@@ -100,7 +100,7 @@ describe('model', () => {
     .then(() => one.$add('children', 100))
     .then(() => {
       return expect(one.$get('children'))
-      .to.eventually.deep.equal([{id: 100}])
+      .to.eventually.deep.equal([{[TestType.$id]: 100}]);
     });
   });
 
@@ -108,9 +108,24 @@ describe('model', () => {
     const one = new TestType({name: 'frotato'}, guild);
     return one.$save()
     .then(() => one.$add('children', 100))
-    .then(() => expect(one.$get('children')).to.eventually.deep.equal([{id: 100}]))
+    .then(() => expect(one.$get('children')).to.eventually.deep.equal([{[TestType.$id]: 100}]))
     .then(() => one.$remove('children', 100))
     .then(() => expect(one.$get('children')).to.eventually.deep.equal([]));
+  });
+
+  it('should include valence in hasMany operations', () => {
+    const one = new TestType({name: 'grotato'}, guild);
+    return one.$save()
+    .then(() => one.$add('valenceChildren', 100, {perm: 1}))
+    .then(() => {
+      return expect(one.$get('valenceChildren'))
+      .to.eventually.deep.equal([{[TestType.$id]: 100, perm: 1}]);
+    })
+    .then(() => one.$modifyRelationship('valenceChildren', 100, {perm: 2}))
+    .then(() => {
+      return expect(one.$get('valenceChildren'))
+      .to.eventually.deep.equal([{[TestType.$id]: 100, perm: 2}]);
+    });
   });
 
   it('should update an inflated version of its hasMany relations');

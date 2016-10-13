@@ -70,12 +70,20 @@ export class RestStorage extends Storage {
     // });
   }
 
-  add(t, id, relationship, childId) {
-    return this[$axios].put(`/${t.$name}/${id}/${relationship}`, childId);
+  add(t, id, relationship, childId, extras) {
+    const newField = {[t.$id]: childId};
+    (t.$fields[relationship].extras || []).forEach((e) => {
+      newField[e] = extras[e];
+    });
+    return this[$axios].put(`/${t.$name}/${id}/${relationship}`, newField);
   }
 
   remove(t, id, relationship, childId) {
     return this[$axios].delete(`/${t.$name}/${id}/${relationship}/${childId}`);
+  }
+
+  modifyRelationship(t, id, relationship, childId, extras) {
+    return this[$axios].patch(`/${t.$name}/${id}/${relationship}/${childId}`, extras);
   }
 
   delete(t, id) {

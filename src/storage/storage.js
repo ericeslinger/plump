@@ -78,6 +78,11 @@ export class Storage {
     return Promise.reject(new Error('remove not implemented'));
   }
 
+  modifyRelationship(type, id, relationship, childId, valence = {}) {
+    // should modify an existing hasMany valence data. Throw if not existing.
+    return Promise.reject(new Error('modifyRelationship not implemented'));
+  }
+
   query(q) {
     // q: {type: string, query: any}
     // q.query is impl defined - a string for sql (raw sql)

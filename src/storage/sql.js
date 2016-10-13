@@ -82,9 +82,19 @@ export class SQLStorage extends Storage {
         return this[$knex](fieldInfo.relationship)
         .where({
           [fieldInfo.parentField]: id,
-        }).select(fieldInfo.childField)
+        }).select([fieldInfo.childField].concat(fieldInfo.extras || []))
         .then((l) => {
-          return {[relationship]: l.map((v) => v[fieldInfo.childField])};
+          return {
+            [relationship]: l.map((v) => {
+              const childData = {
+                [t.$id]: v[fieldInfo.childField],
+              };
+              (fieldInfo.extras || []).forEach((extra) => {
+                childData[extra] = v[extra];
+              });
+              return childData;
+            }),
+          };
         });
       }
     } else {
@@ -98,29 +108,41 @@ export class SQLStorage extends Storage {
     .then((o) => o);
   }
 
-  add(t, id, relationship, childId) {
+  add(t, id, relationship, childId, extras = {}) {
     const fieldInfo = t.$fields[relationship];
     if (fieldInfo === undefined) {
       return Promise.reject(new Error(`Unknown field ${relationship}`));
     } else {
+      const newField = {
+        [fieldInfo.parentField]: id,
+        [fieldInfo.childField]: childId,
+      };
+      (fieldInfo.extras || []).forEach((extra) => {
+        newField[extra] = extras[extra];
+      });
+      return this[$knex](fieldInfo.relationship)
+      .insert(newField).then(() => {
+        return this.read(t, id, relationship);
+      });
+    }
+  }
+
+  modifyRelationship(t, id, relationship, childId, extras = {}) {
+    const fieldInfo = t.$fields[relationship];
+    if (fieldInfo === undefined) {
+      return Promise.reject(new Error(`Unknown field ${relationship}`));
+    } else {
+      const newField = {};
+      fieldInfo.extras.forEach((extra) => {
+        if (extras[extra] !== undefined) {
+          newField[extra] = extras[extra];
+        }
+      });
       return this[$knex](fieldInfo.relationship)
       .where({
         [fieldInfo.parentField]: id,
         [fieldInfo.childField]: childId,
-      }).select()
-      .then((l) => {
-        if (l.length > 0) {
-          return Promise.reject(new Error(`Item ${childId} already in ${relationship} of ${t.$name}:${id}`));
-        } else {
-          return this[$knex](fieldInfo.relationship)
-          .insert({
-            [fieldInfo.parentField]: id,
-            [fieldInfo.childField]: childId,
-          }).then(() => {
-            return this.read(t, id, relationship);
-          });
-        }
-      });
+      }).update(newField);
     }
   }
 

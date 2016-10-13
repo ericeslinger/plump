@@ -34,7 +34,7 @@ const testType = {
     },
     valenceChildren: {
       type: 'hasMany',
-      relationship: 'children',
+      relationship: 'valence_children',
       parentField: 'parent_id',
       childField: 'child_id',
       childType: 'tests',
@@ -133,6 +133,9 @@ const storageTypes = [
             extended jsonb not null default '{}'::jsonb
           );
           CREATE TABLE children (parent_id integer not null, child_id integer not null);
+          CREATE UNIQUE INDEX children_join on children (parent_id, child_id);
+          CREATE TABLE valence_children (parent_id integer not null, child_id integer not null, perm integer not null);
+          CREATE UNIQUE INDEX valence_children_join on valence_children (parent_id, child_id, perm);
         `, {database: 'guild_test'});
       });
     },
@@ -181,7 +184,7 @@ storageTypes.forEach((store) => {
       return actualStore.write(testType, sampleObject)
       .then((createdObject) => {
         return expect(actualStore.read(testType, createdObject.id))
-        .to.eventually.deep.equal(Object.assign({}, sampleObject, {id: createdObject.id}));
+        .to.eventually.deep.equal(Object.assign({}, sampleObject, {[testType.$id]: createdObject.id}));
       });
     });
 
@@ -192,7 +195,11 @@ storageTypes.forEach((store) => {
         return actualStore.write(testType, modObject)
         .then((updatedObject) => {
           return expect(actualStore.read(testType, updatedObject.id))
-          .to.eventually.deep.equal(Object.assign({}, sampleObject, {id: createdObject.id, name: 'carrot'}));
+          .to.eventually.deep.equal(Object.assign(
+            {},
+            sampleObject,
+            {[testType.$id]: createdObject.id, name: 'carrot'}
+          ));
         });
       });
     });
@@ -213,7 +220,7 @@ storageTypes.forEach((store) => {
         return actualStore.add(testType, createdObject.id, 'children', 100)
         .then(() => {
           return expect(actualStore.read(testType, createdObject.id, 'children'))
-          .to.eventually.deep.equal({children: [{id: 100}]});
+          .to.eventually.deep.equal({children: [{[testType.$id]: 100}]});
         });
       });
     });
@@ -221,10 +228,25 @@ storageTypes.forEach((store) => {
     it('can add to a hasMany relationship with extras', () => {
       return actualStore.write(testType, sampleObject)
       .then((createdObject) => {
-        return actualStore.add(testType, createdObject.id, 'children', 100, {perm: 1})
+        return actualStore.add(testType, createdObject.id, 'valenceChildren', 100, {perm: 1})
         .then(() => {
-          return expect(actualStore.read(testType, createdObject.id, 'children'))
-          .to.eventually.deep.equal({children: [{id: 100, perm: 1}]});
+          return expect(actualStore.read(testType, createdObject.id, 'valenceChildren'))
+          .to.eventually.deep.equal({valenceChildren: [{[testType.$id]: 100, perm: 1}]});
+        });
+      });
+    });
+
+    it('can modify valence on a hasMany relationship', () => {
+      return actualStore.write(testType, sampleObject)
+      .then((createdObject) => {
+        return actualStore.add(testType, createdObject.id, 'valenceChildren', 100, {perm: 1})
+        .then(() => {
+          return expect(actualStore.read(testType, createdObject.id, 'valenceChildren'))
+          .to.eventually.deep.equal({valenceChildren: [{[testType.$id]: 100, perm: 1}]});
+        }).then(() => actualStore.modifyRelationship(testType, createdObject.id, 'valenceChildren', 100, {perm: 2}))
+        .then(() => {
+          return expect(actualStore.read(testType, createdObject.id, 'valenceChildren'))
+          .to.eventually.deep.equal({valenceChildren: [{[testType.$id]: 100, perm: 2}]});
         });
       });
     });
@@ -235,7 +257,7 @@ storageTypes.forEach((store) => {
         return actualStore.add(testType, createdObject.id, 'children', 100)
         .then(() => {
           return expect(actualStore.read(testType, createdObject.id, 'children'))
-          .to.eventually.deep.equal({children: [{id: 100}]});
+          .to.eventually.deep.equal({children: [{[testType.$id]: 100}]});
         })
         .then(() => actualStore.remove(testType, createdObject.id, 'children', 100))
         .then(() => {

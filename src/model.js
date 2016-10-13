@@ -109,7 +109,7 @@ export class Model {
     // });
   }
 
-  $add(key, item) {
+  $add(key, item, extras) {
     if (this.constructor.$fields[key].type === 'hasMany') {
       let id = 0;
       if (typeof item === 'number') {
@@ -118,7 +118,26 @@ export class Model {
         id = item.$id;
       }
       if ((typeof id === 'number') && (id > 1)) {
-        return this[$guild].add(this.constructor, this.$id, key, id);
+        return this[$guild].add(this.constructor, this.$id, key, id, extras);
+      } else {
+        return Promise.reject(new Error('Invalid item added to hasMany'));
+      }
+    } else {
+      return Promise.reject(new Error('Cannot $add except to hasMany field'));
+    }
+  }
+
+  $modifyRelationship(key, item, extras) {
+    if (this.constructor.$fields[key].type === 'hasMany') {
+      let id = 0;
+      if (typeof item === 'number') {
+        id = item;
+      } else {
+        id = item.$id;
+      }
+      if ((typeof id === 'number') && (id > 1)) {
+        delete this[$store][key];
+        return this[$guild].modifyRelationship(this.constructor, this.$id, key, id, extras);
       } else {
         return Promise.reject(new Error('Invalid item added to hasMany'));
       }

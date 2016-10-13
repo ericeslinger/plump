@@ -124,18 +124,42 @@ export class RedisStorage extends Storage {
     return this[$redis].delAsync(keyString(t, id));
   }
 
-  add(t, id, relationship, childId) {
+  add(t, id, relationship, childId, extras) {
     return this[$redis].getAsync(keyString(t, id, relationship))
     .then((arrayString) => {
       let relationshipArray = JSON.parse(arrayString);
       if (relationshipArray === null) {
         relationshipArray = [];
       }
-      if (relationshipArray.indexOf(childId) < 0) {
-        relationshipArray.push(childId);
-      }
+      const newRelationship = {[t.$id]: childId};
+      (t.$fields[relationship].extras || []).forEach((e) => {
+        newRelationship[e] = extras[e];
+      });
+      relationshipArray.push(newRelationship);
       return this[$redis].setAsync(keyString(t, id, relationship), JSON.stringify(relationshipArray))
       .then(() => relationshipArray);
+    });
+  }
+
+  modifyRelationship(t, id, relationship, childId, extras) {
+    return this[$redis].getAsync(keyString(t, id, relationship))
+    .then((arrayString) => {
+      let relationshipArray = JSON.parse(arrayString);
+      if (relationshipArray === null) {
+        relationshipArray = [];
+      }
+      const idx = relationshipArray.findIndex((v) => v[t.$id] === childId);
+      if (idx >= 0) {
+        relationshipArray[idx] = Object.assign(
+          {},
+          relationshipArray[idx],
+          extras
+        );
+        return this[$redis].setAsync(keyString(t, id, relationship), JSON.stringify(relationshipArray))
+        .then(() => relationshipArray);
+      } else {
+        return Promise.reject(new Error(`Item ${childId} not found in ${relationship} of ${t.$name}`));
+      }
     });
   }
 
@@ -146,7 +170,7 @@ export class RedisStorage extends Storage {
       if (relationshipArray === null) {
         relationshipArray = [];
       }
-      const idx = relationshipArray.indexOf(childId);
+      const idx = relationshipArray.findIndex((v) => v[t.$id] === childId);
       if (idx >= 0) {
         relationshipArray.splice(idx, 1);
         return this[$redis].setAsync(keyString(t, id, relationship), JSON.stringify(relationshipArray))

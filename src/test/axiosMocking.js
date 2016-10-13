@@ -38,11 +38,25 @@ function mockup(t) {
               {[t.$id]: parseInt(matchItem[1], 10)}
             )
           );
+        } else if (matchSideItem) {
+          return backingStore.modifyRelationship(
+            t,
+            parseInt(matchSideItem[1], 10),
+            matchSideItem[2],
+            parseInt(matchSideItem[3], 10),
+            JSON.parse(config.data)
+          );
         }
       } else if (config.method === 'put') {
         if (matchSideBase) {
           apiWrap = false;
-          return backingStore.add(t, parseInt(matchSideBase[1], 10), matchSideBase[2], JSON.parse(config.data));
+          return backingStore.add(
+            t,
+            parseInt(matchSideBase[1], 10),
+            matchSideBase[2],
+            JSON.parse(config.data)[t.$id],
+            JSON.parse(config.data)
+          );
         }
       } else if (config.method === 'delete') {
         if (matchItem) {

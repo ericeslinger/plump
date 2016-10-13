@@ -69,19 +69,19 @@ export class Guild {
     return this[$subscriptions][typeName][id].subscribe(handler);
   }
 
-  get(type, id, field) {
+  get(...args) {
     return this[$storage].reduce((thenable, storage) => {
       return thenable.then((v) => {
         if (v !== null) {
           return v;
         } else {
-          return storage.read(type, id, field);
+          return storage.read(...args);
         }
       });
     }, Promise.resolve(null))
     .then((v) => {
       if ((v === null) && (this[$terminal])) {
-        return this[$terminal].read(type, id, field);
+        return this[$terminal].read(...args);
       } else {
         return v;
       }
@@ -90,25 +90,33 @@ export class Guild {
     });
   }
 
-  save(type, val) {
+  save(...args) {
     if (this[$terminal]) {
-      return this[$terminal].write(type, val);
+      return this[$terminal].write(...args);
     } else {
       return Promise.reject(new Error('Guild has no terminal store'));
     }
   }
 
-  add(type, parentId, relationship, childId) {
+  add(...args) {
     if (this[$terminal]) {
-      return this[$terminal].add(type, parentId, relationship, childId);
+      return this[$terminal].add(...args);
     } else {
       return Promise.reject(new Error('Guild has no terminal store'));
     }
   }
 
-  remove(type, parentId, relationship, childId) {
+  modifyRelationship(...args) {
     if (this[$terminal]) {
-      return this[$terminal].remove(type, parentId, relationship, childId);
+      return this[$terminal].modifyRelationship(...args);
+    } else {
+      return Promise.reject(new Error('Guild has no terminal store'));
+    }
+  }
+
+  remove(...args) {
+    if (this[$terminal]) {
+      return this[$terminal].remove(...args);
     } else {
       return Promise.reject(new Error('Guild has no terminal store'));
     }
