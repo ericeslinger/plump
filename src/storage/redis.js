@@ -14,7 +14,7 @@ function keyString(t, id, relationship) {
   if (relationship === undefined) {
     return `${t.$name}:store:${id}`;
   } else {
-    return `${t.$name}:${relationship}:${id}`;
+    return `${t.$fields[relationship].relationship.$name}:${relationship}:${id}`;
   }
 }
 
@@ -108,16 +108,16 @@ export class RedisStorage extends Storage {
     }
   }
 
-  read(t, id, relationship) {
-    if (relationship && (t.$fields[relationship].type === 'hasMany')) {
-      return this[$redis].getAsync(keyString(t, id, relationship))
-      .then((arrayString) => {
-        return {[relationship]: (JSON.parse(arrayString) || [])};
-      });
-    } else {
-      return this[$redis].getAsync(keyString(t, id))
-      .then((d) => JSON.parse(d));
-    }
+  readOne(t, id) {
+    return this[$redis].getAsync(keyString(t, id))
+    .then((d) => JSON.parse(d));
+  }
+
+  readMany(t, id, relationship) {
+    return this[$redis].getAsync(keyString(t, id, relationship))
+    .then((arrayString) => {
+      return {[relationship]: (JSON.parse(arrayString) || [])};
+    });
   }
 
   delete(t, id) {
@@ -125,37 +125,56 @@ export class RedisStorage extends Storage {
   }
 
   add(t, id, relationship, childId, extras) {
-    return this[$redis].getAsync(keyString(t, id, relationship))
+    const Rel = t.$fields[relationship].relationship;
+    const thisKeyString = keyString(t, id, relationship);
+    const otherKeyString = keyString(Rel.otherType(relationship).type, childId, Rel.other(relationship));
+    return this[$redis].getAsync(thisKeyString)
     .then((arrayString) => {
       let relationshipArray = JSON.parse(arrayString);
       if (relationshipArray === null) {
         relationshipArray = [];
       }
-      const newRelationship = {[t.$id]: childId};
-      (t.$fields[relationship].extras || []).forEach((e) => {
+      const newRelationship = {
+        [Rel.$sides[relationship].field]: childId,
+        [Rel.otherType(relationship).field]: id,
+      };
+      (t.$fields[relationship].relationship.$extras || []).forEach((e) => {
         newRelationship[e] = extras[e];
       });
       relationshipArray.push(newRelationship);
-      return this[$redis].setAsync(keyString(t, id, relationship), JSON.stringify(relationshipArray))
+      return Promise.all([
+        this[$redis].setAsync(thisKeyString, JSON.stringify(relationshipArray)),
+        this[$redis].setAsync(otherKeyString, JSON.stringify(relationshipArray)),
+      ])
       .then(() => relationshipArray);
     });
   }
 
   modifyRelationship(t, id, relationship, childId, extras) {
-    return this[$redis].getAsync(keyString(t, id, relationship))
+    const Rel = t.$fields[relationship].relationship;
+    const thisKeyString = keyString(t, id, relationship);
+    const otherKeyString = keyString(Rel.otherType(relationship).type, childId, Rel.other(relationship));
+    const otherField = Rel.$sides[relationship];
+    const selfField = Rel.otherType(relationship);
+    return this[$redis].getAsync(thisKeyString)
     .then((arrayString) => {
       let relationshipArray = JSON.parse(arrayString);
       if (relationshipArray === null) {
         relationshipArray = [];
       }
-      const idx = relationshipArray.findIndex((v) => v[t.$id] === childId);
+      const idx = relationshipArray.findIndex((v) => {
+        return (v[selfField.field] === id) && (v[otherField.field] === childId);
+      });
       if (idx >= 0) {
         relationshipArray[idx] = Object.assign(
           {},
           relationshipArray[idx],
           extras
         );
-        return this[$redis].setAsync(keyString(t, id, relationship), JSON.stringify(relationshipArray))
+        return Promise.all([
+          this[$redis].setAsync(thisKeyString, JSON.stringify(relationshipArray)),
+          this[$redis].setAsync(otherKeyString, JSON.stringify(relationshipArray)),
+        ])
         .then(() => relationshipArray);
       } else {
         return Promise.reject(new Error(`Item ${childId} not found in ${relationship} of ${t.$name}`));
@@ -164,16 +183,26 @@ export class RedisStorage extends Storage {
   }
 
   remove(t, id, relationship, childId) {
-    return this[$redis].getAsync(keyString(t, id, relationship))
+    const Rel = t.$fields[relationship].relationship;
+    const thisKeyString = keyString(t, id, relationship);
+    const otherKeyString = keyString(Rel.otherType(relationship).type, childId, Rel.other(relationship));
+    const otherField = Rel.$sides[relationship];
+    const selfField = Rel.otherType(relationship);
+    return this[$redis].getAsync(thisKeyString)
     .then((arrayString) => {
       let relationshipArray = JSON.parse(arrayString);
       if (relationshipArray === null) {
         relationshipArray = [];
       }
-      const idx = relationshipArray.findIndex((v) => v[t.$id] === childId);
+      const idx = relationshipArray.findIndex((v) => {
+        return (v[selfField.field] === id) && (v[otherField.field] === childId);
+      });
       if (idx >= 0) {
         relationshipArray.splice(idx, 1);
-        return this[$redis].setAsync(keyString(t, id, relationship), JSON.stringify(relationshipArray))
+        return Promise.all([
+          this[$redis].setAsync(thisKeyString, JSON.stringify(relationshipArray)),
+          this[$redis].setAsync(otherKeyString, JSON.stringify(relationshipArray)),
+        ])
         .then(() => relationshipArray);
       } else {
         return Promise.reject(new Error(`Item ${childId} not found in ${relationship} of ${t.$name}`));

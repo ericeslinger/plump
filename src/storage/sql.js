@@ -73,34 +73,22 @@ export class SQLStorage extends Storage {
     }
   }
 
-  read(t, id, relationship) {
-    if (relationship && (t.$fields[relationship].type === 'hasMany')) {
-      const fieldInfo = t.$fields[relationship];
-      if (fieldInfo === undefined) {
-        return Promise.reject(new Error(`Unknown field ${relationship}`));
-      } else {
-        return this[$knex](fieldInfo.relationship)
-        .where({
-          [fieldInfo.parentField]: id,
-        }).select([fieldInfo.childField].concat(fieldInfo.extras || []))
-        .then((l) => {
-          return {
-            [relationship]: l.map((v) => {
-              const childData = {
-                [t.$id]: v[fieldInfo.childField],
-              };
-              (fieldInfo.extras || []).forEach((extra) => {
-                childData[extra] = v[extra];
-              });
-              return childData;
-            }),
-          };
-        });
-      }
-    } else {
-      return this[$knex](t.$name).where({[t.$id]: id}).select()
-      .then((o) => o[0] || null);
-    }
+  readOne(t, id) {
+    return this[$knex](t.$name).where({[t.$id]: id}).select()
+    .then((o) => o[0] || null);
+  }
+
+  readMany(t, id, relationship) {
+    const Rel = t.$fields[relationship].relationship;
+    return this[$knex](Rel.$name)
+    .where({
+      [Rel.otherType(relationship).field]: id,
+    }).select()
+    .then((l) => {
+      return {
+        [relationship]: l,
+      };
+    });
   }
 
   delete(t, id) {
@@ -109,57 +97,45 @@ export class SQLStorage extends Storage {
   }
 
   add(t, id, relationship, childId, extras = {}) {
-    const fieldInfo = t.$fields[relationship];
-    if (fieldInfo === undefined) {
-      return Promise.reject(new Error(`Unknown field ${relationship}`));
-    } else {
-      const newField = {
-        [fieldInfo.parentField]: id,
-        [fieldInfo.childField]: childId,
-      };
-      (fieldInfo.extras || []).forEach((extra) => {
-        newField[extra] = extras[extra];
-      });
-      return this[$knex](fieldInfo.relationship)
-      .insert(newField).then(() => {
-        return this.read(t, id, relationship);
-      });
-    }
+    const Rel = t.$fields[relationship].relationship;
+    const newField = {
+      [Rel.$sides[relationship].field]: childId,
+      [Rel.otherType(relationship).field]: id,
+    };
+    (Rel.$extras || []).forEach((extra) => {
+      newField[extra] = extras[extra];
+    });
+    return this[$knex](Rel.$name)
+    .insert(newField).then(() => {
+      return this.readMany(t, id, relationship);
+    });
   }
 
   modifyRelationship(t, id, relationship, childId, extras = {}) {
-    const fieldInfo = t.$fields[relationship];
-    if (fieldInfo === undefined) {
-      return Promise.reject(new Error(`Unknown field ${relationship}`));
-    } else {
-      const newField = {};
-      fieldInfo.extras.forEach((extra) => {
-        if (extras[extra] !== undefined) {
-          newField[extra] = extras[extra];
-        }
-      });
-      return this[$knex](fieldInfo.relationship)
-      .where({
-        [fieldInfo.parentField]: id,
-        [fieldInfo.childField]: childId,
-      }).update(newField);
-    }
+    const Rel = t.$fields[relationship].relationship;
+    const newField = {};
+    Rel.$extras.forEach((extra) => {
+      if (extras[extra] !== undefined) {
+        newField[extra] = extras[extra];
+      }
+    });
+    return this[$knex](Rel.$name)
+    .where({
+      [Rel.$sides[relationship].field]: childId,
+      [Rel.otherType(relationship).field]: id,
+    }).update(newField);
   }
 
   remove(t, id, relationship, childId) {
-    const fieldInfo = t.$fields[relationship];
-    if (fieldInfo === undefined) {
-      return Promise.reject(new Error(`Unknown field ${relationship}`));
-    } else {
-      return this[$knex](fieldInfo.relationship)
-      .where({
-        [fieldInfo.parentField]: id,
-        [fieldInfo.childField]: childId,
-      }).delete()
-      .then(() => {
-        return this.read(t, id, relationship);
-      });
-    }
+    const Rel = t.$fields[relationship].relationship;
+    return this[$knex](Rel.$name)
+    .where({
+      [Rel.$sides[relationship].field]: childId,
+      [Rel.otherType(relationship).field]: id,
+    }).delete()
+    .then(() => {
+      return this.readMany(t, id, relationship);
+    });
   }
 
   query(q) {

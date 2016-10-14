@@ -96,7 +96,6 @@ describe('model', () => {
     return one.$save()
     .then(() => one.$add('valenceChildren', 100, {perm: 1}))
     .then(() => one.$get('valenceChildren'))
-    .then((vx) => console.log(vx))
     .then(() => {
       return expect(one.$get('valenceChildren'))
       .to.eventually.deep.equal([{

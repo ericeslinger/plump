@@ -35,44 +35,30 @@ export class RestStorage extends Storage {
     }).then((d) => d.data[t.$name][0]);
   }
 
-  read(t, id, relationship) {
-    if (!relationship) {
-      return this[$axios].get(`/${t.$name}/${id}`)
-      .then((response) => {
-        return response.data[t.$name][0];
-      }).catch((err) => {
-        if (err === 404) {
-          return null;
-        } else {
-          throw err;
-        }
-      });
-    } else {
-      return this[$axios].get(`/${t.$name}/${id}/${relationship}`)
-      .then((response) => response.data);
-    }
-    // TODO: cacheable read
-    // {
-    //   const retVal = {
-    //     main: ,
-    //     extra: [],
-    //   };
-    //   Object.keys(response.data).forEach((typeName) => {
-    //     retVal.extra.concat(response.data[typeName].map((d) => {
-    //       if ((d[t.$id] === id) && (typeName === t.$name)) {
-    //         return null;
-    //       } else {
-    //         return Object.assign({}, {typeName}, d);
-    //       }
-    //     }).filter((v) => v !== null));
-    //   });
-    //   return retVal;
-    // });
+  readOne(t, id) {
+    return this[$axios].get(`/${t.$name}/${id}`)
+    .then((response) => {
+      return response.data[t.$name][0];
+    }).catch((err) => {
+      if (err === 404) {
+        return null;
+      } else {
+        throw err;
+      }
+    });
+  }
+
+  readMany(t, id, relationship) {
+    return this[$axios].get(`/${t.$name}/${id}/${relationship}`)
+    .then((response) => response.data);
   }
 
   add(t, id, relationship, childId, extras) {
-    const newField = {[t.$id]: childId};
-    (t.$fields[relationship].extras || []).forEach((e) => {
+    const Rel = t.$fields[relationship].relationship;
+    const otherField = Rel.$sides[relationship];
+    const selfField = Rel.otherType(relationship);
+    const newField = {[selfField.field]: id, [otherField.field]: childId};
+    (Rel.$extras || []).forEach((e) => {
       newField[e] = extras[e];
     });
     return this[$axios].put(`/${t.$name}/${id}/${relationship}`, newField);
