@@ -58,8 +58,20 @@ export class Storage {
   // TODO: write the two-way has/get logic into this method
   // and provide override hooks for readOne readMany
 
-  read(type, id) {
-    return Promise.reject(new Error('Read not implemented'));
+  read(type, id, key) {
+    if (key && type.$fields[key].type === 'hasMany') {
+      return this.readMany(type, id, key);
+    } else {
+      return this.readOne(type, id);
+    }
+  }
+
+  readOne(type, id) {
+    return Promise.reject(new Error('ReadOne not implemented'));
+  }
+
+  readMany(type, id, key) {
+    return Promise.reject(new Error('ReadMany not implemented'));
   }
 
   delete(type, id) {

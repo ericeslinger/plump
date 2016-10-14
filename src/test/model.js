@@ -5,41 +5,10 @@ import chaiAsPromised from 'chai-as-promised';
 
 import { MemoryStorage } from '../storage/memory';
 import { Guild } from '../guild';
-import { Model } from '../model';
+import { TestType } from './testType';
 
 // const memstore1 = new MemoryStorage();
 const memstore2 = new MemoryStorage({terminal: true});
-
-class TestType extends Model {}
-
-TestType.$name = 'tests';
-TestType.$id = 'id';
-TestType.$fields = {
-  id: {
-    type: 'number',
-  },
-  name: {
-    type: 'string',
-  },
-  extended: {
-    type: 'object',
-  },
-  children: {
-    type: 'hasMany',
-    relationship: 'children',
-    parentField: 'parent_id',
-    childField: 'child_id',
-    childType: 'tests',
-  },
-  valenceChildren: {
-    type: 'hasMany',
-    relationship: 'valence_children',
-    parentField: 'parent_id',
-    childField: 'child_id',
-    childType: 'tests',
-    extras: ['perm'],
-  },
-};
 
 const guild = new Guild({
   storage: [memstore2],
@@ -100,7 +69,10 @@ describe('model', () => {
     .then(() => one.$add('children', 100))
     .then(() => {
       return expect(one.$get('children'))
-      .to.eventually.deep.equal([{[TestType.$id]: 100}]);
+      .to.eventually.deep.equal([{
+        child_id: 100,
+        parent_id: one.$id,
+      }]);
     });
   });
 
@@ -108,7 +80,13 @@ describe('model', () => {
     const one = new TestType({name: 'frotato'}, guild);
     return one.$save()
     .then(() => one.$add('children', 100))
-    .then(() => expect(one.$get('children')).to.eventually.deep.equal([{[TestType.$id]: 100}]))
+    .then(() => {
+      return expect(one.$get('children'))
+      .to.eventually.deep.equal([{
+        child_id: 100,
+        parent_id: one.$id,
+      }]);
+    })
     .then(() => one.$remove('children', 100))
     .then(() => expect(one.$get('children')).to.eventually.deep.equal([]));
   });
@@ -117,14 +95,24 @@ describe('model', () => {
     const one = new TestType({name: 'grotato'}, guild);
     return one.$save()
     .then(() => one.$add('valenceChildren', 100, {perm: 1}))
+    .then(() => one.$get('valenceChildren'))
+    .then((vx) => console.log(vx))
     .then(() => {
       return expect(one.$get('valenceChildren'))
-      .to.eventually.deep.equal([{[TestType.$id]: 100, perm: 1}]);
+      .to.eventually.deep.equal([{
+        child_id: 100,
+        parent_id: one.$id,
+        perm: 1,
+      }]);
     })
     .then(() => one.$modifyRelationship('valenceChildren', 100, {perm: 2}))
     .then(() => {
       return expect(one.$get('valenceChildren'))
-      .to.eventually.deep.equal([{[TestType.$id]: 100, perm: 2}]);
+      .to.eventually.deep.equal([{
+        child_id: 100,
+        parent_id: one.$id,
+        perm: 2,
+      }]);
     });
   });
 
