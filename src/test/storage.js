@@ -140,8 +140,7 @@ const sampleObject = {
 chai.use(chaiAsPromised);
 const expect = chai.expect;
 
-storageTypes.forEach((store, idx) => {
-  if (idx !== 3) return;
+storageTypes.forEach((store) => {
   describe(store.name, () => {
     let actualStore;
     before(() => {
