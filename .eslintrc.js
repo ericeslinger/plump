@@ -358,12 +358,11 @@ module.exports = {
     // disallow comments inline after code
     'no-inline-comments': 0,
     // disallow if as the only statement in an else block
-    'no-lonely-if': 0,
+    'no-lonely-if': 2,
     // disallow mixed spaces and tabs for indentation
     'no-mixed-spaces-and-tabs': 2,
     // disallow multiple empty lines and only one newline at the end
-    // 'no-multiple-empty-lines': [2, { 'max': 2, 'maxEOF': 1 }],
-    'no-multiple-empty-lines': 0,
+    'no-multiple-empty-lines': [2, { 'max': 2, 'maxEOF': 1 }],
     // disallow nested ternary expressions
     'no-nested-ternary': 2,
     // disallow use of the Object constructor
@@ -384,7 +383,7 @@ module.exports = {
     // http://eslint.org/docs/rules/no-whitespace-before-property
     'no-whitespace-before-property': 2,
     // require padding inside curly braces
-    'object-curly-spacing': 'off',
+    'object-curly-spacing': [2, 'always'],
     // allow just one var statement per function
     'one-var': [2, 'never'],
     // require a newline around variable declaration
