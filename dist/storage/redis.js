@@ -166,8 +166,8 @@ var RedisStorage = exports.RedisStorage = function (_Storage) {
       var _this3 = this;
 
       var Rel = t.$fields[relationshipTitle];
-      var otherFieldName = Rel.field;
-      var selfFieldName = Rel.relationship.otherField(otherFieldName);
+      var selfFieldName = Rel.field;
+      var otherFieldName = Rel.relationship.otherField(selfFieldName);
       var thisKeyString = keyString(t.$name, id, relationshipTitle);
       var otherKeyString = keyString(Rel.relationship.$sides[otherFieldName], childId, Rel.otherside);
       return Promise.all([this[$redis].getAsync(thisKeyString), this[$redis].getAsync(otherKeyString)]).then(function (_ref2) {
@@ -210,8 +210,8 @@ var RedisStorage = exports.RedisStorage = function (_Storage) {
       var _this4 = this;
 
       var Rel = t.$fields[relationshipTitle];
-      var otherFieldName = Rel.field;
-      var selfFieldName = Rel.relationship.otherField(otherFieldName);
+      var selfFieldName = Rel.field;
+      var otherFieldName = Rel.relationship.otherField(selfFieldName);
       var thisKeyString = keyString(t.$name, id, relationshipTitle);
       var otherKeyString = keyString(Rel.relationship.$sides[otherFieldName], childId, Rel.otherside);
       return Promise.all([this[$redis].getAsync(thisKeyString), this[$redis].getAsync(otherKeyString)]).then(function (_ref4) {
@@ -246,8 +246,8 @@ var RedisStorage = exports.RedisStorage = function (_Storage) {
       var _this5 = this;
 
       var Rel = t.$fields[relationshipTitle];
-      var otherFieldName = Rel.field;
-      var selfFieldName = Rel.relationship.otherField(otherFieldName);
+      var selfFieldName = Rel.field;
+      var otherFieldName = Rel.relationship.otherField(selfFieldName);
       var thisKeyString = keyString(t.$name, id, relationshipTitle);
       var otherKeyString = keyString(Rel.relationship.$sides[otherFieldName], childId, Rel.otherside);
       return Promise.all([this[$redis].getAsync(thisKeyString), this[$redis].getAsync(otherKeyString)]).then(function (_ref6) {

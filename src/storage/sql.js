@@ -80,8 +80,8 @@ export class SQLStorage extends Storage {
 
   readMany(t, id, relationshipTitle) {
     const Rel = t.$fields[relationshipTitle]; // {$fields}
-    const otherFieldName = Rel.field;
-    const selfFieldName = Rel.relationship.otherField(otherFieldName);
+    const selfFieldName = Rel.field;
+    const otherFieldName = Rel.relationship.otherField(selfFieldName);
     const toSelect = [otherFieldName, selfFieldName].concat(Rel.relationship.$extras || []);
     return this[$knex](Rel.relationship.$name)
     .where({
@@ -101,8 +101,8 @@ export class SQLStorage extends Storage {
 
   add(t, id, relationshipTitle, childId, extras = {}) {
     const Rel = t.$fields[relationshipTitle]; // {$fields}
-    const otherFieldName = Rel.field;
-    const selfFieldName = Rel.relationship.otherField(otherFieldName);
+    const selfFieldName = Rel.field;
+    const otherFieldName = Rel.relationship.otherField(selfFieldName);
     const newField = {
       [otherFieldName]: childId,
       [selfFieldName]: id,
@@ -118,8 +118,8 @@ export class SQLStorage extends Storage {
 
   modifyRelationship(t, id, relationshipTitle, childId, extras = {}) {
     const Rel = t.$fields[relationshipTitle]; // {$fields}
-    const otherFieldName = Rel.field;
-    const selfFieldName = Rel.relationship.otherField(otherFieldName);
+    const selfFieldName = Rel.field;
+    const otherFieldName = Rel.relationship.otherField(selfFieldName);
     const newField = {};
     Rel.relationship.$extras.forEach((extra) => {
       if (extras[extra] !== undefined) {
@@ -135,8 +135,8 @@ export class SQLStorage extends Storage {
 
   remove(t, id, relationshipTitle, childId) {
     const Rel = t.$fields[relationshipTitle]; // {$fields}
-    const otherFieldName = Rel.field;
-    const selfFieldName = Rel.relationship.otherField(otherFieldName);
+    const selfFieldName = Rel.field;
+    const otherFieldName = Rel.relationship.otherField(selfFieldName);
     return this[$knex](Rel.relationship.$name)
     .where({
       [otherFieldName]: childId,

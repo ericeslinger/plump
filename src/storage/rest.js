@@ -53,8 +53,8 @@ export class RestStorage extends Storage {
 
   add(t, id, relationshipTitle, childId, extras) {
     const Rel = t.$fields[relationshipTitle];
-    const otherFieldName = Rel.field;
-    const selfFieldName = Rel.relationship.otherField(otherFieldName);
+    const selfFieldName = Rel.field;
+    const otherFieldName = Rel.relationship.otherField(selfFieldName);
     const newField = { [selfFieldName]: id, [otherFieldName]: childId };
     (Rel.relationship.$extras || []).forEach((e) => {
       newField[e] = extras[e];

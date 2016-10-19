@@ -116,8 +116,8 @@ var SQLStorage = exports.SQLStorage = function (_Storage) {
     key: 'readMany',
     value: function readMany(t, id, relationshipTitle) {
       var Rel = t.$fields[relationshipTitle]; // {$fields}
-      var otherFieldName = Rel.field;
-      var selfFieldName = Rel.relationship.otherField(otherFieldName);
+      var selfFieldName = Rel.field;
+      var otherFieldName = Rel.relationship.otherField(selfFieldName);
       var toSelect = [otherFieldName, selfFieldName].concat(Rel.relationship.$extras || []);
       return this[$knex](Rel.relationship.$name).where(_defineProperty({}, selfFieldName, id)).select(toSelect).then(function (l) {
         return _defineProperty({}, relationshipTitle, l);
@@ -139,8 +139,8 @@ var SQLStorage = exports.SQLStorage = function (_Storage) {
       var extras = arguments.length <= 4 || arguments[4] === undefined ? {} : arguments[4];
 
       var Rel = t.$fields[relationshipTitle]; // {$fields}
-      var otherFieldName = Rel.field;
-      var selfFieldName = Rel.relationship.otherField(otherFieldName);
+      var selfFieldName = Rel.field;
+      var otherFieldName = Rel.relationship.otherField(selfFieldName);
       var newField = (_newField = {}, _defineProperty(_newField, otherFieldName, childId), _defineProperty(_newField, selfFieldName, id), _newField);
       (Rel.relationship.$extras || []).forEach(function (extra) {
         newField[extra] = extras[extra];
@@ -157,8 +157,8 @@ var SQLStorage = exports.SQLStorage = function (_Storage) {
       var extras = arguments.length <= 4 || arguments[4] === undefined ? {} : arguments[4];
 
       var Rel = t.$fields[relationshipTitle]; // {$fields}
-      var otherFieldName = Rel.field;
-      var selfFieldName = Rel.relationship.otherField(otherFieldName);
+      var selfFieldName = Rel.field;
+      var otherFieldName = Rel.relationship.otherField(selfFieldName);
       var newField = {};
       Rel.relationship.$extras.forEach(function (extra) {
         if (extras[extra] !== undefined) {
@@ -174,8 +174,8 @@ var SQLStorage = exports.SQLStorage = function (_Storage) {
           _this4 = this;
 
       var Rel = t.$fields[relationshipTitle]; // {$fields}
-      var otherFieldName = Rel.field;
-      var selfFieldName = Rel.relationship.otherField(otherFieldName);
+      var selfFieldName = Rel.field;
+      var otherFieldName = Rel.relationship.otherField(selfFieldName);
       return this[$knex](Rel.relationship.$name).where((_$knex$where6 = {}, _defineProperty(_$knex$where6, otherFieldName, childId), _defineProperty(_$knex$where6, selfFieldName, id), _$knex$where6)).delete().then(function () {
         return _this4.readMany(t, id, relationshipTitle);
       });

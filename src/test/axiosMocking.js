@@ -50,11 +50,14 @@ function mockup(t) {
       } else if (config.method === 'put') {
         if (matchSideBase) {
           apiWrap = false;
+          const Rel = t.$fields[matchSideBase[2]];
+          const selfFieldName = Rel.field;
+          const otherFieldName = Rel.relationship.otherField(selfFieldName);
           return backingStore.add(
             t,
             parseInt(matchSideBase[1], 10),
             matchSideBase[2],
-            JSON.parse(config.data)[t.$fields[matchSideBase[2]].field],
+            JSON.parse(config.data)[otherFieldName],
             JSON.parse(config.data)
           );
         }

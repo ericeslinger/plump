@@ -122,8 +122,8 @@ export class RedisStorage extends Storage {
 
   add(t, id, relationshipTitle, childId, extras) {
     const Rel = t.$fields[relationshipTitle];
-    const otherFieldName = Rel.field;
-    const selfFieldName = Rel.relationship.otherField(otherFieldName);
+    const selfFieldName = Rel.field;
+    const otherFieldName = Rel.relationship.otherField(selfFieldName);
     const thisKeyString = keyString(t.$name, id, relationshipTitle);
     const otherKeyString = keyString(Rel.relationship.$sides[otherFieldName], childId, Rel.otherside);
     return Promise.all([
@@ -156,8 +156,8 @@ export class RedisStorage extends Storage {
 
   modifyRelationship(t, id, relationshipTitle, childId, extras) {
     const Rel = t.$fields[relationshipTitle];
-    const otherFieldName = Rel.field;
-    const selfFieldName = Rel.relationship.otherField(otherFieldName);
+    const selfFieldName = Rel.field;
+    const otherFieldName = Rel.relationship.otherField(selfFieldName);
     const thisKeyString = keyString(t.$name, id, relationshipTitle);
     const otherKeyString = keyString(Rel.relationship.$sides[otherFieldName], childId, Rel.otherside);
     return Promise.all([
@@ -194,8 +194,8 @@ export class RedisStorage extends Storage {
 
   remove(t, id, relationshipTitle, childId) {
     const Rel = t.$fields[relationshipTitle];
-    const otherFieldName = Rel.field;
-    const selfFieldName = Rel.relationship.otherField(otherFieldName);
+    const selfFieldName = Rel.field;
+    const otherFieldName = Rel.relationship.otherField(selfFieldName);
     const thisKeyString = keyString(t.$name, id, relationshipTitle);
     const otherKeyString = keyString(Rel.relationship.$sides[otherFieldName], childId, Rel.otherside);
     return Promise.all([

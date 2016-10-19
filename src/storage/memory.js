@@ -79,8 +79,8 @@ export class MemoryStorage extends Storage {
   add(t, id, relationshipTitle, childId, extras) {
     const Rel = t.$fields[relationshipTitle]; // {$fields}
     const relationshipArray = this.$$getRelationship(t.$name, id, relationshipTitle);
-    const otherFieldName = Rel.field;
-    const selfFieldName = Rel.relationship.otherField(otherFieldName);
+    const selfFieldName = Rel.field;
+    const otherFieldName = Rel.relationship.otherField(selfFieldName);
     const idx = relationshipArray.findIndex((v) => {
       return ((v[selfFieldName] === id) && (v[otherFieldName] === childId));
     });
@@ -109,8 +109,8 @@ export class MemoryStorage extends Storage {
   modifyRelationship(t, id, relationshipTitle, childId, extras) {
     const Rel = t.$fields[relationshipTitle]; // {$fields}
     const relationshipArray = this.$$getRelationship(t.$name, id, relationshipTitle);
-    const otherFieldName = Rel.field;
-    const selfFieldName = Rel.relationship.otherField(otherFieldName);
+    const selfFieldName = Rel.field;
+    const otherFieldName = Rel.relationship.otherField(selfFieldName);
     const idx = relationshipArray.findIndex((v) => {
       return ((v[selfFieldName] === id) && (v[otherFieldName] === childId));
     });
@@ -129,8 +129,8 @@ export class MemoryStorage extends Storage {
   remove(t, id, relationshipTitle, childId) {
     const Rel = t.$fields[relationshipTitle]; // {$fields}
     const relationshipArray = this.$$getRelationship(t.$name, id, relationshipTitle);
-    const otherFieldName = Rel.field;
-    const selfFieldName = Rel.relationship.otherField(otherFieldName);
+    const selfFieldName = Rel.field;
+    const otherFieldName = Rel.relationship.otherField(selfFieldName);
     const idx = relationshipArray.findIndex((v) => {
       return ((v[selfFieldName] === id) && (v[otherFieldName] === childId));
     });

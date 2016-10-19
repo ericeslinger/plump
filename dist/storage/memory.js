@@ -116,8 +116,8 @@ var MemoryStorage = exports.MemoryStorage = function (_Storage) {
 
       var Rel = t.$fields[relationshipTitle]; // {$fields}
       var relationshipArray = this.$$getRelationship(t.$name, id, relationshipTitle);
-      var otherFieldName = Rel.field;
-      var selfFieldName = Rel.relationship.otherField(otherFieldName);
+      var selfFieldName = Rel.field;
+      var otherFieldName = Rel.relationship.otherField(selfFieldName);
       var idx = relationshipArray.findIndex(function (v) {
         return v[selfFieldName] === id && v[otherFieldName] === childId;
       });
@@ -153,8 +153,8 @@ var MemoryStorage = exports.MemoryStorage = function (_Storage) {
     value: function modifyRelationship(t, id, relationshipTitle, childId, extras) {
       var Rel = t.$fields[relationshipTitle]; // {$fields}
       var relationshipArray = this.$$getRelationship(t.$name, id, relationshipTitle);
-      var otherFieldName = Rel.field;
-      var selfFieldName = Rel.relationship.otherField(otherFieldName);
+      var selfFieldName = Rel.field;
+      var otherFieldName = Rel.relationship.otherField(selfFieldName);
       var idx = relationshipArray.findIndex(function (v) {
         return v[selfFieldName] === id && v[otherFieldName] === childId;
       });
@@ -170,8 +170,8 @@ var MemoryStorage = exports.MemoryStorage = function (_Storage) {
     value: function remove(t, id, relationshipTitle, childId) {
       var Rel = t.$fields[relationshipTitle]; // {$fields}
       var relationshipArray = this.$$getRelationship(t.$name, id, relationshipTitle);
-      var otherFieldName = Rel.field;
-      var selfFieldName = Rel.relationship.otherField(otherFieldName);
+      var selfFieldName = Rel.field;
+      var otherFieldName = Rel.relationship.otherField(selfFieldName);
       var idx = relationshipArray.findIndex(function (v) {
         return v[selfFieldName] === id && v[otherFieldName] === childId;
       });

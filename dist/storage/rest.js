@@ -94,8 +94,8 @@ var RestStorage = exports.RestStorage = function (_Storage) {
       var _newField;
 
       var Rel = t.$fields[relationshipTitle];
-      var otherFieldName = Rel.field;
-      var selfFieldName = Rel.relationship.otherField(otherFieldName);
+      var selfFieldName = Rel.field;
+      var otherFieldName = Rel.relationship.otherField(selfFieldName);
       var newField = (_newField = {}, _defineProperty(_newField, selfFieldName, id), _defineProperty(_newField, otherFieldName, childId), _newField);
       (Rel.relationship.$extras || []).forEach(function (e) {
         newField[e] = extras[e];

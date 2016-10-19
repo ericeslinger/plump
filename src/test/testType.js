@@ -35,25 +35,25 @@ TestType.$fields = {
   children: {
     type: 'hasMany',
     relationship: Children,
-    field: 'child_id',
+    field: 'parent_id',
     otherSide: 'parents',
   },
   valenceChildren: {
     type: 'hasMany',
     relationship: ValenceChildren,
-    field: 'child_id',
+    field: 'parent_id',
     otherSide: 'valenceParents',
   },
   parents: {
     type: 'hasMany',
     relationship: Children,
-    field: 'parent_id',
+    field: 'child_id',
     otherSide: 'children',
   },
   valenceParents: {
     type: 'hasMany',
     relationship: ValenceChildren,
-    field: 'parent_id',
+    field: 'child_id',
     otherSide: 'valenceChildren',
   },
 };

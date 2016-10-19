@@ -54,7 +54,10 @@ function mockup(t) {
       } else if (config.method === 'put') {
         if (matchSideBase) {
           apiWrap = false;
-          return backingStore.add(t, parseInt(matchSideBase[1], 10), matchSideBase[2], JSON.parse(config.data)[t.$fields[matchSideBase[2]].field], JSON.parse(config.data));
+          var Rel = t.$fields[matchSideBase[2]];
+          var selfFieldName = Rel.field;
+          var otherFieldName = Rel.relationship.otherField(selfFieldName);
+          return backingStore.add(t, parseInt(matchSideBase[1], 10), matchSideBase[2], JSON.parse(config.data)[otherFieldName], JSON.parse(config.data));
         }
       } else if (config.method === 'delete') {
         if (matchItem) {

@@ -189,9 +189,24 @@ storageTypes.forEach(function (store) {
     it('can add to a hasMany relationship', function () {
       return actualStore.write(_testType.TestType, sampleObject).then(function (createdObject) {
         return actualStore.add(_testType.TestType, createdObject.id, 'children', 100).then(function () {
+          return actualStore.add(_testType.TestType, createdObject.id, 'children', 101);
+        }).then(function () {
+          return actualStore.add(_testType.TestType, createdObject.id, 'children', 102);
+        }).then(function () {
+          return actualStore.add(_testType.TestType, createdObject.id, 'children', 103);
+        }).then(function () {
           return expect(actualStore.read(_testType.TestType, createdObject.id, 'children')).to.eventually.deep.equal({
             children: [{
               child_id: 100,
+              parent_id: createdObject.id
+            }, {
+              child_id: 101,
+              parent_id: createdObject.id
+            }, {
+              child_id: 102,
+              parent_id: createdObject.id
+            }, {
+              child_id: 103,
               parent_id: createdObject.id
             }]
           });
