@@ -82,10 +82,11 @@ export class SQLStorage extends Storage {
     const Rel = t.$fields[relationshipTitle]; // {$fields}
     const otherFieldName = Rel.field;
     const selfFieldName = Rel.relationship.otherField(otherFieldName);
+    const toSelect = [otherFieldName, selfFieldName].concat(Rel.relationship.$extras || []);
     return this[$knex](Rel.relationship.$name)
     .where({
       [selfFieldName]: id,
-    }).select()
+    }).select(toSelect)
     .then((l) => {
       return {
         [relationshipTitle]: l,

@@ -118,7 +118,8 @@ var SQLStorage = exports.SQLStorage = function (_Storage) {
       var Rel = t.$fields[relationshipTitle]; // {$fields}
       var otherFieldName = Rel.field;
       var selfFieldName = Rel.relationship.otherField(otherFieldName);
-      return this[$knex](Rel.relationship.$name).where(_defineProperty({}, selfFieldName, id)).select().then(function (l) {
+      var toSelect = [otherFieldName, selfFieldName].concat(Rel.relationship.$extras || []);
+      return this[$knex](Rel.relationship.$name).where(_defineProperty({}, selfFieldName, id)).select(toSelect).then(function (l) {
         return _defineProperty({}, relationshipTitle, l);
       });
     }
