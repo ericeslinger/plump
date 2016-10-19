@@ -1,12 +1,6 @@
-const $guild = Symbol('$guild');
-
 export class Relationship {
   constructor(guild) {
-    this[$guild] = guild;
-  }
-
-  findOthers(item) {
-
+    this.guild = guild;
   }
 
 }
