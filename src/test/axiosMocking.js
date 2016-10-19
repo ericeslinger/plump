@@ -2,10 +2,10 @@ import { MemoryStorage } from '../storage/memory';
 import * as axios from 'axios';
 import Promise from 'bluebird';
 
-const backingStore = new MemoryStorage({terminal: true});
+const backingStore = new MemoryStorage({ terminal: true });
 
 function mockup(t) {
-  const mockedAxios = axios.create({baseURL: ''});
+  const mockedAxios = axios.create({ baseURL: '' });
   mockedAxios.defaults.adapter = (config) => {
     let apiWrap = true; // should we wrap in standard JSON API at the bottom
     return Promise.resolve().then(() => {
@@ -35,7 +35,7 @@ function mockup(t) {
             Object.assign(
               {},
               JSON.parse(config.data),
-              {[t.$id]: parseInt(matchItem[1], 10)}
+              { [t.$id]: parseInt(matchItem[1], 10) }
             )
           );
         } else if (matchSideItem) {
@@ -50,13 +50,11 @@ function mockup(t) {
       } else if (config.method === 'put') {
         if (matchSideBase) {
           apiWrap = false;
-          const Rel = t.$fields[matchSideBase[2]].relationship;
-          const otherField = Rel.$sides[matchSideBase[2]];
           return backingStore.add(
             t,
             parseInt(matchSideBase[1], 10),
             matchSideBase[2],
-            JSON.parse(config.data)[otherField.field],
+            JSON.parse(config.data)[t.$fields[matchSideBase[2]].field],
             JSON.parse(config.data)
           );
         }

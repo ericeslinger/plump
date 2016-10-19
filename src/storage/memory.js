@@ -1,5 +1,5 @@
 import * as Promise from 'bluebird';
-import {Storage} from './storage';
+import { Storage } from './storage';
 
 const $store = Symbol('$store');
 
@@ -11,33 +11,25 @@ export class MemoryStorage extends Storage {
     this.maxId = 0;
   }
 
-  $$ensure(t, id) {
-    if (this[$store][t.$name] === undefined) {
-      this[$store][t.$name] = {};
+  $$ensure(typeName, id) {
+    if (this[$store][typeName] === undefined) {
+      this[$store][typeName] = {};
     }
     if (id !== undefined) {
-      if (this[$store][t.$name][id] === undefined) {
-        this[$store][t.$name][id] = {};
+      if (this[$store][typeName][id] === undefined) {
+        this[$store][typeName][id] = {};
       }
-      return this[$store][t.$name][id];
+      return this[$store][typeName][id];
     } else {
-      return this[$store][t.$name];
+      return this[$store][typeName];
     }
   }
 
-  $$getRelationship(t, parentId, relationship, childId) {
-    if (this.$$ensure(t, parentId)[relationship] === undefined) {
-      const newAry = [];
-      this.$$ensure(t, parentId)[relationship] = newAry;
+  $$getRelationship(typeName, parentId, relationshipTitle) {
+    if (this.$$ensure(typeName, parentId)[relationshipTitle] === undefined) {
+      this.$$ensure(typeName, parentId)[relationshipTitle] = [];
     }
-    if (childId !== undefined) {
-      const theOther = t.$fields[relationship].relationship.otherType(relationship);
-      const childObj = this.$$ensure(theOther, childId);
-      if (childObj[theOther.$name] === undefined) {
-        childObj[theOther.$name] = this.$$ensure(t, parentId)[relationship];
-      }
-    }
-    return this.$$ensure(t, parentId)[relationship];
+    return this.$$ensure(typeName, parentId)[relationshipTitle];
   }
 
   write(t, v) {
@@ -49,13 +41,13 @@ export class MemoryStorage extends Storage {
         throw new Error('Cannot create new content in a non-terminal store');
       }
     }
-    let updateObject = this.$$ensure(t)[id];
+    let updateObject = this.$$ensure(t.$name)[id];
     if (updateObject === undefined) {
       this.maxId = id;
       updateObject = {
         [t.$id]: id,
       };
-      this.$$ensure(t)[id] = updateObject;
+      this.$$ensure(t.$name)[id] = updateObject;
     }
     Object.keys(t.$fields).forEach((fieldName) => {
       if (v[fieldName] !== undefined) {
@@ -76,67 +68,85 @@ export class MemoryStorage extends Storage {
   }
 
   delete(t, id) {
-    const retVal = this.$$ensure(t)[id];
-    delete this.$$ensure(t)[id];
+    const retVal = this.$$ensure(t.$name)[id];
+    delete this.$$ensure(t.$name)[id];
     return Promise.resolve(retVal);
   }
 
-  add(t, id, relationship, childId, extras) {
-    const Rel = t.$fields[relationship].relationship;
-    const relationshipArray = this.$$getRelationship(t, id, relationship, childId);
-    // store: {parent_id: 1, child_id: 2, perm: 3}
-    const otherField = Rel.$sides[relationship];
-    const selfField = Rel.otherType(relationship);
-    const idx = relationshipArray.findIndex((v) => ((v[selfField.field] === id) && (v[otherField.field] === childId)));
+  // relationshipTitle === name of relationship from type perspective, eg., model.relationship
+  // relationshipName === absolute name of relationship, e.g., the table name of the join table
+
+  add(t, id, relationshipTitle, childId, extras) {
+    const Rel = t.$fields[relationshipTitle]; // {$fields}
+    const relationshipArray = this.$$getRelationship(t.$name, id, relationshipTitle);
+    const otherFieldName = Rel.field;
+    const selfFieldName = Rel.relationship.otherField(otherFieldName);
+    const idx = relationshipArray.findIndex((v) => {
+      return ((v[selfFieldName] === id) && (v[otherFieldName] === childId));
+    });
     if (idx < 0) {
-      const newRelationship = {[selfField.field]: id, [otherField.field]: childId};
-      (Rel.$extras || []).forEach((e) => {
+      const newRelationship = { [selfFieldName]: id, [otherFieldName]: childId };
+      (Rel.relationship.$extras || []).forEach((e) => {
         newRelationship[e] = extras[e];
       });
       relationshipArray.push(newRelationship);
+      const otherTypeName = Rel.relationship.$sides[otherFieldName];
+      const otherSide = Rel.otherSide;
+      const otherRelationshipArray = this.$$getRelationship(otherTypeName, childId, otherSide);
+      otherRelationshipArray.push(newRelationship);
     }
     return Promise.resolve(relationshipArray.concat());
   }
 
   readOne(t, id) {
-    return Promise.resolve(this.$$ensure(t)[id] || null);
+    return Promise.resolve(this.$$ensure(t.$name)[id] || null);
   }
 
   readMany(t, id, relationship) {
-    return Promise.resolve({[relationship]: (this.$$getRelationship(t, id, relationship) || []).concat()});
+    return Promise.resolve({ [relationship]: (this.$$getRelationship(t.$name, id, relationship) || []).concat() });
   }
 
-  modifyRelationship(t, id, relationship, childId, extras) {
-    const Rel = t.$fields[relationship].relationship;
-    const relationshipArray = this.$$getRelationship(t, id, relationship, childId);
-    // store: {parent_id: 1, child_id: 2, perm: 3}
-    const otherField = Rel.$sides[relationship];
-    const selfField = Rel.otherType(relationship);
-    const idx = relationshipArray.findIndex((v) => ((v[selfField.field] === id) && (v[otherField.field] === childId)));
+  modifyRelationship(t, id, relationshipTitle, childId, extras) {
+    const Rel = t.$fields[relationshipTitle]; // {$fields}
+    const relationshipArray = this.$$getRelationship(t.$name, id, relationshipTitle);
+    const otherFieldName = Rel.field;
+    const selfFieldName = Rel.relationship.otherField(otherFieldName);
+    const idx = relationshipArray.findIndex((v) => {
+      return ((v[selfFieldName] === id) && (v[otherFieldName] === childId));
+    });
     if (idx >= 0) {
       relationshipArray[idx] = Object.assign(
-        {},
         relationshipArray[idx],
         extras
       );
       return Promise.resolve(relationshipArray.concat());
     } else {
-      return Promise.reject(new Error(`Item ${childId} not found in ${relationship} of ${t.$name}`));
+      return Promise.reject(new Error(`Item ${childId} not found in ${relationshipTitle} of ${t.$name}`));
     }
   }
 
-  remove(t, id, relationship, childId) {
-    const Rel = t.$fields[relationship].relationship;
-    const relationshipArray = this.$$getRelationship(t, id, relationship, childId);
-    // store: {parent_id: 1, child_id: 2, perm: 3}
-    const otherField = Rel.$sides[relationship];
-    const selfField = Rel.otherType(relationship);
-    const idx = relationshipArray.findIndex((v) => ((v[selfField.field] === id) && (v[otherField.field] === childId)));
+
+  remove(t, id, relationshipTitle, childId) {
+    const Rel = t.$fields[relationshipTitle]; // {$fields}
+    const relationshipArray = this.$$getRelationship(t.$name, id, relationshipTitle);
+    const otherFieldName = Rel.field;
+    const selfFieldName = Rel.relationship.otherField(otherFieldName);
+    const idx = relationshipArray.findIndex((v) => {
+      return ((v[selfFieldName] === id) && (v[otherFieldName] === childId));
+    });
     if (idx >= 0) {
+      const otherTypeName = Rel.relationship.$sides[otherFieldName];
+      const otherSide = Rel.otherSide;
+      const otherRelationshipArray = this.$$getRelationship(otherTypeName, childId, otherSide);
+      const otherSideIdx = otherRelationshipArray.findIndex((v) => {
+        return ((v[selfFieldName] === id) && (v[otherFieldName] === childId));
+      });
       relationshipArray.splice(idx, 1);
+      otherRelationshipArray.splice(otherSideIdx, 1);
       return Promise.resolve(relationshipArray.concat());
+    } else {
+      return Promise.reject(new Error(`Item ${childId} not found in ${relationshipTitle} of ${t.$name}`));
     }
-    return Promise.reject(new Error(`Item ${childId} not found in ${relationship} of ${t.$name}`));
   }
 
   query() {

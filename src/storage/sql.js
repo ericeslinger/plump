@@ -1,6 +1,6 @@
 import * as Promise from 'bluebird';
 import knex from 'knex';
-import {Storage} from './storage';
+import { Storage } from './storage';
 const $knex = Symbol('$knex');
 
 export class SQLStorage extends Storage {
@@ -64,7 +64,7 @@ export class SQLStorage extends Storage {
         return this.read(t, createdId[0]);
       });
     } else if (id !== undefined) {
-      return this[$knex](t.$name).where({[t.$id]: id}).update(updateObject)
+      return this[$knex](t.$name).where({ [t.$id]: id }).update(updateObject)
       .then(() => {
         return this.read(t, id);
       });
@@ -74,67 +74,75 @@ export class SQLStorage extends Storage {
   }
 
   readOne(t, id) {
-    return this[$knex](t.$name).where({[t.$id]: id}).select()
+    return this[$knex](t.$name).where({ [t.$id]: id }).select()
     .then((o) => o[0] || null);
   }
 
-  readMany(t, id, relationship) {
-    const Rel = t.$fields[relationship].relationship;
-    return this[$knex](Rel.$name)
+  readMany(t, id, relationshipTitle) {
+    const Rel = t.$fields[relationshipTitle]; // {$fields}
+    const otherFieldName = Rel.field;
+    const selfFieldName = Rel.relationship.otherField(otherFieldName);
+    return this[$knex](Rel.relationship.$name)
     .where({
-      [Rel.otherType(relationship).field]: id,
+      [selfFieldName]: id,
     }).select()
     .then((l) => {
       return {
-        [relationship]: l,
+        [relationshipTitle]: l,
       };
     });
   }
 
   delete(t, id) {
-    return this[$knex](t.$name).where({[t.$id]: id}).delete()
+    return this[$knex](t.$name).where({ [t.$id]: id }).delete()
     .then((o) => o);
   }
 
-  add(t, id, relationship, childId, extras = {}) {
-    const Rel = t.$fields[relationship].relationship;
+  add(t, id, relationshipTitle, childId, extras = {}) {
+    const Rel = t.$fields[relationshipTitle]; // {$fields}
+    const otherFieldName = Rel.field;
+    const selfFieldName = Rel.relationship.otherField(otherFieldName);
     const newField = {
-      [Rel.$sides[relationship].field]: childId,
-      [Rel.otherType(relationship).field]: id,
+      [otherFieldName]: childId,
+      [selfFieldName]: id,
     };
-    (Rel.$extras || []).forEach((extra) => {
+    (Rel.relationship.$extras || []).forEach((extra) => {
       newField[extra] = extras[extra];
     });
-    return this[$knex](Rel.$name)
+    return this[$knex](Rel.relationship.$name)
     .insert(newField).then(() => {
-      return this.readMany(t, id, relationship);
+      return this.readMany(t, id, relationshipTitle);
     });
   }
 
-  modifyRelationship(t, id, relationship, childId, extras = {}) {
-    const Rel = t.$fields[relationship].relationship;
+  modifyRelationship(t, id, relationshipTitle, childId, extras = {}) {
+    const Rel = t.$fields[relationshipTitle]; // {$fields}
+    const otherFieldName = Rel.field;
+    const selfFieldName = Rel.relationship.otherField(otherFieldName);
     const newField = {};
-    Rel.$extras.forEach((extra) => {
+    Rel.relationship.$extras.forEach((extra) => {
       if (extras[extra] !== undefined) {
         newField[extra] = extras[extra];
       }
     });
-    return this[$knex](Rel.$name)
+    return this[$knex](Rel.relationship.$name)
     .where({
-      [Rel.$sides[relationship].field]: childId,
-      [Rel.otherType(relationship).field]: id,
+      [otherFieldName]: childId,
+      [selfFieldName]: id,
     }).update(newField);
   }
 
-  remove(t, id, relationship, childId) {
-    const Rel = t.$fields[relationship].relationship;
-    return this[$knex](Rel.$name)
+  remove(t, id, relationshipTitle, childId) {
+    const Rel = t.$fields[relationshipTitle]; // {$fields}
+    const otherFieldName = Rel.field;
+    const selfFieldName = Rel.relationship.otherField(otherFieldName);
+    return this[$knex](Rel.relationship.$name)
     .where({
-      [Rel.$sides[relationship].field]: childId,
-      [Rel.otherType(relationship).field]: id,
+      [otherFieldName]: childId,
+      [selfFieldName]: id,
     }).delete()
     .then(() => {
-      return this.readMany(t, id, relationship);
+      return this.readMany(t, id, relationshipTitle);
     });
   }
 

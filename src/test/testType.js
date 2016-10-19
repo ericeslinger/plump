@@ -7,26 +7,14 @@ export class Children extends Relationship {}
 export class ValenceChildren extends Relationship {}
 
 Children.$sides = {
-  parents: {
-    type: TestType,
-    field: 'parent_id',
-  },
-  children: {
-    type: TestType,
-    field: 'child_id',
-  },
+  parent_id: 'tests',
+  child_id: 'tests',
 };
 Children.$name = 'children';
 
 ValenceChildren.$sides = {
-  valenceParents: {
-    type: TestType,
-    field: 'parent_id',
-  },
-  valenceChildren: {
-    type: TestType,
-    field: 'child_id',
-  },
+  parent_id: 'tests',
+  child_id: 'tests',
 };
 
 ValenceChildren.$extras = ['perm'];
@@ -47,17 +35,25 @@ TestType.$fields = {
   children: {
     type: 'hasMany',
     relationship: Children,
+    field: 'child_id',
+    otherSide: 'parents',
   },
   valenceChildren: {
     type: 'hasMany',
     relationship: ValenceChildren,
+    field: 'child_id',
+    otherSide: 'valenceParents',
   },
   parents: {
     type: 'hasMany',
     relationship: Children,
+    field: 'parent_id',
+    otherSide: 'children',
   },
   valenceParents: {
     type: 'hasMany',
     relationship: ValenceChildren,
+    field: 'parent_id',
+    otherSide: 'valenceChildren',
   },
 };

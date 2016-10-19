@@ -1,5 +1,5 @@
 import * as axios from 'axios';
-import {Storage} from './storage';
+import { Storage } from './storage';
 
 const $axios = Symbol('$axios');
 import Promise from 'bluebird';
@@ -25,12 +25,10 @@ export class RestStorage extends Storage {
     .then(() => {
       if (v[t.$id]) {
         return this[$axios].patch(`/${t.$name}/${v[t.$id]}`, v);
+      } else if (this.terminal) {
+        return this[$axios].post(`/${t.$name}`, v);
       } else {
-        if (this.terminal) {
-          return this[$axios].post(`/${t.$name}`, v);
-        } else {
-          throw new Error('Cannot create new content in a non-terminal store');
-        }
+        throw new Error('Cannot create new content in a non-terminal store');
       }
     }).then((d) => d.data[t.$name][0]);
   }
@@ -53,15 +51,15 @@ export class RestStorage extends Storage {
     .then((response) => response.data);
   }
 
-  add(t, id, relationship, childId, extras) {
-    const Rel = t.$fields[relationship].relationship;
-    const otherField = Rel.$sides[relationship];
-    const selfField = Rel.otherType(relationship);
-    const newField = {[selfField.field]: id, [otherField.field]: childId};
-    (Rel.$extras || []).forEach((e) => {
+  add(t, id, relationshipTitle, childId, extras) {
+    const Rel = t.$fields[relationshipTitle];
+    const otherFieldName = Rel.field;
+    const selfFieldName = Rel.relationship.otherField(otherFieldName);
+    const newField = { [selfFieldName]: id, [otherFieldName]: childId };
+    (Rel.relationship.$extras || []).forEach((e) => {
       newField[e] = extras[e];
     });
-    return this[$axios].put(`/${t.$name}/${id}/${relationship}`, newField);
+    return this[$axios].put(`/${t.$name}/${id}/${relationshipTitle}`, newField);
   }
 
   remove(t, id, relationship, childId) {
@@ -80,7 +78,7 @@ export class RestStorage extends Storage {
   }
 
   query(q) {
-    return this[$axios].get(`/${q.type}`, {params: q.query})
+    return this[$axios].get(`/${q.type}`, { params: q.query })
     .then((response) => {
       return response.data;
     });

@@ -68,6 +68,7 @@ const storageTypes = [
       return flushRedis();
     },
     after: (driver) => {
+      // return Promise.resolve().then(() => driver.teardown());
       return flushRedis().then(() => driver.teardown());
     },
   },
@@ -106,7 +107,7 @@ const storageTypes = [
           CREATE UNIQUE INDEX children_join on children (parent_id, child_id);
           CREATE TABLE valence_children (parent_id integer not null, child_id integer not null, perm integer not null);
           CREATE UNIQUE INDEX valence_children_join on valence_children (parent_id, child_id, perm);
-        `, {database: 'guild_test'});
+        `, { database: 'guild_test' });
       });
     },
     after: (driver) => {
@@ -125,7 +126,7 @@ const storageTypes = [
   {
     name: 'memory',
     constructor: MemoryStorage,
-    opts: {terminal: true},
+    opts: { terminal: true },
   },
 ];
 
@@ -154,21 +155,21 @@ storageTypes.forEach((store) => {
       return actualStore.write(TestType, sampleObject)
       .then((createdObject) => {
         return expect(actualStore.read(TestType, createdObject.id))
-        .to.eventually.deep.equal(Object.assign({}, sampleObject, {[TestType.$id]: createdObject.id}));
+        .to.eventually.deep.equal(Object.assign({}, sampleObject, { [TestType.$id]: createdObject.id }));
       });
     });
 
     it('allows objects to be stored by id', () => {
       return actualStore.write(TestType, sampleObject)
       .then((createdObject) => {
-        const modObject = Object.assign({}, createdObject, {name: 'carrot'});
+        const modObject = Object.assign({}, createdObject, { name: 'carrot' });
         return actualStore.write(TestType, modObject)
         .then((updatedObject) => {
           return expect(actualStore.read(TestType, updatedObject.id))
           .to.eventually.deep.equal(Object.assign(
             {},
             sampleObject,
-            {[TestType.$id]: createdObject.id, name: 'carrot'}
+            { [TestType.$id]: createdObject.id, name: 'carrot' }
           ));
         });
       });
@@ -203,7 +204,7 @@ storageTypes.forEach((store) => {
     it('can add to a hasMany relationship with extras', () => {
       return actualStore.write(TestType, sampleObject)
       .then((createdObject) => {
-        return actualStore.add(TestType, createdObject.id, 'valenceChildren', 100, {perm: 1})
+        return actualStore.add(TestType, createdObject.id, 'valenceChildren', 100, { perm: 1 })
         .then(() => {
           return expect(actualStore.read(TestType, createdObject.id, 'valenceChildren'))
           .to.eventually.deep.equal({
@@ -220,7 +221,7 @@ storageTypes.forEach((store) => {
     it('can modify valence on a hasMany relationship', () => {
       return actualStore.write(TestType, sampleObject)
       .then((createdObject) => {
-        return actualStore.add(TestType, createdObject.id, 'valenceChildren', 100, {perm: 1})
+        return actualStore.add(TestType, createdObject.id, 'valenceChildren', 100, { perm: 1 })
         .then(() => {
           return expect(actualStore.read(TestType, createdObject.id, 'valenceChildren'))
           .to.eventually.deep.equal({
@@ -230,7 +231,7 @@ storageTypes.forEach((store) => {
               perm: 1,
             }],
           });
-        }).then(() => actualStore.modifyRelationship(TestType, createdObject.id, 'valenceChildren', 100, {perm: 2}))
+        }).then(() => actualStore.modifyRelationship(TestType, createdObject.id, 'valenceChildren', 100, { perm: 2 }))
         .then(() => {
           return expect(actualStore.read(TestType, createdObject.id, 'valenceChildren'))
           .to.eventually.deep.equal({
@@ -260,7 +261,7 @@ storageTypes.forEach((store) => {
         .then(() => actualStore.remove(TestType, createdObject.id, 'children', 100))
         .then(() => {
           return expect(actualStore.read(TestType, createdObject.id, 'children'))
-          .to.eventually.deep.equal({children: []});
+          .to.eventually.deep.equal({ children: [] });
         });
       });
     });
