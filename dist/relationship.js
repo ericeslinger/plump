@@ -20,17 +20,17 @@ var Relationship = exports.Relationship = function () {
   _createClass(Relationship, [{
     key: "$add",
     value: function $add(childId, extras) {
-      return this.guild.add(this.model.constructor, this.model.$id, childId, extras);
+      return this.guild.add(this.for.constructor, this.for.$id, childId, extras);
     }
   }, {
     key: "$remove",
     value: function $remove(childId) {
-      return this.guild.remove(this.model.constructor, this.model.$id, childId);
+      return this.guild.remove(this.for.constructor, this.for.$id, childId);
     }
   }, {
     key: "$list",
     value: function $list() {
-      return this.guild.get(this.model.constructor, this.model.$id, this.title);
+      return this.guild.get(this.for.constructor, this.for.$id, this.title);
     }
   }, {
     key: "$modify",

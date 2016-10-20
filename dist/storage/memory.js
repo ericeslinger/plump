@@ -38,11 +38,15 @@ var MemoryStorage = exports.MemoryStorage = function (_KeyValueStore) {
     var _this = _possibleConstructorReturn(this, (_ref = MemoryStorage.__proto__ || Object.getPrototypeOf(MemoryStorage)).call.apply(_ref, [this].concat(args)));
 
     _this[$store] = {};
-    _this.maxId = 0;
     return _this;
   }
 
   _createClass(MemoryStorage, [{
+    key: 'logStore',
+    value: function logStore() {
+      console.log(JSON.stringify(this[$store], null, 2));
+    }
+  }, {
     key: '_keys',
     value: function _keys(typeName) {
       return Promise.resolve(Object.keys(this[$store]).filter(function (k) {
@@ -69,7 +73,9 @@ var MemoryStorage = exports.MemoryStorage = function (_KeyValueStore) {
       var _this3 = this;
 
       return Promise.resolve().then(function () {
+        var retVal = _this3[$store][k];
         delete _this3[$store][k];
+        return retVal;
       });
     }
   }]);

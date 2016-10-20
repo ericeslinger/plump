@@ -8,7 +8,7 @@ import { Guild } from '../guild';
 import { TestType } from './testType';
 
 // const memstore1 = new MemoryStorage();
-const memstore2 = new MemoryStorage({terminal: true});
+const memstore2 = new MemoryStorage({ terminal: true });
 
 const guild = new Guild({
   storage: [memstore2],
@@ -22,7 +22,7 @@ describe('model', () => {
   it('should save field updates to all datastores');
 
   it('should return promises to existing data', () => {
-    const one = new TestType({id: 1, name: 'potato'});
+    const one = new TestType({ id: 1, name: 'potato' });
     expect(one.$get('name')).to.eventually.equal('potato');
   });
 
@@ -37,34 +37,34 @@ describe('model', () => {
   });
 
   it('should create an id when one is unset', () => {
-    const noID = new TestType({name: 'potato'}, guild);
+    const noID = new TestType({ name: 'potato' }, guild);
     return expect(noID.$save()).to.eventually.have.all.keys('name', 'id');
   });
 
   it('should allow fields to be loaded', () => {
-    const one = new TestType({name: 'potato'}, guild);
+    const one = new TestType({ name: 'potato' }, guild);
     return one.$save()
     .then(() => expect(guild.find('tests', one.$id).$get('name')).to.eventually.equal('potato'))
-    .then(() => expect(guild.find('tests', one.$id).$get()).to.eventually.deep.equal({name: 'potato', id: one.$id}));
+    .then(() => expect(guild.find('tests', one.$id).$get()).to.eventually.deep.equal({ name: 'potato', id: one.$id }));
   });
 
   it('should optimistically update on field updates', () => {
-    const one = new TestType({name: 'potato'}, guild);
+    const one = new TestType({ name: 'potato' }, guild);
     return one.$save()
-    .then(() => one.$set({name: 'rutabaga'}))
+    .then(() => one.$set({ name: 'rutabaga' }))
     .then(() => expect(one.$get('name')).to.eventually.equal('rutabaga'));
   });
 
   it('should save updates to datastores');
 
   it('should show empty hasMany lists as []', () => {
-    const one = new TestType({name: 'frotato'}, guild);
+    const one = new TestType({ name: 'frotato' }, guild);
     return one.$save()
     .then(() => expect(one.$get('children')).to.eventually.deep.equal([]));
   });
 
   it('should add hasMany elements', () => {
-    const one = new TestType({name: 'frotato'}, guild);
+    const one = new TestType({ name: 'frotato' }, guild);
     return one.$save()
     .then(() => one.$add('children', 100))
     .then(() => {
@@ -77,7 +77,7 @@ describe('model', () => {
   });
 
   it('should remove hasMany elements', () => {
-    const one = new TestType({name: 'frotato'}, guild);
+    const one = new TestType({ name: 'frotato' }, guild);
     return one.$save()
     .then(() => one.$add('children', 100))
     .then(() => {
@@ -92,9 +92,9 @@ describe('model', () => {
   });
 
   it('should include valence in hasMany operations', () => {
-    const one = new TestType({name: 'grotato'}, guild);
+    const one = new TestType({ name: 'grotato' }, guild);
     return one.$save()
-    .then(() => one.$add('valenceChildren', 100, {perm: 1}))
+    .then(() => one.$add('valenceChildren', 100, { perm: 1 }))
     .then(() => one.$get('valenceChildren'))
     .then(() => {
       return expect(one.$get('valenceChildren'))
@@ -104,7 +104,7 @@ describe('model', () => {
         perm: 1,
       }]);
     })
-    .then(() => one.$modifyRelationship('valenceChildren', 100, {perm: 2}))
+    .then(() => one.$modifyRelationship('valenceChildren', 100, { perm: 2 }))
     .then(() => {
       return expect(one.$get('valenceChildren'))
       .to.eventually.deep.equal([{

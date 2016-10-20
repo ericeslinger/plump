@@ -78,14 +78,13 @@ export class SQLStorage extends Storage {
     .then((o) => o[0] || null);
   }
 
-  readMany(t, id, relationshipTitle) {
-    const Rel = t.$fields[relationshipTitle]; // {$fields}
-    const selfFieldName = Rel.field;
-    const otherFieldName = Rel.relationship.otherField(selfFieldName);
-    const toSelect = [otherFieldName, selfFieldName].concat(Rel.relationship.$extras || []);
-    return this[$knex](Rel.relationship.$name)
+  readMany(type, id, relationshipTitle) {
+    const relationshipBlock = type.$fields[relationshipTitle];
+    const sideInfo = relationshipBlock.relationship.$sides[relationshipTitle];
+    const toSelect = [sideInfo.other.field, sideInfo.self.field].concat(relationshipBlock.relationship.$extras || []);
+    return this[$knex](relationshipBlock.relationship.$name)
     .where({
-      [selfFieldName]: id,
+      [sideInfo.self.field]: id,
     }).select(toSelect)
     .then((l) => {
       return {
@@ -99,51 +98,48 @@ export class SQLStorage extends Storage {
     .then((o) => o);
   }
 
-  add(t, id, relationshipTitle, childId, extras = {}) {
-    const Rel = t.$fields[relationshipTitle]; // {$fields}
-    const selfFieldName = Rel.field;
-    const otherFieldName = Rel.relationship.otherField(selfFieldName);
+  add(type, id, relationshipTitle, childId, extras = {}) {
+    const relationshipBlock = type.$fields[relationshipTitle];
+    const sideInfo = relationshipBlock.relationship.$sides[relationshipTitle];
     const newField = {
-      [otherFieldName]: childId,
-      [selfFieldName]: id,
+      [sideInfo.other.field]: childId,
+      [sideInfo.self.field]: id,
     };
-    (Rel.relationship.$extras || []).forEach((extra) => {
+    (relationshipBlock.relationship.$extras || []).forEach((extra) => {
       newField[extra] = extras[extra];
     });
-    return this[$knex](Rel.relationship.$name)
+    return this[$knex](relationshipBlock.relationship.$name)
     .insert(newField).then(() => {
-      return this.readMany(t, id, relationshipTitle);
+      return this.readMany(type, id, relationshipTitle);
     });
   }
 
-  modifyRelationship(t, id, relationshipTitle, childId, extras = {}) {
-    const Rel = t.$fields[relationshipTitle]; // {$fields}
-    const selfFieldName = Rel.field;
-    const otherFieldName = Rel.relationship.otherField(selfFieldName);
+  modifyRelationship(type, id, relationshipTitle, childId, extras = {}) {
+    const relationshipBlock = type.$fields[relationshipTitle];
+    const sideInfo = relationshipBlock.relationship.$sides[relationshipTitle];
     const newField = {};
-    Rel.relationship.$extras.forEach((extra) => {
+    relationshipBlock.relationship.$extras.forEach((extra) => {
       if (extras[extra] !== undefined) {
         newField[extra] = extras[extra];
       }
     });
-    return this[$knex](Rel.relationship.$name)
+    return this[$knex](relationshipBlock.relationship.$name)
     .where({
-      [otherFieldName]: childId,
-      [selfFieldName]: id,
+      [sideInfo.other.field]: childId,
+      [sideInfo.self.field]: id,
     }).update(newField);
   }
 
-  remove(t, id, relationshipTitle, childId) {
-    const Rel = t.$fields[relationshipTitle]; // {$fields}
-    const selfFieldName = Rel.field;
-    const otherFieldName = Rel.relationship.otherField(selfFieldName);
-    return this[$knex](Rel.relationship.$name)
+  remove(type, id, relationshipTitle, childId) {
+    const relationshipBlock = type.$fields[relationshipTitle];
+    const sideInfo = relationshipBlock.relationship.$sides[relationshipTitle];
+    return this[$knex](relationshipBlock.relationship.$name)
     .where({
-      [otherFieldName]: childId,
-      [selfFieldName]: id,
+      [sideInfo.other.field]: childId,
+      [sideInfo.self.field]: id,
     }).delete()
     .then(() => {
-      return this.readMany(t, id, relationshipTitle);
+      return this.readMany(type, id, relationshipTitle);
     });
   }
 

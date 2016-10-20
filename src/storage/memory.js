@@ -8,7 +8,10 @@ export class MemoryStorage extends KeyValueStore {
   constructor(...args) {
     super(...args);
     this[$store] = {};
-    this.maxId = 0;
+  }
+
+  logStore() {
+    console.log(JSON.stringify(this[$store], null, 2));
   }
 
   _keys(typeName) {
@@ -29,7 +32,9 @@ export class MemoryStorage extends KeyValueStore {
   _del(k) {
     return Promise.resolve()
     .then(() => {
+      const retVal = this[$store][k];
       delete this[$store][k];
+      return retVal;
     });
   }
 }

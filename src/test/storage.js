@@ -178,7 +178,9 @@ storageTypes.forEach((store) => {
     it('allows for deletion of objects by id', () => {
       return actualStore.write(TestType, sampleObject)
       .then((createdObject) => {
-        return actualStore.delete(TestType, createdObject.id)
+        return expect(actualStore.read(TestType, createdObject.id))
+        .to.eventually.deep.equal(Object.assign({}, sampleObject, { [TestType.$id]: createdObject.id }))
+        .then(() => actualStore.delete(TestType, createdObject.id))
         .then(() => expect(actualStore.read(TestType, createdObject.id)).to.eventually.deep.equal(null));
       });
     });
@@ -210,6 +212,16 @@ storageTypes.forEach((store) => {
               },
               {
                 child_id: 103,
+                parent_id: createdObject.id,
+              },
+            ],
+          });
+        }).then(() => {
+          return expect(actualStore.read(TestType, 100, 'parents'))
+          .to.eventually.deep.equal({
+            parents: [
+              {
+                child_id: 100,
                 parent_id: createdObject.id,
               },
             ],

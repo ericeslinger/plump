@@ -8,19 +8,55 @@ export class ValenceChildren extends Relationship {}
 
 Children.$name = 'children';
 Children.$sides = {
-  tests: {
-    children: 'parent_id',
-    parents: 'child_id',
+  parents: {
+    self: {
+      field: 'child_id',
+      type: 'tests',
+    },
+    other: {
+      field: 'parent_id',
+      type: 'tests',
+      title: 'children',
+    },
+  },
+  children: {
+    self: {
+      field: 'parent_id',
+      type: 'tests',
+    },
+    other: {
+      field: 'child_id',
+      type: 'tests',
+      title: 'parents',
+    },
   },
 };
+
 
 ValenceChildren.$sides = {
-  tests: {
-    valenceChildren: 'parent_id',
-    valenceParents: 'child_id',
+  valenceParents: {
+    self: {
+      field: 'child_id',
+      type: 'tests',
+    },
+    other: {
+      field: 'parent_id',
+      type: 'tests',
+      title: 'valenceChildren',
+    },
+  },
+  valenceChildren: {
+    self: {
+      field: 'parent_id',
+      type: 'tests',
+    },
+    other: {
+      field: 'child_id',
+      type: 'tests',
+      title: 'valenceParents',
+    },
   },
 };
-
 
 ValenceChildren.$extras = ['perm'];
 ValenceChildren.$name = 'valence_children';

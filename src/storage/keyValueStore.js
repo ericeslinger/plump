@@ -40,7 +40,7 @@ export class KeyValueStore extends Storage {
     });
     if (id === undefined) {
       if (this.terminal) {
-        return this.$$maxKey(t)
+        return this.$$maxKey(t.$name)
         .then((n) => {
           const toSave = Object.assign({}, { [t.$id]: n + 1 }, updateObject);
           return this._set(this.keyString(t.$name, n + 1), JSON.stringify(toSave))
@@ -75,12 +75,11 @@ export class KeyValueStore extends Storage {
     return this._del(this.keyString(t.$name, id));
   }
 
-  add(t, id, relationshipTitle, childId, extras) {
-    const Rel = t.$fields[relationshipTitle];
-    const selfFieldName = Rel.field;
-    const otherFieldName = Rel.relationship.otherField(selfFieldName);
-    const thisKeyString = this.keyString(t.$name, id, relationshipTitle);
-    const otherKeyString = this.keyString(Rel.relationship.$sides[otherFieldName], childId, Rel.otherside);
+  add(type, id, relationshipTitle, childId, extras = {}) {
+    const relationshipBlock = type.$fields[relationshipTitle];
+    const sideInfo = relationshipBlock.relationship.$sides[relationshipTitle];
+    const thisKeyString = this.keyString(type.$name, id, relationshipTitle);
+    const otherKeyString = this.keyString(sideInfo.other.type, childId, sideInfo.other.title);
     return Promise.all([
       this._get(thisKeyString),
       this._get(otherKeyString),
@@ -89,11 +88,11 @@ export class KeyValueStore extends Storage {
       const thisArray = JSON.parse(thisArrayString) || [];
       const otherArray = JSON.parse(otherArrayString) || [];
       const idx = thisArray.findIndex((v) => {
-        return ((v[selfFieldName] === id) && (v[otherFieldName] === childId));
+        return ((v[sideInfo.self.field] === id) && (v[sideInfo.other.field] === childId));
       });
       if (idx < 0) {
-        const newRelationship = { [selfFieldName]: id, [otherFieldName]: childId };
-        (Rel.relationship.$extras || []).forEach((e) => {
+        const newRelationship = { [sideInfo.self.field]: id, [sideInfo.other.field]: childId };
+        (relationshipBlock.relationship.$extras || []).forEach((e) => {
           newRelationship[e] = extras[e];
         });
         thisArray.push(newRelationship);
@@ -109,12 +108,11 @@ export class KeyValueStore extends Storage {
     });
   }
 
-  modifyRelationship(t, id, relationshipTitle, childId, extras) {
-    const Rel = t.$fields[relationshipTitle];
-    const selfFieldName = Rel.field;
-    const otherFieldName = Rel.relationship.otherField(selfFieldName);
-    const thisKeyString = this.keyString(t.$name, id, relationshipTitle);
-    const otherKeyString = this.keyString(Rel.relationship.$sides[otherFieldName], childId, Rel.otherside);
+  modifyRelationship(type, id, relationshipTitle, childId, extras) {
+    const relationshipBlock = type.$fields[relationshipTitle];
+    const sideInfo = relationshipBlock.relationship.$sides[relationshipTitle];
+    const thisKeyString = this.keyString(type.$name, id, relationshipTitle);
+    const otherKeyString = this.keyString(sideInfo.other.type, childId, sideInfo.other.title);
     return Promise.all([
       this._get(thisKeyString),
       this._get(otherKeyString),
@@ -123,10 +121,10 @@ export class KeyValueStore extends Storage {
       const thisArray = JSON.parse(thisArrayString) || [];
       const otherArray = JSON.parse(otherArrayString) || [];
       const thisIdx = thisArray.findIndex((v) => {
-        return ((v[selfFieldName] === id) && (v[otherFieldName] === childId));
+        return ((v[sideInfo.self.field] === id) && (v[sideInfo.other.field] === childId));
       });
       const otherIdx = otherArray.findIndex((v) => {
-        return ((v[selfFieldName] === id) && (v[otherFieldName] === childId));
+        return ((v[sideInfo.self.field] === id) && (v[sideInfo.other.field] === childId));
       });
       if (thisIdx >= 0) {
         const modifiedRelationship = Object.assign(
@@ -147,12 +145,11 @@ export class KeyValueStore extends Storage {
     });
   }
 
-  remove(t, id, relationshipTitle, childId) {
-    const Rel = t.$fields[relationshipTitle];
-    const selfFieldName = Rel.field;
-    const otherFieldName = Rel.relationship.otherField(selfFieldName);
-    const thisKeyString = this.keyString(t.$name, id, relationshipTitle);
-    const otherKeyString = this.keyString(Rel.relationship.$sides[otherFieldName], childId, Rel.otherside);
+  remove(type, id, relationshipTitle, childId) {
+    const relationshipBlock = type.$fields[relationshipTitle];
+    const sideInfo = relationshipBlock.relationship.$sides[relationshipTitle];
+    const thisKeyString = this.keyString(type.$name, id, relationshipTitle);
+    const otherKeyString = this.keyString(sideInfo.other.type, childId, sideInfo.other.title);
     return Promise.all([
       this._get(thisKeyString),
       this._get(otherKeyString),
@@ -161,10 +158,10 @@ export class KeyValueStore extends Storage {
       const thisArray = JSON.parse(thisArrayString) || [];
       const otherArray = JSON.parse(otherArrayString) || [];
       const thisIdx = thisArray.findIndex((v) => {
-        return ((v[selfFieldName] === id) && (v[otherFieldName] === childId));
+        return ((v[sideInfo.self.field] === id) && (v[sideInfo.other.field] === childId));
       });
       const otherIdx = otherArray.findIndex((v) => {
-        return ((v[selfFieldName] === id) && (v[otherFieldName] === childId));
+        return ((v[sideInfo.self.field] === id) && (v[sideInfo.other.field] === childId));
       });
       if (thisIdx >= 0) {
         thisArray.splice(thisIdx, 1);

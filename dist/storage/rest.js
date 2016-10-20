@@ -71,10 +71,14 @@ var RestStorage = exports.RestStorage = function (_Storage) {
   }, {
     key: 'readOne',
     value: function readOne(t, id) {
-      return this[$axios].get('/' + t.$name + '/' + id).then(function (response) {
+      var _this3 = this;
+
+      return _bluebird2.default.resolve().then(function () {
+        return _this3[$axios].get('/' + t.$name + '/' + id);
+      }).then(function (response) {
         return response.data[t.$name][0];
       }).catch(function (err) {
-        if (err === 404) {
+        if (err.response && err.response.status === 404) {
           return null;
         } else {
           throw err;
@@ -86,21 +90,26 @@ var RestStorage = exports.RestStorage = function (_Storage) {
     value: function readMany(t, id, relationship) {
       return this[$axios].get('/' + t.$name + '/' + id + '/' + relationship).then(function (response) {
         return response.data;
+      }).catch(function (err) {
+        if (err.response && err.response.status === 404) {
+          return [];
+        } else {
+          throw err;
+        }
       });
     }
   }, {
     key: 'add',
-    value: function add(t, id, relationshipTitle, childId, extras) {
+    value: function add(type, id, relationshipTitle, childId, extras) {
       var _newField;
 
-      var Rel = t.$fields[relationshipTitle];
-      var selfFieldName = Rel.field;
-      var otherFieldName = Rel.relationship.otherField(selfFieldName);
-      var newField = (_newField = {}, _defineProperty(_newField, selfFieldName, id), _defineProperty(_newField, otherFieldName, childId), _newField);
-      (Rel.relationship.$extras || []).forEach(function (e) {
+      var relationshipBlock = type.$fields[relationshipTitle];
+      var sideInfo = relationshipBlock.relationship.$sides[relationshipTitle];
+      var newField = (_newField = {}, _defineProperty(_newField, sideInfo.self.field, id), _defineProperty(_newField, sideInfo.other.field, childId), _newField);
+      (relationshipBlock.relationship.$extras || []).forEach(function (e) {
         newField[e] = extras[e];
       });
-      return this[$axios].put('/' + t.$name + '/' + id + '/' + relationshipTitle, newField);
+      return this[$axios].put('/' + type.$name + '/' + id + '/' + relationshipTitle, newField);
     }
   }, {
     key: 'remove',

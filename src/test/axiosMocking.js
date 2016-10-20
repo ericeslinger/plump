@@ -50,14 +50,13 @@ function mockup(t) {
       } else if (config.method === 'put') {
         if (matchSideBase) {
           apiWrap = false;
-          const Rel = t.$fields[matchSideBase[2]];
-          const selfFieldName = Rel.field;
-          const otherFieldName = Rel.relationship.otherField(selfFieldName);
+          const relationshipBlock = t.$fields[matchSideBase[2]];
+          const sideInfo = relationshipBlock.relationship.$sides[matchSideBase[2]];
           return backingStore.add(
             t,
             parseInt(matchSideBase[1], 10),
             matchSideBase[2],
-            JSON.parse(config.data)[otherFieldName],
+            JSON.parse(config.data)[sideInfo.other.field],
             JSON.parse(config.data)
           );
         }
@@ -74,7 +73,7 @@ function mockup(t) {
           );
         }
       }
-      return Promise.reject(new Error(404));
+      return Promise.reject({ response: { status: 400 } });
     }).then((d) => {
       // console.log('FOR');
       // console.log(config);
@@ -92,7 +91,7 @@ function mockup(t) {
           };
         }
       } else {
-        return Promise.reject(404);
+        return Promise.reject({ response: { status: 404 } });
       }
     });
   };

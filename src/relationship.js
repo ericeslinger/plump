@@ -6,15 +6,15 @@ export class Relationship {
   }
 
   $add(childId, extras) {
-    return this.guild.add(this.model.constructor, this.model.$id, childId, extras);
+    return this.guild.add(this.for.constructor, this.for.$id, childId, extras);
   }
 
   $remove(childId) {
-    return this.guild.remove(this.model.constructor, this.model.$id, childId);
+    return this.guild.remove(this.for.constructor, this.for.$id, childId);
   }
 
   $list() {
-    return this.guild.get(this.model.constructor, this.model.$id, this.title);
+    return this.guild.get(this.for.constructor, this.for.$id, this.title);
   }
 
   $modify() {}

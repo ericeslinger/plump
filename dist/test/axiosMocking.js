@@ -54,10 +54,9 @@ function mockup(t) {
       } else if (config.method === 'put') {
         if (matchSideBase) {
           apiWrap = false;
-          var Rel = t.$fields[matchSideBase[2]];
-          var selfFieldName = Rel.field;
-          var otherFieldName = Rel.relationship.otherField(selfFieldName);
-          return backingStore.add(t, parseInt(matchSideBase[1], 10), matchSideBase[2], JSON.parse(config.data)[otherFieldName], JSON.parse(config.data));
+          var relationshipBlock = t.$fields[matchSideBase[2]];
+          var sideInfo = relationshipBlock.relationship.$sides[matchSideBase[2]];
+          return backingStore.add(t, parseInt(matchSideBase[1], 10), matchSideBase[2], JSON.parse(config.data)[sideInfo.other.field], JSON.parse(config.data));
         }
       } else if (config.method === 'delete') {
         if (matchItem) {
@@ -67,7 +66,7 @@ function mockup(t) {
           return backingStore.remove(t, parseInt(matchSideItem[1], 10), matchSideItem[2], parseInt(matchSideItem[3], 10));
         }
       }
-      return _bluebird2.default.reject(new Error(404));
+      return _bluebird2.default.reject({ response: { status: 400 } });
     }).then(function (d) {
       // console.log('FOR');
       // console.log(config);
@@ -83,7 +82,7 @@ function mockup(t) {
           };
         }
       } else {
-        return _bluebird2.default.reject(404);
+        return _bluebird2.default.reject({ response: { status: 404 } });
       }
     });
   };

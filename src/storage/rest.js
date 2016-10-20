@@ -34,11 +34,12 @@ export class RestStorage extends Storage {
   }
 
   readOne(t, id) {
-    return this[$axios].get(`/${t.$name}/${id}`)
+    return Promise.resolve()
+    .then(() => this[$axios].get(`/${t.$name}/${id}`))
     .then((response) => {
       return response.data[t.$name][0];
     }).catch((err) => {
-      if (err === 404) {
+      if (err.response && err.response.status === 404) {
         return null;
       } else {
         throw err;
@@ -48,18 +49,24 @@ export class RestStorage extends Storage {
 
   readMany(t, id, relationship) {
     return this[$axios].get(`/${t.$name}/${id}/${relationship}`)
-    .then((response) => response.data);
+    .then((response) => response.data)
+    .catch((err) => {
+      if (err.response && err.response.status === 404) {
+        return [];
+      } else {
+        throw err;
+      }
+    });
   }
 
-  add(t, id, relationshipTitle, childId, extras) {
-    const Rel = t.$fields[relationshipTitle];
-    const selfFieldName = Rel.field;
-    const otherFieldName = Rel.relationship.otherField(selfFieldName);
-    const newField = { [selfFieldName]: id, [otherFieldName]: childId };
-    (Rel.relationship.$extras || []).forEach((e) => {
+  add(type, id, relationshipTitle, childId, extras) {
+    const relationshipBlock = type.$fields[relationshipTitle];
+    const sideInfo = relationshipBlock.relationship.$sides[relationshipTitle];
+    const newField = { [sideInfo.self.field]: id, [sideInfo.other.field]: childId };
+    (relationshipBlock.relationship.$extras || []).forEach((e) => {
       newField[e] = extras[e];
     });
-    return this[$axios].put(`/${t.$name}/${id}/${relationshipTitle}`, newField);
+    return this[$axios].put(`/${type.$name}/${id}/${relationshipTitle}`, newField);
   }
 
   remove(t, id, relationship, childId) {

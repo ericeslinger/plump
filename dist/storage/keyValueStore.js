@@ -80,7 +80,7 @@ var KeyValueStore = exports.KeyValueStore = function (_Storage) {
       });
       if (id === undefined) {
         if (this.terminal) {
-          return this.$$maxKey(t).then(function (n) {
+          return this.$$maxKey(t.$name).then(function (n) {
             var toSave = Object.assign({}, _defineProperty({}, t.$id, n + 1), updateObject);
             return _this2._set(_this2.keyString(t.$name, n + 1), JSON.stringify(toSave)).then(function () {
               return toSave;
@@ -119,14 +119,15 @@ var KeyValueStore = exports.KeyValueStore = function (_Storage) {
     }
   }, {
     key: 'add',
-    value: function add(t, id, relationshipTitle, childId, extras) {
+    value: function add(type, id, relationshipTitle, childId) {
       var _this3 = this;
 
-      var Rel = t.$fields[relationshipTitle];
-      var selfFieldName = Rel.field;
-      var otherFieldName = Rel.relationship.otherField(selfFieldName);
-      var thisKeyString = this.keyString(t.$name, id, relationshipTitle);
-      var otherKeyString = this.keyString(Rel.relationship.$sides[otherFieldName], childId, Rel.otherside);
+      var extras = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : {};
+
+      var relationshipBlock = type.$fields[relationshipTitle];
+      var sideInfo = relationshipBlock.relationship.$sides[relationshipTitle];
+      var thisKeyString = this.keyString(type.$name, id, relationshipTitle);
+      var otherKeyString = this.keyString(sideInfo.other.type, childId, sideInfo.other.title);
       return Promise.all([this._get(thisKeyString), this._get(otherKeyString)]).then(function (_ref2) {
         var _ref3 = _slicedToArray(_ref2, 2);
 
@@ -136,14 +137,14 @@ var KeyValueStore = exports.KeyValueStore = function (_Storage) {
         var thisArray = JSON.parse(thisArrayString) || [];
         var otherArray = JSON.parse(otherArrayString) || [];
         var idx = thisArray.findIndex(function (v) {
-          return v[selfFieldName] === id && v[otherFieldName] === childId;
+          return v[sideInfo.self.field] === id && v[sideInfo.other.field] === childId;
         });
         if (idx < 0) {
           var _ret = function () {
             var _newRelationship;
 
-            var newRelationship = (_newRelationship = {}, _defineProperty(_newRelationship, selfFieldName, id), _defineProperty(_newRelationship, otherFieldName, childId), _newRelationship);
-            (Rel.relationship.$extras || []).forEach(function (e) {
+            var newRelationship = (_newRelationship = {}, _defineProperty(_newRelationship, sideInfo.self.field, id), _defineProperty(_newRelationship, sideInfo.other.field, childId), _newRelationship);
+            (relationshipBlock.relationship.$extras || []).forEach(function (e) {
               newRelationship[e] = extras[e];
             });
             thisArray.push(newRelationship);
@@ -163,14 +164,13 @@ var KeyValueStore = exports.KeyValueStore = function (_Storage) {
     }
   }, {
     key: 'modifyRelationship',
-    value: function modifyRelationship(t, id, relationshipTitle, childId, extras) {
+    value: function modifyRelationship(type, id, relationshipTitle, childId, extras) {
       var _this4 = this;
 
-      var Rel = t.$fields[relationshipTitle];
-      var selfFieldName = Rel.field;
-      var otherFieldName = Rel.relationship.otherField(selfFieldName);
-      var thisKeyString = this.keyString(t.$name, id, relationshipTitle);
-      var otherKeyString = this.keyString(Rel.relationship.$sides[otherFieldName], childId, Rel.otherside);
+      var relationshipBlock = type.$fields[relationshipTitle];
+      var sideInfo = relationshipBlock.relationship.$sides[relationshipTitle];
+      var thisKeyString = this.keyString(type.$name, id, relationshipTitle);
+      var otherKeyString = this.keyString(sideInfo.other.type, childId, sideInfo.other.title);
       return Promise.all([this._get(thisKeyString), this._get(otherKeyString)]).then(function (_ref4) {
         var _ref5 = _slicedToArray(_ref4, 2);
 
@@ -180,10 +180,10 @@ var KeyValueStore = exports.KeyValueStore = function (_Storage) {
         var thisArray = JSON.parse(thisArrayString) || [];
         var otherArray = JSON.parse(otherArrayString) || [];
         var thisIdx = thisArray.findIndex(function (v) {
-          return v[selfFieldName] === id && v[otherFieldName] === childId;
+          return v[sideInfo.self.field] === id && v[sideInfo.other.field] === childId;
         });
         var otherIdx = otherArray.findIndex(function (v) {
-          return v[selfFieldName] === id && v[otherFieldName] === childId;
+          return v[sideInfo.self.field] === id && v[sideInfo.other.field] === childId;
         });
         if (thisIdx >= 0) {
           var modifiedRelationship = Object.assign({}, thisArray[thisIdx], extras);
@@ -199,14 +199,13 @@ var KeyValueStore = exports.KeyValueStore = function (_Storage) {
     }
   }, {
     key: 'remove',
-    value: function remove(t, id, relationshipTitle, childId) {
+    value: function remove(type, id, relationshipTitle, childId) {
       var _this5 = this;
 
-      var Rel = t.$fields[relationshipTitle];
-      var selfFieldName = Rel.field;
-      var otherFieldName = Rel.relationship.otherField(selfFieldName);
-      var thisKeyString = this.keyString(t.$name, id, relationshipTitle);
-      var otherKeyString = this.keyString(Rel.relationship.$sides[otherFieldName], childId, Rel.otherside);
+      var relationshipBlock = type.$fields[relationshipTitle];
+      var sideInfo = relationshipBlock.relationship.$sides[relationshipTitle];
+      var thisKeyString = this.keyString(type.$name, id, relationshipTitle);
+      var otherKeyString = this.keyString(sideInfo.other.type, childId, sideInfo.other.title);
       return Promise.all([this._get(thisKeyString), this._get(otherKeyString)]).then(function (_ref6) {
         var _ref7 = _slicedToArray(_ref6, 2);
 
@@ -216,10 +215,10 @@ var KeyValueStore = exports.KeyValueStore = function (_Storage) {
         var thisArray = JSON.parse(thisArrayString) || [];
         var otherArray = JSON.parse(otherArrayString) || [];
         var thisIdx = thisArray.findIndex(function (v) {
-          return v[selfFieldName] === id && v[otherFieldName] === childId;
+          return v[sideInfo.self.field] === id && v[sideInfo.other.field] === childId;
         });
         var otherIdx = otherArray.findIndex(function (v) {
-          return v[selfFieldName] === id && v[otherFieldName] === childId;
+          return v[sideInfo.self.field] === id && v[sideInfo.other.field] === childId;
         });
         if (thisIdx >= 0) {
           thisArray.splice(thisIdx, 1);
