@@ -12,6 +12,13 @@ export class Model {
     this[$store] = {};
     this.$$copyValuesFrom(opts || {});
     this[$loaded] = false;
+    this.$relationships = {};
+    Object.keys(this.constructor.$fields).forEach((key) => {
+      if (this.constructor.$fields[key].type === 'hasMany') {
+        const Relationship = this.constructor.$fields[key].relationship;
+        this.$relationships[key] = new Relationship(this, key, guild);
+      }
+    });
     if (guild) {
       this.$$connectToGuild(guild);
     }
@@ -64,6 +71,9 @@ export class Model {
         ((key === undefined) && (this[$loaded] === false)) ||
         (key && (this[$store][key] === undefined))
       ) {
+        if (this.$relationships[key]) {
+          return this.$relationships[key].$list();
+        }
         return this[$guild].get(this.constructor, this.$id, key);
       } else {
         return true;
@@ -83,8 +93,12 @@ export class Model {
     });
   }
 
+  $relationship(key) {
+    return
+  }
+
   $load(opts = {}) {
-    const options = Object.assign({}, {self: true}, opts);
+    const options = Object.assign({}, { self: true }, opts);
     if (options.self) {
       this.getSelf()
       .then((data) => {

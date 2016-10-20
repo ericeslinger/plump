@@ -362,7 +362,7 @@ module.exports = {
     // disallow mixed spaces and tabs for indentation
     'no-mixed-spaces-and-tabs': 2,
     // disallow multiple empty lines and only one newline at the end
-    'no-multiple-empty-lines': [2, { 'max': 2, 'maxEOF': 1 }],
+    'no-multiple-empty-lines': [2, { 'max': 4, 'maxEOF': 1 }],
     // disallow nested ternary expressions
     'no-nested-ternary': 2,
     // disallow use of the Object constructor

@@ -15,7 +15,7 @@ var _bluebird = require('bluebird');
 
 var Promise = _interopRequireWildcard(_bluebird);
 
-var _storage = require('./storage');
+var _keyValueStore2 = require('./keyValueStore');
 
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
 
@@ -25,11 +25,11 @@ function _possibleConstructorReturn(self, call) { if (!self) { throw new Referen
 
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
-var LocalForageStorage = exports.LocalForageStorage = function (_Storage) {
-  _inherits(LocalForageStorage, _Storage);
+var LocalForageStorage = exports.LocalForageStorage = function (_keyValueStore) {
+  _inherits(LocalForageStorage, _keyValueStore);
 
   function LocalForageStorage() {
-    var opts = arguments.length <= 0 || arguments[0] === undefined ? {} : arguments[0];
+    var opts = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
 
     _classCallCheck(this, LocalForageStorage);
 
@@ -44,47 +44,30 @@ var LocalForageStorage = exports.LocalForageStorage = function (_Storage) {
   }
 
   _createClass(LocalForageStorage, [{
-    key: 'create',
-    value: function create(t, v) {
-      if (v.id === undefined) {
-        return Promise.reject('This service cannot allocate ID values');
-      } else {
-        return localforage.setItem(t.$name + ':' + v.id, v);
-      }
-    }
-
-    // TODO: fix this whole file.
-
-  }, {
-    key: 'read',
-    value: function read(t, id, relationship) {
-      if (relationship) {
-        var retVal = localforage.getItem[t.$name + ':' + relationship + ':' + id];
-        if (retVal) {
-          return Promise.resolve(retVal.concat());
-        } else {
-          return Promise.resolve(null);
-        }
-      } else {
-        return localforage.getItem(t + ':' + id);
-      }
+    key: '_keys',
+    value: function _keys(typeName) {
+      return localforage.keys().then(function (keyArray) {
+        return keyArray.filter(function (k) {
+          return k.indexOf(typeName + ':store:') === 0;
+        });
+      });
     }
   }, {
-    key: 'update',
-    value: function update(t, id, v) {
-      return this.create(t, v);
+    key: '_get',
+    value: function _get(k) {
+      return localforage.getItem(k);
     }
   }, {
-    key: 'delete',
-    value: function _delete(t, id) {
-      return localforage.removeItem(t + ':' + id);
+    key: '_set',
+    value: function _set(k, v) {
+      return localforage.setItem(k, v);
     }
   }, {
-    key: 'query',
-    value: function query() {
-      return Promise.reject('Query interface not supported on LocalForageStorage');
+    key: '_del',
+    value: function _del(k) {
+      return localforage.removeItem(k);
     }
   }]);
 
   return LocalForageStorage;
-}(_storage.Storage);
+}(_keyValueStore2.keyValueStore);

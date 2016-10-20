@@ -1,15 +1,21 @@
 export class Relationship {
-  constructor(guild) {
+  constructor(model, title, guild) {
     this.guild = guild;
+    this.for = model;
+    this.title = title;
   }
 
+  $add(childId, extras) {
+    return this.guild.add(this.model.constructor, this.model.$id, childId, extras);
+  }
+
+  $remove(childId) {
+    return this.guild.remove(this.model.constructor, this.model.$id, childId);
+  }
+
+  $list() {
+    return this.guild.get(this.model.constructor, this.model.$id, this.title);
+  }
+
+  $modify() {}
 }
-
-// Relationship.other('memberships') === {typeName: 'communities', field: 'community_id'};
-
-Relationship.otherField = function otherField(field) {
-  const nameArray = Object.keys(this.$sides);
-  return field === nameArray[0]
-    ? nameArray[1]
-    : nameArray[0];
-};

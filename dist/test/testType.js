@@ -51,15 +51,19 @@ var ValenceChildren = exports.ValenceChildren = function (_Relationship2) {
   return ValenceChildren;
 }(_relationship.Relationship);
 
-Children.$sides = {
-  parent_id: 'tests',
-  child_id: 'tests'
-};
 Children.$name = 'children';
+Children.$sides = {
+  tests: {
+    children: 'parent_id',
+    parents: 'child_id'
+  }
+};
 
 ValenceChildren.$sides = {
-  parent_id: 'tests',
-  child_id: 'tests'
+  tests: {
+    valenceChildren: 'parent_id',
+    valenceParents: 'child_id'
+  }
 };
 
 ValenceChildren.$extras = ['perm'];

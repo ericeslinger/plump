@@ -1,8 +1,8 @@
 import * as localforage from 'localforage';
 import * as Promise from 'bluebird';
-import {Storage} from './storage';
+import { keyValueStore } from './keyValueStore';
 
-export class LocalForageStorage extends Storage {
+export class LocalForageStorage extends keyValueStore {
 
   constructor(opts = {}) {
     super();
@@ -13,38 +13,20 @@ export class LocalForageStorage extends Storage {
     });
   }
 
-  create(t, v) {
-    if (v.id === undefined) {
-      return Promise.reject('This service cannot allocate ID values');
-    } else {
-      return localforage.setItem(`${t.$name}:${v.id}`, v);
-    }
+  _keys(typeName) {
+    return localforage.keys()
+    .then((keyArray) => keyArray.filter((k) => k.indexOf(`${typeName}:store:`) === 0));
   }
 
-  // TODO: fix this whole file.
-
-  read(t, id, relationship) {
-    if (relationship) {
-      const retVal = localforage.getItem[`${t.$name}:${relationship}:${id}`];
-      if (retVal) {
-        return Promise.resolve(retVal.concat());
-      } else {
-        return Promise.resolve(null);
-      }
-    } else {
-      return localforage.getItem(`${t}:${id}`);
-    }
+  _get(k) {
+    return localforage.getItem(k);
   }
 
-  update(t, id, v) {
-    return this.create(t, v);
+  _set(k, v) {
+    return localforage.setItem(k, v);
   }
 
-  delete(t, id) {
-    return localforage.removeItem(`${t}:${id}`);
-  }
-
-  query() {
-    return Promise.reject('Query interface not supported on LocalForageStorage');
+  _del(k) {
+    return localforage.removeItem(k);
   }
 }

@@ -25,11 +25,20 @@ var $unsubscribe = Symbol('$unsubscribe');
 
 var Model = exports.Model = function () {
   function Model(opts, guild) {
+    var _this = this;
+
     _classCallCheck(this, Model);
 
     this[$store] = {};
     this.$$copyValuesFrom(opts || {});
     this[$loaded] = false;
+    this.$relationships = {};
+    Object.keys(this.constructor.$fields).forEach(function (key) {
+      if (_this.constructor.$fields[key].type === 'hasMany') {
+        var Relationship = _this.constructor.$fields[key].relationship;
+        _this.$relationships[key] = new Relationship(_this, key, guild);
+      }
+    });
     if (guild) {
       this.$$connectToGuild(guild);
     }
@@ -38,29 +47,29 @@ var Model = exports.Model = function () {
   _createClass(Model, [{
     key: '$$connectToGuild',
     value: function $$connectToGuild(guild) {
-      var _this = this;
+      var _this2 = this;
 
       this[$guild] = guild;
       this[$unsubscribe] = guild.subscribe(this.constructor.$name, this.$id, function (v) {
-        _this.$$copyValuesFrom(v);
+        _this2.$$copyValuesFrom(v);
       });
     }
   }, {
     key: '$$copyValuesFrom',
     value: function $$copyValuesFrom() {
-      var _this2 = this;
+      var _this3 = this;
 
-      var opts = arguments.length <= 0 || arguments[0] === undefined ? {} : arguments[0];
+      var opts = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
 
       Object.keys(this.constructor.$fields).forEach(function (fieldName) {
         if (opts[fieldName] !== undefined) {
           // copy from opts to the best of our ability
-          if (_this2.constructor.$fields[fieldName].type === 'array' || _this2.constructor.$fields[fieldName].type === 'hasMany') {
-            _this2[$store][fieldName] = (opts[fieldName] || []).concat();
-          } else if (_this2.constructor.$fields[fieldName].type === 'object') {
-            _this2[$store][fieldName] = Object.assign({}, opts[fieldName]);
+          if (_this3.constructor.$fields[fieldName].type === 'array' || _this3.constructor.$fields[fieldName].type === 'hasMany') {
+            _this3[$store][fieldName] = (opts[fieldName] || []).concat();
+          } else if (_this3.constructor.$fields[fieldName].type === 'object') {
+            _this3[$store][fieldName] = Object.assign({}, opts[fieldName]);
           } else {
-            _this2[$store][fieldName] = opts[fieldName];
+            _this3[$store][fieldName] = opts[fieldName];
           }
         }
       });
@@ -71,7 +80,7 @@ var Model = exports.Model = function () {
   }, {
     key: '$get',
     value: function $get(key) {
-      var _this3 = this;
+      var _this4 = this;
 
       // three cases.
       // key === undefined - fetch all, unless $loaded, but return all.
@@ -79,36 +88,44 @@ var Model = exports.Model = function () {
       // otherwise - fetch all, unless $store[key], return $store[key].
 
       return Promise.resolve().then(function () {
-        if (key === undefined && _this3[$loaded] === false || key && _this3[$store][key] === undefined) {
-          return _this3[$guild].get(_this3.constructor, _this3.$id, key);
+        if (key === undefined && _this4[$loaded] === false || key && _this4[$store][key] === undefined) {
+          if (_this4.$relationships[key]) {
+            return _this4.$relationships[key].$list();
+          }
+          return _this4[$guild].get(_this4.constructor, _this4.$id, key);
         } else {
           return true;
         }
       }).then(function (v) {
         if (v === true) {
-          return _this3[$store][key];
+          return _this4[$store][key];
         } else {
-          _this3.$$copyValuesFrom(v);
-          _this3[$loaded] = true;
+          _this4.$$copyValuesFrom(v);
+          _this4[$loaded] = true;
           if (key) {
-            return _this3[$store][key];
+            return _this4[$store][key];
           } else {
-            return Object.assign({}, _this3[$store]);
+            return Object.assign({}, _this4[$store]);
           }
         }
       });
     }
   }, {
+    key: '$relationship',
+    value: function $relationship(key) {
+      return;
+    }
+  }, {
     key: '$load',
     value: function $load() {
-      var _this4 = this;
+      var _this5 = this;
 
-      var opts = arguments.length <= 0 || arguments[0] === undefined ? {} : arguments[0];
+      var opts = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
 
       var options = Object.assign({}, { self: true }, opts);
       if (options.self) {
         this.getSelf().then(function (data) {
-          _this4.$$copyValuesFrom(data);
+          _this5.$$copyValuesFrom(data);
         });
       }
     }
@@ -120,13 +137,13 @@ var Model = exports.Model = function () {
   }, {
     key: '$set',
     value: function $set() {
-      var _this5 = this;
+      var _this6 = this;
 
-      var update = arguments.length <= 0 || arguments[0] === undefined ? this[$store] : arguments[0];
+      var update = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : this[$store];
 
       this.$$copyValuesFrom(update); // this is the optimistic update;
       return this[$guild].save(this.constructor, update).then(function (updated) {
-        _this5.$$copyValuesFrom(updated);
+        _this6.$$copyValuesFrom(updated);
         return updated;
       });
       // .then((updates) => {

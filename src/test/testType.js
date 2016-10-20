@@ -6,16 +6,21 @@ export class TestType extends Model {}
 export class Children extends Relationship {}
 export class ValenceChildren extends Relationship {}
 
-Children.$sides = {
-  parent_id: 'tests',
-  child_id: 'tests',
-};
 Children.$name = 'children';
+Children.$sides = {
+  tests: {
+    children: 'parent_id',
+    parents: 'child_id',
+  },
+};
 
 ValenceChildren.$sides = {
-  parent_id: 'tests',
-  child_id: 'tests',
+  tests: {
+    valenceChildren: 'parent_id',
+    valenceParents: 'child_id',
+  },
 };
+
 
 ValenceChildren.$extras = ['perm'];
 ValenceChildren.$name = 'valence_children';
