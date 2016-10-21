@@ -1,5 +1,4 @@
 import * as localforage from 'localforage';
-import * as Promise from 'bluebird';
 import { keyValueStore } from './keyValueStore';
 
 export class LocalForageStorage extends keyValueStore {

@@ -11,10 +11,6 @@ var _localforage = require('localforage');
 
 var localforage = _interopRequireWildcard(_localforage);
 
-var _bluebird = require('bluebird');
-
-var Promise = _interopRequireWildcard(_bluebird);
-
 var _keyValueStore2 = require('./keyValueStore');
 
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
@@ -29,7 +25,7 @@ var LocalForageStorage = exports.LocalForageStorage = function (_keyValueStore) 
   _inherits(LocalForageStorage, _keyValueStore);
 
   function LocalForageStorage() {
-    var opts = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+    var opts = arguments.length <= 0 || arguments[0] === undefined ? {} : arguments[0];
 
     _classCallCheck(this, LocalForageStorage);
 

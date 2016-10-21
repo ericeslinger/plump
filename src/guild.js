@@ -39,7 +39,7 @@ export class Guild {
     store.onUpdate((u) => {
       this[$storage].forEach((storage) => {
         const Type = this[$types][u.type];
-        storage.onCacheableRead(Type, Object.assign({}, u.value, {[Type.$id]: u.id}));
+        storage.onCacheableRead(Type, Object.assign({}, u.value, { [Type.$id]: u.id }));
       });
       if (this[$subscriptions][u.type] && this[$subscriptions][u.type][u.id]) {
         this[$subscriptions][u.type][u.id].next(u.value);
@@ -52,7 +52,7 @@ export class Guild {
     if (typeof t === 'string') {
       Type = this[$types][t];
     }
-    const retVal = new Type({[Type.$id]: id}, this);
+    const retVal = new Type({ [Type.$id]: id }, this);
     return retVal;
   }
 

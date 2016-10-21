@@ -18,6 +18,12 @@ var Relationship = exports.Relationship = function () {
   }
 
   _createClass(Relationship, [{
+    key: "$otherItem",
+    value: function $otherItem(childId) {
+      var otherInfo = this.constructor.$sides[this.title].other;
+      return this.guild.find(otherInfo.type, childId);
+    }
+  }, {
     key: "$add",
     value: function $add(childId, extras) {
       return this.guild.add(this.for.constructor, this.for.$id, childId, extras);
@@ -34,7 +40,9 @@ var Relationship = exports.Relationship = function () {
     }
   }, {
     key: "$modify",
-    value: function $modify() {}
+    value: function $modify(childId, extras) {
+      return this.guild.modifyRelationship(this.for.constructor, this.for.$id, this.title, childId, extras);
+    }
   }]);
 
   return Relationship;

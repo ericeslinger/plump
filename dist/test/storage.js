@@ -42,7 +42,7 @@ function _defineProperty(obj, key, value) { if (key in obj) { Object.definePrope
 /* eslint no-shadow: 0 */
 
 function runSQL(command) {
-  var opts = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+  var opts = arguments.length <= 1 || arguments[1] === undefined ? {} : arguments[1];
 
   var connOptions = Object.assign({}, {
     user: 'postgres',

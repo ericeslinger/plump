@@ -5,6 +5,11 @@ export class Relationship {
     this.title = title;
   }
 
+  $otherItem(childId) {
+    const otherInfo = this.constructor.$sides[this.title].other;
+    return this.guild.find(otherInfo.type, childId);
+  }
+
   $add(childId, extras) {
     return this.guild.add(this.for.constructor, this.for.$id, childId, extras);
   }
@@ -17,5 +22,7 @@ export class Relationship {
     return this.guild.get(this.for.constructor, this.for.$id, this.title);
   }
 
-  $modify() {}
+  $modify(childId, extras) {
+    return this.guild.modifyRelationship(this.for.constructor, this.for.$id, this.title, childId, extras);
+  }
 }

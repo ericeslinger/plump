@@ -93,10 +93,6 @@ export class Model {
     });
   }
 
-  $relationship(key) {
-    return
-  }
-
   $load(opts = {}) {
     const options = Object.assign({}, { self: true }, opts);
     if (options.self) {

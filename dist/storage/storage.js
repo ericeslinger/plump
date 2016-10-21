@@ -36,7 +36,7 @@ var $emitter = Symbol('$emitter');
 
 var Storage = exports.Storage = function () {
   function Storage() {
-    var opts = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+    var opts = arguments.length <= 0 || arguments[0] === undefined ? {} : arguments[0];
 
     _classCallCheck(this, Storage);
 
@@ -110,7 +110,7 @@ var Storage = exports.Storage = function () {
   }, {
     key: 'add',
     value: function add(type, id, relationship, childId) {
-      var valence = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : {};
+      var valence = arguments.length <= 4 || arguments[4] === undefined ? {} : arguments[4];
 
       // add to a hasMany relationship
       // note that hasMany fields can have (impl-specific) valence data
@@ -126,7 +126,7 @@ var Storage = exports.Storage = function () {
   }, {
     key: 'modifyRelationship',
     value: function modifyRelationship(type, id, relationship, childId) {
-      var valence = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : {};
+      var valence = arguments.length <= 4 || arguments[4] === undefined ? {} : arguments[4];
 
       // should modify an existing hasMany valence data. Throw if not existing.
       return Promise.reject(new Error('modifyRelationship not implemented'));
