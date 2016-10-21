@@ -5,6 +5,7 @@ export class TestType extends Model {}
 
 export class Children extends Relationship {}
 export class ValenceChildren extends Relationship {}
+export class Reactions extends Relationship {}
 
 Children.$name = 'children';
 Children.$sides = {
@@ -31,6 +32,34 @@ Children.$sides = {
     },
   },
 };
+
+Reactions.$sides = {
+  reactors: {
+    self: {
+      field: 'child_id',
+      type: 'tests',
+    },
+    other: {
+      field: 'parent_id',
+      type: 'tests',
+      title: 'reactees',
+    },
+  },
+  reactees: {
+    self: {
+      field: 'parent_id',
+      type: 'tests',
+    },
+    other: {
+      field: 'child_id',
+      type: 'tests',
+      title: 'reactors',
+    },
+  },
+};
+
+Reactions.$restrict = { reaction: 'reeeeact' };
+Reactions.$name = 'reactions';
 
 
 ValenceChildren.$sides = {
@@ -76,25 +105,25 @@ TestType.$fields = {
   children: {
     type: 'hasMany',
     relationship: Children,
-    field: 'parent_id',
-    otherSide: 'parents',
   },
   valenceChildren: {
     type: 'hasMany',
     relationship: ValenceChildren,
-    field: 'parent_id',
-    otherSide: 'valenceParents',
   },
   parents: {
     type: 'hasMany',
     relationship: Children,
-    field: 'child_id',
-    otherSide: 'children',
   },
   valenceParents: {
     type: 'hasMany',
     relationship: ValenceChildren,
-    field: 'child_id',
-    otherSide: 'valenceChildren',
+  },
+  reactors: {
+    type: 'hasMany',
+    relationship: Reactions,
+  },
+  reactees: {
+    type: 'hasMany',
+    relationship: Reactions,
   },
 };

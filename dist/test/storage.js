@@ -186,6 +186,26 @@ storageTypes.forEach(function (store) {
       });
     });
 
+    it('handles relationships with restrictions', function () {
+      return actualStore.write(_testType.TestType, sampleObject).then(function (createdObject) {
+        return actualStore.add(_testType.TestType, createdObject.id, 'reactors', 100, { reaction: 'reeeeact' }).then(function () {
+          return actualStore.add(_testType.TestType, createdObject.id, 'reactors', 101, { reaction: 'reeeeact' });
+        }).then(function () {
+          return actualStore.add(_testType.TestType, createdObject.id, 'reactors', 101, { reaction: 'other' });
+        }).then(function () {
+          return expect(actualStore.read(_testType.TestType, createdObject.id, 'children')).to.eventually.deep.equal({
+            children: [{
+              child_id: 100,
+              parent_id: createdObject.id
+            }, {
+              child_id: 101,
+              parent_id: createdObject.id
+            }]
+          });
+        });
+      });
+    });
+
     it('supports querying objects');
 
     it('can add to a hasMany relationship', function () {

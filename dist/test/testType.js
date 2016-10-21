@@ -3,7 +3,7 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.ValenceChildren = exports.Children = exports.TestType = undefined;
+exports.Reactions = exports.ValenceChildren = exports.Children = exports.TestType = undefined;
 
 var _model = require('../model');
 
@@ -51,6 +51,18 @@ var ValenceChildren = exports.ValenceChildren = function (_Relationship2) {
   return ValenceChildren;
 }(_relationship.Relationship);
 
+var Reactions = exports.Reactions = function (_Relationship3) {
+  _inherits(Reactions, _Relationship3);
+
+  function Reactions() {
+    _classCallCheck(this, Reactions);
+
+    return _possibleConstructorReturn(this, (Reactions.__proto__ || Object.getPrototypeOf(Reactions)).apply(this, arguments));
+  }
+
+  return Reactions;
+}(_relationship.Relationship);
+
 Children.$name = 'children';
 Children.$sides = {
   parents: {
@@ -76,6 +88,34 @@ Children.$sides = {
     }
   }
 };
+
+Reactions.$sides = {
+  reactors: {
+    self: {
+      field: 'child_id',
+      type: 'tests'
+    },
+    other: {
+      field: 'parent_id',
+      type: 'tests',
+      title: 'reactees'
+    }
+  },
+  reactees: {
+    self: {
+      field: 'parent_id',
+      type: 'tests'
+    },
+    other: {
+      field: 'child_id',
+      type: 'tests',
+      title: 'reactors'
+    }
+  }
+};
+
+Reactions.$restrict = { reaction: 'reeeeact' };
+Reactions.$name = 'reactions';
 
 ValenceChildren.$sides = {
   valenceParents: {
@@ -119,26 +159,26 @@ TestType.$fields = {
   },
   children: {
     type: 'hasMany',
-    relationship: Children,
-    field: 'parent_id',
-    otherSide: 'parents'
+    relationship: Children
   },
   valenceChildren: {
     type: 'hasMany',
-    relationship: ValenceChildren,
-    field: 'parent_id',
-    otherSide: 'valenceParents'
+    relationship: ValenceChildren
   },
   parents: {
     type: 'hasMany',
-    relationship: Children,
-    field: 'child_id',
-    otherSide: 'children'
+    relationship: Children
   },
   valenceParents: {
     type: 'hasMany',
-    relationship: ValenceChildren,
-    field: 'child_id',
-    otherSide: 'valenceChildren'
+    relationship: ValenceChildren
+  },
+  reactors: {
+    type: 'hasMany',
+    relationship: Reactions
+  },
+  reactees: {
+    type: 'hasMany',
+    relationship: Reactions
   }
 };

@@ -185,6 +185,30 @@ storageTypes.forEach((store) => {
       });
     });
 
+    it('handles relationships with restrictions', () => {
+      return actualStore.write(TestType, sampleObject)
+      .then((createdObject) => {
+        return actualStore.add(TestType, createdObject.id, 'reactors', 100, { reaction: 'reeeeact' })
+        .then(() => actualStore.add(TestType, createdObject.id, 'reactors', 101, { reaction: 'reeeeact' }))
+        .then(() => actualStore.add(TestType, createdObject.id, 'reactors', 101, { reaction: 'other' }))
+        .then(() => {
+          return expect(actualStore.read(TestType, createdObject.id, 'children'))
+          .to.eventually.deep.equal({
+            children: [
+              {
+                child_id: 100,
+                parent_id: createdObject.id,
+              },
+              {
+                child_id: 101,
+                parent_id: createdObject.id,
+              },
+            ],
+          });
+        });
+      });
+    });
+
     it('supports querying objects');
 
     it('can add to a hasMany relationship', () => {
