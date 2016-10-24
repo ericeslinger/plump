@@ -42,7 +42,7 @@ function _defineProperty(obj, key, value) { if (key in obj) { Object.definePrope
 /* eslint no-shadow: 0 */
 
 function runSQL(command) {
-  var opts = arguments.length <= 1 || arguments[1] === undefined ? {} : arguments[1];
+  var opts = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
 
   var connOptions = Object.assign({}, {
     user: 'postgres',
@@ -116,7 +116,7 @@ var storageTypes = [{
     return runSQL('DROP DATABASE if exists guild_test;').then(function () {
       return runSQL('CREATE DATABASE guild_test;');
     }).then(function () {
-      return runSQL('\n          CREATE SEQUENCE testid_seq\n            START WITH 1\n            INCREMENT BY 1\n            NO MINVALUE\n            MAXVALUE 2147483647\n            CACHE 1\n            CYCLE;\n          CREATE TABLE tests (\n            id integer not null primary key DEFAULT nextval(\'testid_seq\'::regclass),\n            name text,\n            extended jsonb not null default \'{}\'::jsonb\n          );\n          CREATE TABLE children (parent_id integer not null, child_id integer not null);\n          CREATE UNIQUE INDEX children_join on children (parent_id, child_id);\n          CREATE TABLE valence_children (parent_id integer not null, child_id integer not null, perm integer not null);\n          CREATE UNIQUE INDEX valence_children_join on valence_children (parent_id, child_id, perm);\n        ', { database: 'guild_test' });
+      return runSQL('\n          CREATE SEQUENCE testid_seq\n            START WITH 1\n            INCREMENT BY 1\n            NO MINVALUE\n            MAXVALUE 2147483647\n            CACHE 1\n            CYCLE;\n          CREATE TABLE tests (\n            id integer not null primary key DEFAULT nextval(\'testid_seq\'::regclass),\n            name text,\n            extended jsonb not null default \'{}\'::jsonb\n          );\n          CREATE TABLE children (parent_id integer not null, child_id integer not null);\n          CREATE UNIQUE INDEX children_join on children (parent_id, child_id);\n          CREATE TABLE reactions (parent_id integer not null, child_id integer not null, reaction text not null);\n          CREATE UNIQUE INDEX reactions_join on reactions (parent_id, child_id, reaction);\n          CREATE TABLE valence_children (parent_id integer not null, child_id integer not null, perm integer not null);\n          CREATE UNIQUE INDEX valence_children_join on valence_children (parent_id, child_id);\n        ', { database: 'guild_test' });
     });
   },
   after: function after(driver) {
@@ -149,6 +149,7 @@ _chai2.default.use(_chaiAsPromised2.default);
 var expect = _chai2.default.expect;
 
 storageTypes.forEach(function (store) {
+  // if (store.name !== 'redis') return;
   describe(store.name, function () {
     var actualStore = void 0;
     before(function () {
@@ -188,18 +189,35 @@ storageTypes.forEach(function (store) {
 
     it('handles relationships with restrictions', function () {
       return actualStore.write(_testType.TestType, sampleObject).then(function (createdObject) {
-        return actualStore.add(_testType.TestType, createdObject.id, 'reactors', 100, { reaction: 'reeeeact' }).then(function () {
-          return actualStore.add(_testType.TestType, createdObject.id, 'reactors', 101, { reaction: 'reeeeact' });
+        return actualStore.add(_testType.TestType, createdObject.id, 'likers', 100).then(function () {
+          return actualStore.add(_testType.TestType, createdObject.id, 'likers', 101);
         }).then(function () {
-          return actualStore.add(_testType.TestType, createdObject.id, 'reactors', 101, { reaction: 'other' });
+          return actualStore.add(_testType.TestType, createdObject.id, 'agreers', 100);
         }).then(function () {
-          return expect(actualStore.read(_testType.TestType, createdObject.id, 'children')).to.eventually.deep.equal({
-            children: [{
-              child_id: 100,
-              parent_id: createdObject.id
+          return actualStore.add(_testType.TestType, createdObject.id, 'agreers', 101);
+        }).then(function () {
+          return actualStore.add(_testType.TestType, createdObject.id, 'agreers', 102);
+        }).then(function () {
+          return expect(actualStore.read(_testType.TestType, createdObject.id, 'likers')).to.eventually.deep.equal({
+            likers: [{
+              parent_id: 100,
+              child_id: createdObject.id
             }, {
-              child_id: 101,
-              parent_id: createdObject.id
+              parent_id: 101,
+              child_id: createdObject.id
+            }]
+          });
+        }).then(function () {
+          return expect(actualStore.read(_testType.TestType, createdObject.id, 'agreers')).to.eventually.deep.equal({
+            agreers: [{
+              parent_id: 100,
+              child_id: createdObject.id
+            }, {
+              parent_id: 101,
+              child_id: createdObject.id
+            }, {
+              parent_id: 102,
+              child_id: createdObject.id
             }]
           });
         });

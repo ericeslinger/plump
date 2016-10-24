@@ -5,8 +5,6 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.KeyValueStore = undefined;
 
-var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol ? "symbol" : typeof obj; };
-
 var _slicedToArray = function () { function sliceIterator(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"]) _i["return"](); } finally { if (_d) throw _e; } } return _arr; } return function (arr, i) { if (Array.isArray(arr)) { return arr; } else if (Symbol.iterator in Object(arr)) { return sliceIterator(arr, i); } else { throw new TypeError("Invalid attempt to destructure non-iterable instance"); } }; }();
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -29,6 +27,24 @@ function _inherits(subClass, superClass) { if (typeof superClass !== "function" 
 
 function saneNumber(i) {
   return typeof i === 'number' && !isNaN(i) && i !== Infinity & i !== -Infinity;
+}
+
+function findEntryCallback(relationship, relationshipTitle, target) {
+  var sideInfo = relationship.$sides[relationshipTitle];
+  return function (value) {
+    if (value[sideInfo.self.field] === target[sideInfo.self.field] && value[sideInfo.other.field] === target[sideInfo.other.field]) {
+      if (relationship.$restrict) {
+        console.log('TESTING: ' + JSON.stringify(target) + ' vs ' + JSON.stringify(value));
+        return Object.keys(relationship.$restrict).reduce(function (prior, restriction) {
+          return prior && value[restriction] === relationship.$restrict[restriction].value;
+        }, true);
+      } else {
+        return true;
+      }
+    } else {
+      return false;
+    }
+  };
 }
 
 var KeyValueStore = exports.KeyValueStore = function (_Storage) {
@@ -109,7 +125,24 @@ var KeyValueStore = exports.KeyValueStore = function (_Storage) {
     key: 'readMany',
     value: function readMany(t, id, relationship) {
       return this._get(this.keyString(t.$name, id, relationship)).then(function (arrayString) {
-        return _defineProperty({}, relationship, JSON.parse(arrayString) || []);
+        var relationshipArray = JSON.parse(arrayString) || [];
+        var relationshipType = t.$fields[relationship].relationship;
+        if (relationshipType.$restrict) {
+          return relationshipArray.filter(function (v) {
+            return Object.keys(relationshipType.$restrict).reduce(function (prior, restriction) {
+              return prior && v[restriction] === relationshipType.$restrict[restriction].value;
+            }, true);
+          }).map(function (entry) {
+            Object.keys(relationshipType.$restrict).forEach(function (k) {
+              delete entry[k]; // eslint-disable-line no-param-reassign
+            });
+            return entry;
+          });
+        } else {
+          return relationshipArray;
+        }
+      }).then(function (ary) {
+        return _defineProperty({}, relationship, ary);
       });
     }
   }, {
@@ -122,13 +155,15 @@ var KeyValueStore = exports.KeyValueStore = function (_Storage) {
     value: function add(type, id, relationshipTitle, childId) {
       var _this3 = this;
 
-      var extras = arguments.length <= 4 || arguments[4] === undefined ? {} : arguments[4];
+      var extras = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : {};
 
       var relationshipBlock = type.$fields[relationshipTitle];
       var sideInfo = relationshipBlock.relationship.$sides[relationshipTitle];
       var thisKeyString = this.keyString(type.$name, id, relationshipTitle);
       var otherKeyString = this.keyString(sideInfo.other.type, childId, sideInfo.other.title);
       return Promise.all([this._get(thisKeyString), this._get(otherKeyString)]).then(function (_ref2) {
+        var _newField;
+
         var _ref3 = _slicedToArray(_ref2, 2);
 
         var thisArrayString = _ref3[0];
@@ -136,27 +171,24 @@ var KeyValueStore = exports.KeyValueStore = function (_Storage) {
 
         var thisArray = JSON.parse(thisArrayString) || [];
         var otherArray = JSON.parse(otherArrayString) || [];
-        var idx = thisArray.findIndex(function (v) {
-          return v[sideInfo.self.field] === id && v[sideInfo.other.field] === childId;
-        });
+        var newField = (_newField = {}, _defineProperty(_newField, sideInfo.other.field, childId), _defineProperty(_newField, sideInfo.self.field, id), _newField);
+        var idx = thisArray.findIndex(findEntryCallback(relationshipBlock.relationship, relationshipTitle, newField));
         if (idx < 0) {
-          var _ret = function () {
-            var _newRelationship;
-
-            var newRelationship = (_newRelationship = {}, _defineProperty(_newRelationship, sideInfo.self.field, id), _defineProperty(_newRelationship, sideInfo.other.field, childId), _newRelationship);
-            (relationshipBlock.relationship.$extras || []).forEach(function (e) {
-              newRelationship[e] = extras[e];
+          if (relationshipBlock.relationship.$restrict) {
+            Object.keys(relationshipBlock.relationship.$restrict).forEach(function (restriction) {
+              newField[restriction] = relationshipBlock.relationship.$restrict[restriction].value;
             });
-            thisArray.push(newRelationship);
-            otherArray.push(newRelationship);
-            return {
-              v: Promise.all([_this3._set(thisKeyString, JSON.stringify(thisArray)), _this3._set(otherKeyString, JSON.stringify(otherArray))]).then(function () {
-                return thisArray;
-              })
-            };
-          }();
-
-          if ((typeof _ret === 'undefined' ? 'undefined' : _typeof(_ret)) === "object") return _ret.v;
+          }
+          if (relationshipBlock.relationship.$extras) {
+            Object.keys(relationshipBlock.relationship.$extras).forEach(function (extra) {
+              newField[extra] = extras[extra];
+            });
+          }
+          thisArray.push(newField);
+          otherArray.push(newField);
+          return Promise.all([_this3._set(thisKeyString, JSON.stringify(thisArray)), _this3._set(otherKeyString, JSON.stringify(otherArray))]).then(function () {
+            return thisArray;
+          });
         } else {
           return thisArray;
         }
@@ -172,6 +204,8 @@ var KeyValueStore = exports.KeyValueStore = function (_Storage) {
       var thisKeyString = this.keyString(type.$name, id, relationshipTitle);
       var otherKeyString = this.keyString(sideInfo.other.type, childId, sideInfo.other.title);
       return Promise.all([this._get(thisKeyString), this._get(otherKeyString)]).then(function (_ref4) {
+        var _target;
+
         var _ref5 = _slicedToArray(_ref4, 2);
 
         var thisArrayString = _ref5[0];
@@ -179,12 +213,9 @@ var KeyValueStore = exports.KeyValueStore = function (_Storage) {
 
         var thisArray = JSON.parse(thisArrayString) || [];
         var otherArray = JSON.parse(otherArrayString) || [];
-        var thisIdx = thisArray.findIndex(function (v) {
-          return v[sideInfo.self.field] === id && v[sideInfo.other.field] === childId;
-        });
-        var otherIdx = otherArray.findIndex(function (v) {
-          return v[sideInfo.self.field] === id && v[sideInfo.other.field] === childId;
-        });
+        var target = (_target = {}, _defineProperty(_target, sideInfo.other.field, childId), _defineProperty(_target, sideInfo.self.field, id), _target);
+        var thisIdx = thisArray.findIndex(findEntryCallback(relationshipBlock.relationship, relationshipTitle, target));
+        var otherIdx = otherArray.findIndex(findEntryCallback(relationshipBlock.relationship, relationshipTitle, target));
         if (thisIdx >= 0) {
           var modifiedRelationship = Object.assign({}, thisArray[thisIdx], extras);
           thisArray[thisIdx] = modifiedRelationship;
@@ -207,6 +238,8 @@ var KeyValueStore = exports.KeyValueStore = function (_Storage) {
       var thisKeyString = this.keyString(type.$name, id, relationshipTitle);
       var otherKeyString = this.keyString(sideInfo.other.type, childId, sideInfo.other.title);
       return Promise.all([this._get(thisKeyString), this._get(otherKeyString)]).then(function (_ref6) {
+        var _target2;
+
         var _ref7 = _slicedToArray(_ref6, 2);
 
         var thisArrayString = _ref7[0];
@@ -214,12 +247,9 @@ var KeyValueStore = exports.KeyValueStore = function (_Storage) {
 
         var thisArray = JSON.parse(thisArrayString) || [];
         var otherArray = JSON.parse(otherArrayString) || [];
-        var thisIdx = thisArray.findIndex(function (v) {
-          return v[sideInfo.self.field] === id && v[sideInfo.other.field] === childId;
-        });
-        var otherIdx = otherArray.findIndex(function (v) {
-          return v[sideInfo.self.field] === id && v[sideInfo.other.field] === childId;
-        });
+        var target = (_target2 = {}, _defineProperty(_target2, sideInfo.other.field, childId), _defineProperty(_target2, sideInfo.self.field, id), _target2);
+        var thisIdx = thisArray.findIndex(findEntryCallback(relationshipBlock.relationship, relationshipTitle, target));
+        var otherIdx = otherArray.findIndex(findEntryCallback(relationshipBlock.relationship, relationshipTitle, target));
         if (thisIdx >= 0) {
           thisArray.splice(thisIdx, 1);
           otherArray.splice(otherIdx, 1);

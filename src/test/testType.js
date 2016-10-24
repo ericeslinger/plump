@@ -5,7 +5,8 @@ export class TestType extends Model {}
 
 export class Children extends Relationship {}
 export class ValenceChildren extends Relationship {}
-export class Reactions extends Relationship {}
+export class Likes extends Relationship {}
+export class Agrees extends Relationship {}
 
 Children.$name = 'children';
 Children.$sides = {
@@ -33,8 +34,8 @@ Children.$sides = {
   },
 };
 
-Reactions.$sides = {
-  reactors: {
+Likes.$sides = {
+  likers: {
     self: {
       field: 'child_id',
       type: 'tests',
@@ -42,10 +43,10 @@ Reactions.$sides = {
     other: {
       field: 'parent_id',
       type: 'tests',
-      title: 'reactees',
+      title: 'likees',
     },
   },
-  reactees: {
+  likees: {
     self: {
       field: 'parent_id',
       type: 'tests',
@@ -53,13 +54,50 @@ Reactions.$sides = {
     other: {
       field: 'child_id',
       type: 'tests',
-      title: 'reactors',
+      title: 'likers',
     },
   },
 };
 
-Reactions.$restrict = { reaction: 'reeeeact' };
-Reactions.$name = 'reactions';
+Likes.$restrict = {
+  reaction: {
+    type: 'string',
+    value: 'like',
+  },
+};
+Likes.$name = 'reactions';
+Agrees.$sides = {
+  agreers: {
+    self: {
+      field: 'child_id',
+      type: 'tests',
+    },
+    other: {
+      field: 'parent_id',
+      type: 'tests',
+      title: 'agreees',
+    },
+  },
+  agreees: {
+    self: {
+      field: 'parent_id',
+      type: 'tests',
+    },
+    other: {
+      field: 'child_id',
+      type: 'tests',
+      title: 'agreers',
+    },
+  },
+};
+
+Agrees.$restrict = {
+  reaction: {
+    type: 'string',
+    value: 'agree',
+  },
+};
+Agrees.$name = 'reactions';
 
 
 ValenceChildren.$sides = {
@@ -87,7 +125,11 @@ ValenceChildren.$sides = {
   },
 };
 
-ValenceChildren.$extras = ['perm'];
+ValenceChildren.$extras = {
+  perm: {
+    type: 'number',
+  },
+};
 ValenceChildren.$name = 'valence_children';
 
 TestType.$name = 'tests';
@@ -118,12 +160,20 @@ TestType.$fields = {
     type: 'hasMany',
     relationship: ValenceChildren,
   },
-  reactors: {
+  likers: {
     type: 'hasMany',
-    relationship: Reactions,
+    relationship: Likes,
   },
-  reactees: {
+  likees: {
     type: 'hasMany',
-    relationship: Reactions,
+    relationship: Likes,
+  },
+  agreers: {
+    type: 'hasMany',
+    relationship: Agrees,
+  },
+  agreees: {
+    type: 'hasMany',
+    relationship: Agrees,
   },
 };

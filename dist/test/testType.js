@@ -3,7 +3,7 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.Reactions = exports.ValenceChildren = exports.Children = exports.TestType = undefined;
+exports.Agrees = exports.Likes = exports.ValenceChildren = exports.Children = exports.TestType = undefined;
 
 var _model = require('../model');
 
@@ -51,16 +51,28 @@ var ValenceChildren = exports.ValenceChildren = function (_Relationship2) {
   return ValenceChildren;
 }(_relationship.Relationship);
 
-var Reactions = exports.Reactions = function (_Relationship3) {
-  _inherits(Reactions, _Relationship3);
+var Likes = exports.Likes = function (_Relationship3) {
+  _inherits(Likes, _Relationship3);
 
-  function Reactions() {
-    _classCallCheck(this, Reactions);
+  function Likes() {
+    _classCallCheck(this, Likes);
 
-    return _possibleConstructorReturn(this, (Reactions.__proto__ || Object.getPrototypeOf(Reactions)).apply(this, arguments));
+    return _possibleConstructorReturn(this, (Likes.__proto__ || Object.getPrototypeOf(Likes)).apply(this, arguments));
   }
 
-  return Reactions;
+  return Likes;
+}(_relationship.Relationship);
+
+var Agrees = exports.Agrees = function (_Relationship4) {
+  _inherits(Agrees, _Relationship4);
+
+  function Agrees() {
+    _classCallCheck(this, Agrees);
+
+    return _possibleConstructorReturn(this, (Agrees.__proto__ || Object.getPrototypeOf(Agrees)).apply(this, arguments));
+  }
+
+  return Agrees;
 }(_relationship.Relationship);
 
 Children.$name = 'children';
@@ -89,8 +101,8 @@ Children.$sides = {
   }
 };
 
-Reactions.$sides = {
-  reactors: {
+Likes.$sides = {
+  likers: {
     self: {
       field: 'child_id',
       type: 'tests'
@@ -98,10 +110,10 @@ Reactions.$sides = {
     other: {
       field: 'parent_id',
       type: 'tests',
-      title: 'reactees'
+      title: 'likees'
     }
   },
-  reactees: {
+  likees: {
     self: {
       field: 'parent_id',
       type: 'tests'
@@ -109,13 +121,50 @@ Reactions.$sides = {
     other: {
       field: 'child_id',
       type: 'tests',
-      title: 'reactors'
+      title: 'likers'
     }
   }
 };
 
-Reactions.$restrict = { reaction: 'reeeeact' };
-Reactions.$name = 'reactions';
+Likes.$restrict = {
+  reaction: {
+    type: 'string',
+    value: 'like'
+  }
+};
+Likes.$name = 'reactions';
+Agrees.$sides = {
+  agreers: {
+    self: {
+      field: 'child_id',
+      type: 'tests'
+    },
+    other: {
+      field: 'parent_id',
+      type: 'tests',
+      title: 'agreees'
+    }
+  },
+  agreees: {
+    self: {
+      field: 'parent_id',
+      type: 'tests'
+    },
+    other: {
+      field: 'child_id',
+      type: 'tests',
+      title: 'agreers'
+    }
+  }
+};
+
+Agrees.$restrict = {
+  reaction: {
+    type: 'string',
+    value: 'agree'
+  }
+};
+Agrees.$name = 'reactions';
 
 ValenceChildren.$sides = {
   valenceParents: {
@@ -142,7 +191,11 @@ ValenceChildren.$sides = {
   }
 };
 
-ValenceChildren.$extras = ['perm'];
+ValenceChildren.$extras = {
+  perm: {
+    type: 'number'
+  }
+};
 ValenceChildren.$name = 'valence_children';
 
 TestType.$name = 'tests';
@@ -173,12 +226,20 @@ TestType.$fields = {
     type: 'hasMany',
     relationship: ValenceChildren
   },
-  reactors: {
+  likers: {
     type: 'hasMany',
-    relationship: Reactions
+    relationship: Likes
   },
-  reactees: {
+  likees: {
     type: 'hasMany',
-    relationship: Reactions
+    relationship: Likes
+  },
+  agreers: {
+    type: 'hasMany',
+    relationship: Agrees
+  },
+  agreees: {
+    type: 'hasMany',
+    relationship: Agrees
   }
 };

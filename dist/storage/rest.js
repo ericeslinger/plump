@@ -35,7 +35,7 @@ var RestStorage = exports.RestStorage = function (_Storage) {
   _inherits(RestStorage, _Storage);
 
   function RestStorage() {
-    var opts = arguments.length <= 0 || arguments[0] === undefined ? {} : arguments[0];
+    var opts = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
 
     _classCallCheck(this, RestStorage);
 
@@ -106,9 +106,11 @@ var RestStorage = exports.RestStorage = function (_Storage) {
       var relationshipBlock = type.$fields[relationshipTitle];
       var sideInfo = relationshipBlock.relationship.$sides[relationshipTitle];
       var newField = (_newField = {}, _defineProperty(_newField, sideInfo.self.field, id), _defineProperty(_newField, sideInfo.other.field, childId), _newField);
-      (relationshipBlock.relationship.$extras || []).forEach(function (e) {
-        newField[e] = extras[e];
-      });
+      if (relationshipBlock.relationship.$extras) {
+        Object.keys(relationshipBlock.relationship.$extras).forEach(function (extra) {
+          newField[extra] = extras[extra];
+        });
+      }
       return this[$axios].put('/' + type.$name + '/' + id + '/' + relationshipTitle, newField);
     }
   }, {

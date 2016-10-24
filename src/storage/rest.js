@@ -63,9 +63,11 @@ export class RestStorage extends Storage {
     const relationshipBlock = type.$fields[relationshipTitle];
     const sideInfo = relationshipBlock.relationship.$sides[relationshipTitle];
     const newField = { [sideInfo.self.field]: id, [sideInfo.other.field]: childId };
-    (relationshipBlock.relationship.$extras || []).forEach((e) => {
-      newField[e] = extras[e];
-    });
+    if (relationshipBlock.relationship.$extras) {
+      Object.keys(relationshipBlock.relationship.$extras).forEach((extra) => {
+        newField[extra] = extras[extra];
+      });
+    }
     return this[$axios].put(`/${type.$name}/${id}/${relationshipTitle}`, newField);
   }
 

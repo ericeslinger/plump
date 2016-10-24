@@ -81,11 +81,20 @@ export class SQLStorage extends Storage {
   readMany(type, id, relationshipTitle) {
     const relationshipBlock = type.$fields[relationshipTitle];
     const sideInfo = relationshipBlock.relationship.$sides[relationshipTitle];
-    const toSelect = [sideInfo.other.field, sideInfo.self.field].concat(relationshipBlock.relationship.$extras || []);
-    return this[$knex](relationshipBlock.relationship.$name)
-    .where({
+    let toSelect = [sideInfo.other.field, sideInfo.self.field];
+    if (relationshipBlock.relationship.$extras) {
+      toSelect = toSelect.concat(Object.keys(relationshipBlock.relationship.$extras));
+    }
+    const whereBlock = {
       [sideInfo.self.field]: id,
-    }).select(toSelect)
+    };
+    if (relationshipBlock.relationship.$restrict) {
+      Object.keys(relationshipBlock.relationship.$restrict).forEach((restriction) => {
+        whereBlock[restriction] = relationshipBlock.relationship.$restrict[restriction].value;
+      });
+    }
+    return this[$knex](relationshipBlock.relationship.$name)
+    .where(whereBlock).select(toSelect)
     .then((l) => {
       return {
         [relationshipTitle]: l,
@@ -105,9 +114,16 @@ export class SQLStorage extends Storage {
       [sideInfo.other.field]: childId,
       [sideInfo.self.field]: id,
     };
-    (relationshipBlock.relationship.$extras || []).forEach((extra) => {
-      newField[extra] = extras[extra];
-    });
+    if (relationshipBlock.relationship.$restrict) {
+      Object.keys(relationshipBlock.relationship.$restrict).forEach((restriction) => {
+        newField[restriction] = relationshipBlock.relationship.$restrict[restriction].value;
+      });
+    }
+    if (relationshipBlock.relationship.$extras) {
+      Object.keys(relationshipBlock.relationship.$extras).forEach((extra) => {
+        newField[extra] = extras[extra];
+      });
+    }
     return this[$knex](relationshipBlock.relationship.$name)
     .insert(newField).then(() => {
       return this.readMany(type, id, relationshipTitle);
@@ -118,26 +134,38 @@ export class SQLStorage extends Storage {
     const relationshipBlock = type.$fields[relationshipTitle];
     const sideInfo = relationshipBlock.relationship.$sides[relationshipTitle];
     const newField = {};
-    relationshipBlock.relationship.$extras.forEach((extra) => {
+    Object.keys(relationshipBlock.relationship.$extras).forEach((extra) => {
       if (extras[extra] !== undefined) {
         newField[extra] = extras[extra];
       }
     });
-    return this[$knex](relationshipBlock.relationship.$name)
-    .where({
+    const whereBlock = {
       [sideInfo.other.field]: childId,
       [sideInfo.self.field]: id,
-    }).update(newField);
+    };
+    if (relationshipBlock.relationship.$restrict) {
+      Object.keys(relationshipBlock.relationship.$restrict).forEach((restriction) => {
+        whereBlock[restriction] = relationshipBlock.relationship.$restrict[restriction].value;
+      });
+    }
+    return this[$knex](relationshipBlock.relationship.$name)
+    .where(whereBlock).update(newField);
   }
 
   remove(type, id, relationshipTitle, childId) {
     const relationshipBlock = type.$fields[relationshipTitle];
     const sideInfo = relationshipBlock.relationship.$sides[relationshipTitle];
-    return this[$knex](relationshipBlock.relationship.$name)
-    .where({
+    const whereBlock = {
       [sideInfo.other.field]: childId,
       [sideInfo.self.field]: id,
-    }).delete()
+    };
+    if (relationshipBlock.relationship.$restrict) {
+      Object.keys(relationshipBlock.relationship.$restrict).forEach((restriction) => {
+        whereBlock[restriction] = relationshipBlock.relationship.$restrict[restriction].value;
+      });
+    }
+    return this[$knex](relationshipBlock.relationship.$name)
+    .where(whereBlock).delete()
     .then(() => {
       return this.readMany(type, id, relationshipTitle);
     });

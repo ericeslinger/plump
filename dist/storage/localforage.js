@@ -25,7 +25,7 @@ var LocalForageStorage = exports.LocalForageStorage = function (_keyValueStore) 
   _inherits(LocalForageStorage, _keyValueStore);
 
   function LocalForageStorage() {
-    var opts = arguments.length <= 0 || arguments[0] === undefined ? {} : arguments[0];
+    var opts = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
 
     _classCallCheck(this, LocalForageStorage);
 

@@ -105,8 +105,10 @@ const storageTypes = [
           );
           CREATE TABLE children (parent_id integer not null, child_id integer not null);
           CREATE UNIQUE INDEX children_join on children (parent_id, child_id);
+          CREATE TABLE reactions (parent_id integer not null, child_id integer not null, reaction text not null);
+          CREATE UNIQUE INDEX reactions_join on reactions (parent_id, child_id, reaction);
           CREATE TABLE valence_children (parent_id integer not null, child_id integer not null, perm integer not null);
-          CREATE UNIQUE INDEX valence_children_join on valence_children (parent_id, child_id, perm);
+          CREATE UNIQUE INDEX valence_children_join on valence_children (parent_id, child_id);
         `, { database: 'guild_test' });
       });
     },
@@ -142,6 +144,7 @@ chai.use(chaiAsPromised);
 const expect = chai.expect;
 
 storageTypes.forEach((store) => {
+  // if (store.name !== 'redis') return;
   describe(store.name, () => {
     let actualStore;
     before(() => {
@@ -188,20 +191,41 @@ storageTypes.forEach((store) => {
     it('handles relationships with restrictions', () => {
       return actualStore.write(TestType, sampleObject)
       .then((createdObject) => {
-        return actualStore.add(TestType, createdObject.id, 'reactors', 100, { reaction: 'reeeeact' })
-        .then(() => actualStore.add(TestType, createdObject.id, 'reactors', 101, { reaction: 'reeeeact' }))
-        .then(() => actualStore.add(TestType, createdObject.id, 'reactors', 101, { reaction: 'other' }))
+        return actualStore.add(TestType, createdObject.id, 'likers', 100)
+        .then(() => actualStore.add(TestType, createdObject.id, 'likers', 101))
+        .then(() => actualStore.add(TestType, createdObject.id, 'agreers', 100))
+        .then(() => actualStore.add(TestType, createdObject.id, 'agreers', 101))
+        .then(() => actualStore.add(TestType, createdObject.id, 'agreers', 102))
         .then(() => {
-          return expect(actualStore.read(TestType, createdObject.id, 'children'))
+          return expect(actualStore.read(TestType, createdObject.id, 'likers'))
           .to.eventually.deep.equal({
-            children: [
+            likers: [
               {
-                child_id: 100,
-                parent_id: createdObject.id,
+                parent_id: 100,
+                child_id: createdObject.id,
               },
               {
-                child_id: 101,
-                parent_id: createdObject.id,
+                parent_id: 101,
+                child_id: createdObject.id,
+              },
+            ],
+          });
+        })
+        .then(() => {
+          return expect(actualStore.read(TestType, createdObject.id, 'agreers'))
+          .to.eventually.deep.equal({
+            agreers: [
+              {
+                parent_id: 100,
+                child_id: createdObject.id,
+              },
+              {
+                parent_id: 101,
+                child_id: createdObject.id,
+              },
+              {
+                parent_id: 102,
+                child_id: createdObject.id,
               },
             ],
           });
