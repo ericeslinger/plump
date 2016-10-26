@@ -15,6 +15,8 @@ var Promise = _interopRequireWildcard(_bluebird);
 
 var _storage = require('./storage');
 
+var _createFilter = require('./createFilter');
+
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
 
 function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
@@ -34,7 +36,6 @@ function findEntryCallback(relationship, relationshipTitle, target) {
   return function (value) {
     if (value[sideInfo.self.field] === target[sideInfo.self.field] && value[sideInfo.other.field] === target[sideInfo.other.field]) {
       if (relationship.$restrict) {
-        console.log('TESTING: ' + JSON.stringify(target) + ' vs ' + JSON.stringify(value));
         return Object.keys(relationship.$restrict).reduce(function (prior, restriction) {
           return prior && value[restriction] === relationship.$restrict[restriction].value;
         }, true);
@@ -127,6 +128,10 @@ var KeyValueStore = exports.KeyValueStore = function (_Storage) {
       return this._get(this.keyString(t.$name, id, relationship)).then(function (arrayString) {
         var relationshipArray = JSON.parse(arrayString) || [];
         var relationshipType = t.$fields[relationship].relationship;
+        if (relationshipType.$sides[relationship].self.query) {
+          var filterBlock = _storage.Storage.massReplace(relationshipType.$sides[relationship].self.query, { id: id });
+          relationshipArray = relationshipArray.filter((0, _createFilter.createFilter)(filterBlock));
+        }
         if (relationshipType.$restrict) {
           return relationshipArray.filter(function (v) {
             return Object.keys(relationshipType.$restrict).reduce(function (prior, restriction) {
@@ -157,8 +162,8 @@ var KeyValueStore = exports.KeyValueStore = function (_Storage) {
 
       var extras = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : {};
 
-      var relationshipBlock = type.$fields[relationshipTitle];
-      var sideInfo = relationshipBlock.relationship.$sides[relationshipTitle];
+      var relationshipBlock = type.$fields[relationshipTitle].relationship;
+      var sideInfo = relationshipBlock.$sides[relationshipTitle];
       var thisKeyString = this.keyString(type.$name, id, relationshipTitle);
       var otherKeyString = this.keyString(sideInfo.other.type, childId, sideInfo.other.title);
       return Promise.all([this._get(thisKeyString), this._get(otherKeyString)]).then(function (_ref2) {
@@ -172,15 +177,15 @@ var KeyValueStore = exports.KeyValueStore = function (_Storage) {
         var thisArray = JSON.parse(thisArrayString) || [];
         var otherArray = JSON.parse(otherArrayString) || [];
         var newField = (_newField = {}, _defineProperty(_newField, sideInfo.other.field, childId), _defineProperty(_newField, sideInfo.self.field, id), _newField);
-        var idx = thisArray.findIndex(findEntryCallback(relationshipBlock.relationship, relationshipTitle, newField));
+        var idx = thisArray.findIndex(findEntryCallback(relationshipBlock, relationshipTitle, newField));
         if (idx < 0) {
-          if (relationshipBlock.relationship.$restrict) {
-            Object.keys(relationshipBlock.relationship.$restrict).forEach(function (restriction) {
-              newField[restriction] = relationshipBlock.relationship.$restrict[restriction].value;
+          if (relationshipBlock.$restrict) {
+            Object.keys(relationshipBlock.$restrict).forEach(function (restriction) {
+              newField[restriction] = relationshipBlock.$restrict[restriction].value;
             });
           }
-          if (relationshipBlock.relationship.$extras) {
-            Object.keys(relationshipBlock.relationship.$extras).forEach(function (extra) {
+          if (relationshipBlock.$extras) {
+            Object.keys(relationshipBlock.$extras).forEach(function (extra) {
               newField[extra] = extras[extra];
             });
           }
@@ -199,8 +204,8 @@ var KeyValueStore = exports.KeyValueStore = function (_Storage) {
     value: function modifyRelationship(type, id, relationshipTitle, childId, extras) {
       var _this4 = this;
 
-      var relationshipBlock = type.$fields[relationshipTitle];
-      var sideInfo = relationshipBlock.relationship.$sides[relationshipTitle];
+      var relationshipBlock = type.$fields[relationshipTitle].relationship;
+      var sideInfo = relationshipBlock.$sides[relationshipTitle];
       var thisKeyString = this.keyString(type.$name, id, relationshipTitle);
       var otherKeyString = this.keyString(sideInfo.other.type, childId, sideInfo.other.title);
       return Promise.all([this._get(thisKeyString), this._get(otherKeyString)]).then(function (_ref4) {
@@ -214,8 +219,8 @@ var KeyValueStore = exports.KeyValueStore = function (_Storage) {
         var thisArray = JSON.parse(thisArrayString) || [];
         var otherArray = JSON.parse(otherArrayString) || [];
         var target = (_target = {}, _defineProperty(_target, sideInfo.other.field, childId), _defineProperty(_target, sideInfo.self.field, id), _target);
-        var thisIdx = thisArray.findIndex(findEntryCallback(relationshipBlock.relationship, relationshipTitle, target));
-        var otherIdx = otherArray.findIndex(findEntryCallback(relationshipBlock.relationship, relationshipTitle, target));
+        var thisIdx = thisArray.findIndex(findEntryCallback(relationshipBlock, relationshipTitle, target));
+        var otherIdx = otherArray.findIndex(findEntryCallback(relationshipBlock, relationshipTitle, target));
         if (thisIdx >= 0) {
           var modifiedRelationship = Object.assign({}, thisArray[thisIdx], extras);
           thisArray[thisIdx] = modifiedRelationship;
@@ -233,8 +238,8 @@ var KeyValueStore = exports.KeyValueStore = function (_Storage) {
     value: function remove(type, id, relationshipTitle, childId) {
       var _this5 = this;
 
-      var relationshipBlock = type.$fields[relationshipTitle];
-      var sideInfo = relationshipBlock.relationship.$sides[relationshipTitle];
+      var relationshipBlock = type.$fields[relationshipTitle].relationship;
+      var sideInfo = relationshipBlock.$sides[relationshipTitle];
       var thisKeyString = this.keyString(type.$name, id, relationshipTitle);
       var otherKeyString = this.keyString(sideInfo.other.type, childId, sideInfo.other.title);
       return Promise.all([this._get(thisKeyString), this._get(otherKeyString)]).then(function (_ref6) {
@@ -248,8 +253,8 @@ var KeyValueStore = exports.KeyValueStore = function (_Storage) {
         var thisArray = JSON.parse(thisArrayString) || [];
         var otherArray = JSON.parse(otherArrayString) || [];
         var target = (_target2 = {}, _defineProperty(_target2, sideInfo.other.field, childId), _defineProperty(_target2, sideInfo.self.field, id), _target2);
-        var thisIdx = thisArray.findIndex(findEntryCallback(relationshipBlock.relationship, relationshipTitle, target));
-        var otherIdx = otherArray.findIndex(findEntryCallback(relationshipBlock.relationship, relationshipTitle, target));
+        var thisIdx = thisArray.findIndex(findEntryCallback(relationshipBlock, relationshipTitle, target));
+        var otherIdx = otherArray.findIndex(findEntryCallback(relationshipBlock, relationshipTitle, target));
         if (thisIdx >= 0) {
           thisArray.splice(thisIdx, 1);
           otherArray.splice(otherIdx, 1);

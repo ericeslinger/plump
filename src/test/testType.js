@@ -7,6 +7,7 @@ export class Children extends Relationship {}
 export class ValenceChildren extends Relationship {}
 export class Likes extends Relationship {}
 export class Agrees extends Relationship {}
+export class QueryChildren extends Relationship {}
 
 Children.$name = 'children';
 Children.$sides = {
@@ -132,6 +133,41 @@ ValenceChildren.$extras = {
 };
 ValenceChildren.$name = 'valence_children';
 
+QueryChildren.$sides = {
+  queryParents: {
+    self: {
+      field: 'child_id',
+      type: 'tests',
+      query: ['where', ['where', 'child_id', '=', '{id}'], ['where', 'perm', '>=', 2]],
+    },
+    other: {
+      field: 'parent_id',
+      type: 'tests',
+      title: 'queryChildren',
+    },
+  },
+  queryChildren: {
+    self: {
+      field: 'parent_id',
+      type: 'tests',
+      query: ['where', ['where', 'parent_id', '=', '{id}'], ['where', 'perm', '>=', 2]],
+    },
+    other: {
+      field: 'child_id',
+      type: 'tests',
+      title: 'queryParents',
+    },
+  },
+};
+QueryChildren.$extras = {
+  perm: {
+    type: 'number',
+  },
+};
+
+QueryChildren.$name = 'valence_children';
+
+
 TestType.$name = 'tests';
 TestType.$id = 'id';
 TestType.$fields = {
@@ -155,6 +191,16 @@ TestType.$fields = {
   parents: {
     type: 'hasMany',
     relationship: Children,
+  },
+  queryChildren: {
+    type: 'hasMany',
+    readonly: true,
+    relationship: QueryChildren,
+  },
+  queryParents: {
+    type: 'hasMany',
+    readonly: true,
+    relationship: QueryChildren,
   },
   valenceParents: {
     type: 'hasMany',

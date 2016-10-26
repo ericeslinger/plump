@@ -119,10 +119,22 @@ export class Storage {
       if (args[0].$id === undefined) {
         throw new Error('Illegal operation on an unsaved new model');
       }
-    } else {
-      if (args[1][args[0].$id] === undefined) {
-        throw new Error('Illegal operation on an unsaved new model');
-      }
+    } else if (args[1][args[0].$id] === undefined) {
+      throw new Error('Illegal operation on an unsaved new model');
     }
   }
+}
+
+
+// convenience function that walks an array replacing any {id} with context.id
+Storage.massReplace = function massReplace(block, context) {
+  return block.map((v) => {
+    if (Array.isArray(v)) {
+      return massReplace(v, context);
+    } else if ((typeof v === 'string') && (v.match(/^\{(.*)\}$/))) {
+      return context[v.match(/^\{(.*)\}$/)[1]];
+    } else {
+      return v;
+    }
+  });
 }

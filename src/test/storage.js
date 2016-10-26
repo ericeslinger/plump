@@ -108,7 +108,7 @@ const storageTypes = [
           CREATE TABLE reactions (parent_id integer not null, child_id integer not null, reaction text not null);
           CREATE UNIQUE INDEX reactions_join on reactions (parent_id, child_id, reaction);
           CREATE TABLE valence_children (parent_id integer not null, child_id integer not null, perm integer not null);
-          CREATE UNIQUE INDEX valence_children_join on valence_children (parent_id, child_id);
+          --CREATE UNIQUE INDEX valence_children_join on valence_children (parent_id, child_id);
         `, { database: 'guild_test' });
       });
     },
@@ -144,7 +144,6 @@ chai.use(chaiAsPromised);
 const expect = chai.expect;
 
 storageTypes.forEach((store) => {
-  // if (store.name !== 'redis') return;
   describe(store.name, () => {
     let actualStore;
     before(() => {
@@ -232,8 +231,6 @@ storageTypes.forEach((store) => {
         });
       });
     });
-
-    it('supports querying objects');
 
     it('can add to a hasMany relationship', () => {
       return actualStore.write(TestType, sampleObject)
@@ -339,6 +336,31 @@ storageTypes.forEach((store) => {
         .then(() => {
           return expect(actualStore.read(TestType, createdObject.id, 'children'))
           .to.eventually.deep.equal({ children: [] });
+        });
+      });
+    });
+
+    it('supports queries in hasMany relationships', () => {
+      return actualStore.write(TestType, sampleObject)
+      .then((createdObject) => {
+        return actualStore.add(TestType, createdObject.id, 'queryChildren', 101, { perm: 1 })
+        .then(() => actualStore.add(TestType, createdObject.id, 'queryChildren', 102, { perm: 2 }))
+        .then(() => actualStore.add(TestType, createdObject.id, 'queryChildren', 103, { perm: 3 }))
+        .then(() => {
+          return expect(actualStore.read(TestType, createdObject.id, 'queryChildren'))
+          .to.eventually.deep.equal({
+            queryChildren: [
+              {
+                child_id: 102,
+                parent_id: createdObject.id,
+                perm: 2,
+              }, {
+                child_id: 103,
+                parent_id: createdObject.id,
+                perm: 3,
+              },
+            ],
+          });
         });
       });
     });

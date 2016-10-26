@@ -3,6 +3,27 @@ import knex from 'knex';
 import { Storage } from './storage';
 const $knex = Symbol('$knex');
 
+function deserializeWhere(query, block) {
+  const car = block[0];
+  const cdr = block.slice(1);
+  if (Array.isArray(cdr[0])) {
+    return cdr.reduce((subQuery, subBlock) => deserializeWhere(subQuery, subBlock), query);
+  } else {
+    return query[car].apply(query, cdr);
+  }
+}
+
+function objectToWhereChain(query, block, context) {
+  return Object.keys(block).reduce((q, key) => {
+    if (Array.isArray(block[key])) {
+      return deserializeWhere(query, Storage.massReplace(block[key], context));
+    } else {
+      return q.where(key, block[key]);
+    }
+  }, query);
+}
+
+
 export class SQLStorage extends Storage {
   constructor(opts = {}) {
     super(opts);
@@ -86,15 +107,15 @@ export class SQLStorage extends Storage {
       toSelect = toSelect.concat(Object.keys(relationshipBlock.relationship.$extras));
     }
     const whereBlock = {
-      [sideInfo.self.field]: id,
+      [sideInfo.self.field]: sideInfo.self.query || id,
     };
     if (relationshipBlock.relationship.$restrict) {
       Object.keys(relationshipBlock.relationship.$restrict).forEach((restriction) => {
         whereBlock[restriction] = relationshipBlock.relationship.$restrict[restriction].value;
       });
     }
-    return this[$knex](relationshipBlock.relationship.$name)
-    .where(whereBlock).select(toSelect)
+    return objectToWhereChain(this[$knex](relationshipBlock.relationship.$name), whereBlock, { id })
+    .select(toSelect)
     .then((l) => {
       return {
         [relationshipTitle]: l,
@@ -125,9 +146,7 @@ export class SQLStorage extends Storage {
       });
     }
     return this[$knex](relationshipBlock.relationship.$name)
-    .insert(newField).then(() => {
-      return this.readMany(type, id, relationshipTitle);
-    });
+    .insert(newField);
   }
 
   modifyRelationship(type, id, relationshipTitle, childId, extras = {}) {
@@ -148,8 +167,8 @@ export class SQLStorage extends Storage {
         whereBlock[restriction] = relationshipBlock.relationship.$restrict[restriction].value;
       });
     }
-    return this[$knex](relationshipBlock.relationship.$name)
-    .where(whereBlock).update(newField);
+    return objectToWhereChain(this[$knex](relationshipBlock.relationship.$name), whereBlock, { id, childId })
+    .update(newField);
   }
 
   remove(type, id, relationshipTitle, childId) {
@@ -164,11 +183,7 @@ export class SQLStorage extends Storage {
         whereBlock[restriction] = relationshipBlock.relationship.$restrict[restriction].value;
       });
     }
-    return this[$knex](relationshipBlock.relationship.$name)
-    .where(whereBlock).delete()
-    .then(() => {
-      return this.readMany(type, id, relationshipTitle);
-    });
+    return objectToWhereChain(this[$knex](relationshipBlock.relationship.$name), whereBlock).delete();
   }
 
   query(q) {

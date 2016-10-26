@@ -1,5 +1,6 @@
 import * as Promise from 'bluebird';
 import { Storage } from './storage';
+import { createFilter } from './createFilter';
 
 function saneNumber(i) {
   return ((typeof i === 'number') && (!isNaN(i)) && (i !== Infinity) & (i !== -Infinity));
@@ -13,7 +14,6 @@ function findEntryCallback(relationship, relationshipTitle, target) {
       (value[sideInfo.other.field] === target[sideInfo.other.field])
     ) {
       if (relationship.$restrict) {
-        console.log(`TESTING: ${JSON.stringify(target)} vs ${JSON.stringify(value)}`);
         return Object.keys(relationship.$restrict).reduce(
           (prior, restriction) => prior && value[restriction] === relationship.$restrict[restriction].value,
           true
@@ -89,8 +89,12 @@ export class KeyValueStore extends Storage {
   readMany(t, id, relationship) {
     return this._get(this.keyString(t.$name, id, relationship))
     .then((arrayString) => {
-      const relationshipArray = JSON.parse(arrayString) || [];
+      let relationshipArray = JSON.parse(arrayString) || [];
       const relationshipType = t.$fields[relationship].relationship;
+      if (relationshipType.$sides[relationship].self.query) {
+        const filterBlock = Storage.massReplace(relationshipType.$sides[relationship].self.query, { id });
+        relationshipArray = relationshipArray.filter(createFilter(filterBlock));
+      }
       if (relationshipType.$restrict) {
         return relationshipArray.filter((v) => {
           return Object.keys(relationshipType.$restrict).reduce(
@@ -116,8 +120,8 @@ export class KeyValueStore extends Storage {
   }
 
   add(type, id, relationshipTitle, childId, extras = {}) {
-    const relationshipBlock = type.$fields[relationshipTitle];
-    const sideInfo = relationshipBlock.relationship.$sides[relationshipTitle];
+    const relationshipBlock = type.$fields[relationshipTitle].relationship;
+    const sideInfo = relationshipBlock.$sides[relationshipTitle];
     const thisKeyString = this.keyString(type.$name, id, relationshipTitle);
     const otherKeyString = this.keyString(sideInfo.other.type, childId, sideInfo.other.title);
     return Promise.all([
@@ -131,15 +135,15 @@ export class KeyValueStore extends Storage {
         [sideInfo.other.field]: childId,
         [sideInfo.self.field]: id,
       };
-      const idx = thisArray.findIndex(findEntryCallback(relationshipBlock.relationship, relationshipTitle, newField));
+      const idx = thisArray.findIndex(findEntryCallback(relationshipBlock, relationshipTitle, newField));
       if (idx < 0) {
-        if (relationshipBlock.relationship.$restrict) {
-          Object.keys(relationshipBlock.relationship.$restrict).forEach((restriction) => {
-            newField[restriction] = relationshipBlock.relationship.$restrict[restriction].value;
+        if (relationshipBlock.$restrict) {
+          Object.keys(relationshipBlock.$restrict).forEach((restriction) => {
+            newField[restriction] = relationshipBlock.$restrict[restriction].value;
           });
         }
-        if (relationshipBlock.relationship.$extras) {
-          Object.keys(relationshipBlock.relationship.$extras).forEach((extra) => {
+        if (relationshipBlock.$extras) {
+          Object.keys(relationshipBlock.$extras).forEach((extra) => {
             newField[extra] = extras[extra];
           });
         }
@@ -157,8 +161,8 @@ export class KeyValueStore extends Storage {
   }
 
   modifyRelationship(type, id, relationshipTitle, childId, extras) {
-    const relationshipBlock = type.$fields[relationshipTitle];
-    const sideInfo = relationshipBlock.relationship.$sides[relationshipTitle];
+    const relationshipBlock = type.$fields[relationshipTitle].relationship;
+    const sideInfo = relationshipBlock.$sides[relationshipTitle];
     const thisKeyString = this.keyString(type.$name, id, relationshipTitle);
     const otherKeyString = this.keyString(sideInfo.other.type, childId, sideInfo.other.title);
     return Promise.all([
@@ -172,8 +176,8 @@ export class KeyValueStore extends Storage {
         [sideInfo.other.field]: childId,
         [sideInfo.self.field]: id,
       };
-      const thisIdx = thisArray.findIndex(findEntryCallback(relationshipBlock.relationship, relationshipTitle, target));
-      const otherIdx = otherArray.findIndex(findEntryCallback(relationshipBlock.relationship, relationshipTitle, target));
+      const thisIdx = thisArray.findIndex(findEntryCallback(relationshipBlock, relationshipTitle, target));
+      const otherIdx = otherArray.findIndex(findEntryCallback(relationshipBlock, relationshipTitle, target));
       if (thisIdx >= 0) {
         const modifiedRelationship = Object.assign(
           {},
@@ -194,8 +198,8 @@ export class KeyValueStore extends Storage {
   }
 
   remove(type, id, relationshipTitle, childId) {
-    const relationshipBlock = type.$fields[relationshipTitle];
-    const sideInfo = relationshipBlock.relationship.$sides[relationshipTitle];
+    const relationshipBlock = type.$fields[relationshipTitle].relationship;
+    const sideInfo = relationshipBlock.$sides[relationshipTitle];
     const thisKeyString = this.keyString(type.$name, id, relationshipTitle);
     const otherKeyString = this.keyString(sideInfo.other.type, childId, sideInfo.other.title);
     return Promise.all([
@@ -209,8 +213,8 @@ export class KeyValueStore extends Storage {
         [sideInfo.other.field]: childId,
         [sideInfo.self.field]: id,
       };
-      const thisIdx = thisArray.findIndex(findEntryCallback(relationshipBlock.relationship, relationshipTitle, target));
-      const otherIdx = otherArray.findIndex(findEntryCallback(relationshipBlock.relationship, relationshipTitle, target));
+      const thisIdx = thisArray.findIndex(findEntryCallback(relationshipBlock, relationshipTitle, target));
+      const otherIdx = otherArray.findIndex(findEntryCallback(relationshipBlock, relationshipTitle, target));
       if (thisIdx >= 0) {
         thisArray.splice(thisIdx, 1);
         otherArray.splice(otherIdx, 1);

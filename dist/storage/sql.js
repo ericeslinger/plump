@@ -31,6 +31,28 @@ function _inherits(subClass, superClass) { if (typeof superClass !== "function" 
 
 var $knex = Symbol('$knex');
 
+function deserializeWhere(query, block) {
+  var car = block[0];
+  var cdr = block.slice(1);
+  if (Array.isArray(cdr[0])) {
+    return cdr.reduce(function (subQuery, subBlock) {
+      return deserializeWhere(subQuery, subBlock);
+    }, query);
+  } else {
+    return query[car].apply(query, cdr);
+  }
+}
+
+function objectToWhereChain(query, block, context) {
+  return Object.keys(block).reduce(function (q, key) {
+    if (Array.isArray(block[key])) {
+      return deserializeWhere(query, _storage.Storage.massReplace(block[key], context));
+    } else {
+      return q.where(key, block[key]);
+    }
+  }, query);
+}
+
 var SQLStorage = exports.SQLStorage = function (_Storage) {
   _inherits(SQLStorage, _Storage);
 
@@ -121,13 +143,13 @@ var SQLStorage = exports.SQLStorage = function (_Storage) {
       if (relationshipBlock.relationship.$extras) {
         toSelect = toSelect.concat(Object.keys(relationshipBlock.relationship.$extras));
       }
-      var whereBlock = _defineProperty({}, sideInfo.self.field, id);
+      var whereBlock = _defineProperty({}, sideInfo.self.field, sideInfo.self.query || id);
       if (relationshipBlock.relationship.$restrict) {
         Object.keys(relationshipBlock.relationship.$restrict).forEach(function (restriction) {
           whereBlock[restriction] = relationshipBlock.relationship.$restrict[restriction].value;
         });
       }
-      return this[$knex](relationshipBlock.relationship.$name).where(whereBlock).select(toSelect).then(function (l) {
+      return objectToWhereChain(this[$knex](relationshipBlock.relationship.$name), whereBlock, { id: id }).select(toSelect).then(function (l) {
         return _defineProperty({}, relationshipTitle, l);
       });
     }
@@ -141,8 +163,7 @@ var SQLStorage = exports.SQLStorage = function (_Storage) {
   }, {
     key: 'add',
     value: function add(type, id, relationshipTitle, childId) {
-      var _newField,
-          _this3 = this;
+      var _newField;
 
       var extras = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : {};
 
@@ -159,9 +180,7 @@ var SQLStorage = exports.SQLStorage = function (_Storage) {
           newField[extra] = extras[extra];
         });
       }
-      return this[$knex](relationshipBlock.relationship.$name).insert(newField).then(function () {
-        return _this3.readMany(type, id, relationshipTitle);
-      });
+      return this[$knex](relationshipBlock.relationship.$name).insert(newField);
     }
   }, {
     key: 'modifyRelationship',
@@ -184,13 +203,12 @@ var SQLStorage = exports.SQLStorage = function (_Storage) {
           whereBlock[restriction] = relationshipBlock.relationship.$restrict[restriction].value;
         });
       }
-      return this[$knex](relationshipBlock.relationship.$name).where(whereBlock).update(newField);
+      return objectToWhereChain(this[$knex](relationshipBlock.relationship.$name), whereBlock, { id: id, childId: childId }).update(newField);
     }
   }, {
     key: 'remove',
     value: function remove(type, id, relationshipTitle, childId) {
-      var _whereBlock3,
-          _this4 = this;
+      var _whereBlock3;
 
       var relationshipBlock = type.$fields[relationshipTitle];
       var sideInfo = relationshipBlock.relationship.$sides[relationshipTitle];
@@ -200,9 +218,7 @@ var SQLStorage = exports.SQLStorage = function (_Storage) {
           whereBlock[restriction] = relationshipBlock.relationship.$restrict[restriction].value;
         });
       }
-      return this[$knex](relationshipBlock.relationship.$name).where(whereBlock).delete().then(function () {
-        return _this4.readMany(type, id, relationshipTitle);
-      });
+      return objectToWhereChain(this[$knex](relationshipBlock.relationship.$name), whereBlock).delete();
     }
   }, {
     key: 'query',

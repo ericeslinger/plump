@@ -3,7 +3,7 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.Agrees = exports.Likes = exports.ValenceChildren = exports.Children = exports.TestType = undefined;
+exports.QueryChildren = exports.Agrees = exports.Likes = exports.ValenceChildren = exports.Children = exports.TestType = undefined;
 
 var _model = require('../model');
 
@@ -73,6 +73,18 @@ var Agrees = exports.Agrees = function (_Relationship4) {
   }
 
   return Agrees;
+}(_relationship.Relationship);
+
+var QueryChildren = exports.QueryChildren = function (_Relationship5) {
+  _inherits(QueryChildren, _Relationship5);
+
+  function QueryChildren() {
+    _classCallCheck(this, QueryChildren);
+
+    return _possibleConstructorReturn(this, (QueryChildren.__proto__ || Object.getPrototypeOf(QueryChildren)).apply(this, arguments));
+  }
+
+  return QueryChildren;
 }(_relationship.Relationship);
 
 Children.$name = 'children';
@@ -198,6 +210,40 @@ ValenceChildren.$extras = {
 };
 ValenceChildren.$name = 'valence_children';
 
+QueryChildren.$sides = {
+  queryParents: {
+    self: {
+      field: 'child_id',
+      type: 'tests',
+      query: ['where', ['where', 'child_id', '=', '{id}'], ['where', 'perm', '>=', 2]]
+    },
+    other: {
+      field: 'parent_id',
+      type: 'tests',
+      title: 'queryChildren'
+    }
+  },
+  queryChildren: {
+    self: {
+      field: 'parent_id',
+      type: 'tests',
+      query: ['where', ['where', 'parent_id', '=', '{id}'], ['where', 'perm', '>=', 2]]
+    },
+    other: {
+      field: 'child_id',
+      type: 'tests',
+      title: 'queryParents'
+    }
+  }
+};
+QueryChildren.$extras = {
+  perm: {
+    type: 'number'
+  }
+};
+
+QueryChildren.$name = 'valence_children';
+
 TestType.$name = 'tests';
 TestType.$id = 'id';
 TestType.$fields = {
@@ -221,6 +267,16 @@ TestType.$fields = {
   parents: {
     type: 'hasMany',
     relationship: Children
+  },
+  queryChildren: {
+    type: 'hasMany',
+    readonly: true,
+    relationship: QueryChildren
+  },
+  queryParents: {
+    type: 'hasMany',
+    readonly: true,
+    relationship: QueryChildren
   },
   valenceParents: {
     type: 'hasMany',

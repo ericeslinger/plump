@@ -28,8 +28,6 @@ _chai2.default.use(_chaiAsPromised2.default);
 var expect = _chai2.default.expect;
 
 describe('model', function () {
-  it('should save field updates to all datastores');
-
   it('should return promises to existing data', function () {
     var one = new _testType.TestType({ id: 1, name: 'potato' });
     expect(one.$get('name')).to.eventually.equal('potato');
@@ -67,8 +65,6 @@ describe('model', function () {
       return expect(one.$get('name')).to.eventually.equal('rutabaga');
     });
   });
-
-  it('should save updates to datastores');
 
   it('should show empty hasMany lists as []', function () {
     var one = new _testType.TestType({ name: 'frotato' }, guild);
@@ -127,10 +123,4 @@ describe('model', function () {
       }]);
     });
   });
-
-  it('should update an inflated version of its hasMany relations');
-  it('should optimistically update hasMany changes');
-  it('should roll back optimistic changes on error');
-  it('should return errors when fetching undefined fields');
-  it('should fire events when underlying data changes');
 });
