@@ -9,7 +9,7 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 var _bluebird = require('bluebird');
 
-var Promise = _interopRequireWildcard(_bluebird);
+var Bluebird = _interopRequireWildcard(_bluebird);
 
 var _knex = require('knex');
 
@@ -85,7 +85,7 @@ var SQLStorage = exports.SQLStorage = function (_Storage) {
   /*
     note that knex.js "then" functions aren't actually promises the way you think they are.
     you can return knex.insert().into(), which has a then() on it, but that thenable isn't
-    an actual promise yet. So instead we're returning Promise.resolve(thenable);
+    an actual promise yet. So instead we're returning Bluebird.resolve(thenable);
   */
 
   _createClass(SQLStorage, [{
@@ -137,19 +137,34 @@ var SQLStorage = exports.SQLStorage = function (_Storage) {
   }, {
     key: 'readMany',
     value: function readMany(type, id, relationshipTitle) {
+      var _this3 = this;
+
       var relationshipBlock = type.$fields[relationshipTitle];
       var sideInfo = relationshipBlock.relationship.$sides[relationshipTitle];
       var toSelect = [sideInfo.other.field, sideInfo.self.field];
       if (relationshipBlock.relationship.$extras) {
         toSelect = toSelect.concat(Object.keys(relationshipBlock.relationship.$extras));
       }
-      var whereBlock = _defineProperty({}, sideInfo.self.field, sideInfo.self.query || id);
+      var whereBlock = {};
+      if (sideInfo.self.query) {
+        whereBlock[sideInfo.self.field] = sideInfo.self.query.logic;
+      } else {
+        whereBlock[sideInfo.self.field] = id;
+      }
       if (relationshipBlock.relationship.$restrict) {
         Object.keys(relationshipBlock.relationship.$restrict).forEach(function (restriction) {
           whereBlock[restriction] = relationshipBlock.relationship.$restrict[restriction].value;
         });
       }
-      return objectToWhereChain(this[$knex](relationshipBlock.relationship.$name), whereBlock, { id: id }).select(toSelect).then(function (l) {
+      return Bluebird.resolve().then(function () {
+        if (sideInfo.self.query && sideInfo.self.query.requireLoad) {
+          return _this3.readOne(type, id);
+        } else {
+          return { id: id };
+        }
+      }).then(function (context) {
+        return objectToWhereChain(_this3[$knex](relationshipBlock.relationship.$name), whereBlock, context).select(toSelect);
+      }).then(function (l) {
         return _defineProperty({}, relationshipTitle, l);
       });
     }
@@ -185,7 +200,7 @@ var SQLStorage = exports.SQLStorage = function (_Storage) {
   }, {
     key: 'modifyRelationship',
     value: function modifyRelationship(type, id, relationshipTitle, childId) {
-      var _whereBlock2;
+      var _whereBlock;
 
       var extras = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : {};
 
@@ -197,7 +212,7 @@ var SQLStorage = exports.SQLStorage = function (_Storage) {
           newField[extra] = extras[extra];
         }
       });
-      var whereBlock = (_whereBlock2 = {}, _defineProperty(_whereBlock2, sideInfo.other.field, childId), _defineProperty(_whereBlock2, sideInfo.self.field, id), _whereBlock2);
+      var whereBlock = (_whereBlock = {}, _defineProperty(_whereBlock, sideInfo.other.field, childId), _defineProperty(_whereBlock, sideInfo.self.field, id), _whereBlock);
       if (relationshipBlock.relationship.$restrict) {
         Object.keys(relationshipBlock.relationship.$restrict).forEach(function (restriction) {
           whereBlock[restriction] = relationshipBlock.relationship.$restrict[restriction].value;
@@ -208,11 +223,11 @@ var SQLStorage = exports.SQLStorage = function (_Storage) {
   }, {
     key: 'remove',
     value: function remove(type, id, relationshipTitle, childId) {
-      var _whereBlock3;
+      var _whereBlock2;
 
       var relationshipBlock = type.$fields[relationshipTitle];
       var sideInfo = relationshipBlock.relationship.$sides[relationshipTitle];
-      var whereBlock = (_whereBlock3 = {}, _defineProperty(_whereBlock3, sideInfo.other.field, childId), _defineProperty(_whereBlock3, sideInfo.self.field, id), _whereBlock3);
+      var whereBlock = (_whereBlock2 = {}, _defineProperty(_whereBlock2, sideInfo.other.field, childId), _defineProperty(_whereBlock2, sideInfo.self.field, id), _whereBlock2);
       if (relationshipBlock.relationship.$restrict) {
         Object.keys(relationshipBlock.relationship.$restrict).forEach(function (restriction) {
           whereBlock[restriction] = relationshipBlock.relationship.$restrict[restriction].value;
@@ -223,7 +238,7 @@ var SQLStorage = exports.SQLStorage = function (_Storage) {
   }, {
     key: 'query',
     value: function query(q) {
-      return Promise.resolve(this[$knex].raw(q.query)).then(function (d) {
+      return Bluebird.resolve(this[$knex].raw(q.query)).then(function (d) {
         return d.rows;
       });
     }

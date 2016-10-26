@@ -1,4 +1,4 @@
-import * as Promise from 'bluebird';
+import * as Bluebird from 'bluebird';
 import knex from 'knex';
 import { Storage } from './storage';
 const $knex = Symbol('$knex');
@@ -52,7 +52,7 @@ export class SQLStorage extends Storage {
   /*
     note that knex.js "then" functions aren't actually promises the way you think they are.
     you can return knex.insert().into(), which has a then() on it, but that thenable isn't
-    an actual promise yet. So instead we're returning Promise.resolve(thenable);
+    an actual promise yet. So instead we're returning Bluebird.resolve(thenable);
   */
 
   teardown() {
@@ -106,16 +106,29 @@ export class SQLStorage extends Storage {
     if (relationshipBlock.relationship.$extras) {
       toSelect = toSelect.concat(Object.keys(relationshipBlock.relationship.$extras));
     }
-    const whereBlock = {
-      [sideInfo.self.field]: sideInfo.self.query || id,
-    };
+    const whereBlock = {};
+    if (sideInfo.self.query) {
+      whereBlock[sideInfo.self.field] = sideInfo.self.query.logic;
+    } else {
+      whereBlock[sideInfo.self.field] = id;
+    }
     if (relationshipBlock.relationship.$restrict) {
       Object.keys(relationshipBlock.relationship.$restrict).forEach((restriction) => {
         whereBlock[restriction] = relationshipBlock.relationship.$restrict[restriction].value;
       });
     }
-    return objectToWhereChain(this[$knex](relationshipBlock.relationship.$name), whereBlock, { id })
-    .select(toSelect)
+    return Bluebird.resolve()
+    .then(() => {
+      if (sideInfo.self.query && sideInfo.self.query.requireLoad) {
+        return this.readOne(type, id);
+      } else {
+        return { id };
+      }
+    })
+    .then((context) => {
+      return objectToWhereChain(this[$knex](relationshipBlock.relationship.$name), whereBlock, context)
+      .select(toSelect);
+    })
     .then((l) => {
       return {
         [relationshipTitle]: l,
@@ -187,7 +200,7 @@ export class SQLStorage extends Storage {
   }
 
   query(q) {
-    return Promise.resolve(this[$knex].raw(q.query))
+    return Bluebird.resolve(this[$knex].raw(q.query))
     .then((d) => d.rows);
   }
 }

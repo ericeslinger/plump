@@ -1,4 +1,4 @@
-import * as Promise from 'bluebird';
+import * as Bluebird from 'bluebird';
 import { Storage } from './storage';
 import { createFilter } from './createFilter';
 
@@ -87,12 +87,22 @@ export class KeyValueStore extends Storage {
   }
 
   readMany(t, id, relationship) {
-    return this._get(this.keyString(t.$name, id, relationship))
-    .then((arrayString) => {
+    const relationshipType = t.$fields[relationship].relationship;
+    const sideInfo = relationshipType.$sides[relationship];
+    return Bluebird.resolve()
+    .then(() => {
+      const resolves = [this._get(this.keyString(t.$name, id, relationship))];
+      if (sideInfo.self.query && sideInfo.self.query.requireLoad) {
+        resolves.push(this.readOne(t, id));
+      } else {
+        resolves.push(Bluebird.resolve({ id }));
+      }
+      return Bluebird.all(resolves);
+    })
+    .then(([arrayString, context]) => {
       let relationshipArray = JSON.parse(arrayString) || [];
-      const relationshipType = t.$fields[relationship].relationship;
-      if (relationshipType.$sides[relationship].self.query) {
-        const filterBlock = Storage.massReplace(relationshipType.$sides[relationship].self.query, { id });
+      if (sideInfo.self.query) {
+        const filterBlock = Storage.massReplace(sideInfo.self.query.logic, context);
         relationshipArray = relationshipArray.filter(createFilter(filterBlock));
       }
       if (relationshipType.$restrict) {
@@ -124,7 +134,7 @@ export class KeyValueStore extends Storage {
     const sideInfo = relationshipBlock.$sides[relationshipTitle];
     const thisKeyString = this.keyString(type.$name, id, relationshipTitle);
     const otherKeyString = this.keyString(sideInfo.other.type, childId, sideInfo.other.title);
-    return Promise.all([
+    return Bluebird.all([
       this._get(thisKeyString),
       this._get(otherKeyString),
     ])
@@ -149,7 +159,7 @@ export class KeyValueStore extends Storage {
         }
         thisArray.push(newField);
         otherArray.push(newField);
-        return Promise.all([
+        return Bluebird.all([
           this._set(thisKeyString, JSON.stringify(thisArray)),
           this._set(otherKeyString, JSON.stringify(otherArray)),
         ])
@@ -165,7 +175,7 @@ export class KeyValueStore extends Storage {
     const sideInfo = relationshipBlock.$sides[relationshipTitle];
     const thisKeyString = this.keyString(type.$name, id, relationshipTitle);
     const otherKeyString = this.keyString(sideInfo.other.type, childId, sideInfo.other.title);
-    return Promise.all([
+    return Bluebird.all([
       this._get(thisKeyString),
       this._get(otherKeyString),
     ])
@@ -186,7 +196,7 @@ export class KeyValueStore extends Storage {
         );
         thisArray[thisIdx] = modifiedRelationship;
         otherArray[otherIdx] = modifiedRelationship;
-        return Promise.all([
+        return Bluebird.all([
           this._set(thisKeyString, JSON.stringify(thisArray)),
           this._set(otherKeyString, JSON.stringify(otherArray)),
         ])
@@ -202,7 +212,7 @@ export class KeyValueStore extends Storage {
     const sideInfo = relationshipBlock.$sides[relationshipTitle];
     const thisKeyString = this.keyString(type.$name, id, relationshipTitle);
     const otherKeyString = this.keyString(sideInfo.other.type, childId, sideInfo.other.title);
-    return Promise.all([
+    return Bluebird.all([
       this._get(thisKeyString),
       this._get(otherKeyString),
     ])
@@ -218,7 +228,7 @@ export class KeyValueStore extends Storage {
       if (thisIdx >= 0) {
         thisArray.splice(thisIdx, 1);
         otherArray.splice(otherIdx, 1);
-        return Promise.all([
+        return Bluebird.all([
           this._set(thisKeyString, JSON.stringify(thisArray)),
           this._set(otherKeyString, JSON.stringify(otherArray)),
         ])

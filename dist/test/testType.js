@@ -215,7 +215,10 @@ QueryChildren.$sides = {
     self: {
       field: 'child_id',
       type: 'tests',
-      query: ['where', ['where', 'child_id', '=', '{id}'], ['where', 'perm', '>=', 2]]
+      query: {
+        logic: ['where', ['where', 'child_id', '=', '{id}'], ['where', 'perm', '>=', 2]],
+        requireLoad: true
+      }
     },
     other: {
       field: 'parent_id',
@@ -227,7 +230,10 @@ QueryChildren.$sides = {
     self: {
       field: 'parent_id',
       type: 'tests',
-      query: ['where', ['where', 'parent_id', '=', '{id}'], ['where', 'perm', '>=', 2]]
+      query: {
+        logic: ['where', ['where', 'parent_id', '=', '{id}'], ['where', 'perm', '>=', 2]],
+        requireLoad: true
+      }
     },
     other: {
       field: 'child_id',
