@@ -7,7 +7,8 @@ gulp.task('test', ['build'], () => {
   .pipe(mocha());
 });
 
-gulp.task('oldtest', ['build'], () => {
-  const transform = require('../../dist/transform');
-  transform.testDeltas();
+gulp.task('go', ['build'], () => {
+  const main = require('../../dist');
+  console.log(main);
+  main.go();
 });
