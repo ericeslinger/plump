@@ -3,7 +3,7 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.Guild = undefined;
+exports.Plump = undefined;
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
@@ -22,13 +22,13 @@ var $storage = Symbol('$storage');
 var $terminal = Symbol('$terminal');
 var $subscriptions = Symbol('$subscriptions');
 
-var Guild = exports.Guild = function () {
-  function Guild() {
+var Plump = exports.Plump = function () {
+  function Plump() {
     var _this = this;
 
     var opts = arguments.length <= 0 || arguments[0] === undefined ? {} : arguments[0];
 
-    _classCallCheck(this, Guild);
+    _classCallCheck(this, Plump);
 
     var options = Object.assign({}, {
       storage: [],
@@ -45,7 +45,7 @@ var Guild = exports.Guild = function () {
     });
   }
 
-  _createClass(Guild, [{
+  _createClass(Plump, [{
     key: 'addType',
     value: function addType(T) {
       if (this[$types][T.$name] === undefined) {
@@ -140,7 +140,7 @@ var Guild = exports.Guild = function () {
 
         return (_$terminal2 = this[$terminal]).write.apply(_$terminal2, arguments);
       } else {
-        return Promise.reject(new Error('Guild has no terminal store'));
+        return Promise.reject(new Error('Plump has no terminal store'));
       }
     }
   }, {
@@ -151,7 +151,7 @@ var Guild = exports.Guild = function () {
 
         return (_$terminal3 = this[$terminal]).add.apply(_$terminal3, arguments);
       } else {
-        return Promise.reject(new Error('Guild has no terminal store'));
+        return Promise.reject(new Error('Plump has no terminal store'));
       }
     }
   }, {
@@ -162,7 +162,7 @@ var Guild = exports.Guild = function () {
 
         return (_$terminal4 = this[$terminal]).modifyRelationship.apply(_$terminal4, arguments);
       } else {
-        return Promise.reject(new Error('Guild has no terminal store'));
+        return Promise.reject(new Error('Plump has no terminal store'));
       }
     }
   }, {
@@ -173,7 +173,7 @@ var Guild = exports.Guild = function () {
 
         return (_$terminal5 = this[$terminal]).remove.apply(_$terminal5, arguments);
       } else {
-        return Promise.reject(new Error('Guild has no terminal store'));
+        return Promise.reject(new Error('Plump has no terminal store'));
       }
     }
   }, {
@@ -187,5 +187,5 @@ var Guild = exports.Guild = function () {
     }
   }]);
 
-  return Guild;
+  return Plump;
 }();

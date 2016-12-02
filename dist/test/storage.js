@@ -104,7 +104,7 @@ var storageTypes = [{
   opts: {
     sql: {
       connection: {
-        database: 'guild_test',
+        database: 'plump_test',
         user: 'postgres',
         host: 'localhost',
         port: 5432
@@ -113,15 +113,15 @@ var storageTypes = [{
     terminal: true
   },
   before: function before() {
-    return runSQL('DROP DATABASE if exists guild_test;').then(function () {
-      return runSQL('CREATE DATABASE guild_test;');
+    return runSQL('DROP DATABASE if exists plump_test;').then(function () {
+      return runSQL('CREATE DATABASE plump_test;');
     }).then(function () {
-      return runSQL('\n          CREATE SEQUENCE testid_seq\n            START WITH 1\n            INCREMENT BY 1\n            NO MINVALUE\n            MAXVALUE 2147483647\n            CACHE 1\n            CYCLE;\n          CREATE TABLE tests (\n            id integer not null primary key DEFAULT nextval(\'testid_seq\'::regclass),\n            name text,\n            extended jsonb not null default \'{}\'::jsonb\n          );\n          CREATE TABLE children (parent_id integer not null, child_id integer not null);\n          CREATE UNIQUE INDEX children_join on children (parent_id, child_id);\n          CREATE TABLE reactions (parent_id integer not null, child_id integer not null, reaction text not null);\n          CREATE UNIQUE INDEX reactions_join on reactions (parent_id, child_id, reaction);\n          CREATE TABLE valence_children (parent_id integer not null, child_id integer not null, perm integer not null);\n          --CREATE UNIQUE INDEX valence_children_join on valence_children (parent_id, child_id);\n        ', { database: 'guild_test' });
+      return runSQL('\n          CREATE SEQUENCE testid_seq\n            START WITH 1\n            INCREMENT BY 1\n            NO MINVALUE\n            MAXVALUE 2147483647\n            CACHE 1\n            CYCLE;\n          CREATE TABLE tests (\n            id integer not null primary key DEFAULT nextval(\'testid_seq\'::regclass),\n            name text,\n            extended jsonb not null default \'{}\'::jsonb\n          );\n          CREATE TABLE children (parent_id integer not null, child_id integer not null);\n          CREATE UNIQUE INDEX children_join on children (parent_id, child_id);\n          CREATE TABLE reactions (parent_id integer not null, child_id integer not null, reaction text not null);\n          CREATE UNIQUE INDEX reactions_join on reactions (parent_id, child_id, reaction);\n          CREATE TABLE valence_children (parent_id integer not null, child_id integer not null, perm integer not null);\n          --CREATE UNIQUE INDEX valence_children_join on valence_children (parent_id, child_id);\n        ', { database: 'plump_test' });
     });
   },
   after: function after(driver) {
     return driver.teardown().then(function () {
-      return runSQL('DROP DATABASE guild_test;');
+      return runSQL('DROP DATABASE plump_test;');
     });
   }
 }, {

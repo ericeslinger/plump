@@ -5,7 +5,7 @@ const $subscriptions = Symbol('$subscriptions');
 
 import Rx from 'rxjs/Rx';
 
-export class Guild {
+export class Plump {
   constructor(opts = {}) {
     const options = Object.assign({}, {
       storage: [],
@@ -94,7 +94,7 @@ export class Guild {
     if (this[$terminal]) {
       return this[$terminal].write(...args);
     } else {
-      return Promise.reject(new Error('Guild has no terminal store'));
+      return Promise.reject(new Error('Plump has no terminal store'));
     }
   }
 
@@ -102,7 +102,7 @@ export class Guild {
     if (this[$terminal]) {
       return this[$terminal].add(...args);
     } else {
-      return Promise.reject(new Error('Guild has no terminal store'));
+      return Promise.reject(new Error('Plump has no terminal store'));
     }
   }
 
@@ -110,7 +110,7 @@ export class Guild {
     if (this[$terminal]) {
       return this[$terminal].modifyRelationship(...args);
     } else {
-      return Promise.reject(new Error('Guild has no terminal store'));
+      return Promise.reject(new Error('Plump has no terminal store'));
     }
   }
 
@@ -118,7 +118,7 @@ export class Guild {
     if (this[$terminal]) {
       return this[$terminal].remove(...args);
     } else {
-      return Promise.reject(new Error('Guild has no terminal store'));
+      return Promise.reject(new Error('Plump has no terminal store'));
     }
   }
 

@@ -1,6 +1,6 @@
 {
-  "name": "@kstf/guild",
-  "version": "0.0.1",
+  "name": "plump",
+  "version": "0.1.0",
   "description": "Pluggable Datastore",
   "main": "dist/index.js",
   "scripts": {
@@ -8,7 +8,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/kstf/guild.git"
+    "url": "git+https://github.com/kstf/plump.git"
   },
   "keywords": [
     "typescript",
@@ -19,9 +19,9 @@
   "author": "Eric Eslinger <eric.eslinger@gmail.com>",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/kstf/guild/issues"
+    "url": "https://github.com/kstf/plump/issues"
   },
-  "homepage": "https://github.com/kstf/guild#readme",
+  "homepage": "https://github.com/kstf/plump#readme",
   "devDependencies": {
     "axios": "^0.14.0",
     "axios-mock-adapter": "^1.6.1",

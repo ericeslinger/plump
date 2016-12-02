@@ -9,10 +9,10 @@ var _createClass = function () { function defineProperties(target, props) { for 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 var Relationship = exports.Relationship = function () {
-  function Relationship(model, title, guild) {
+  function Relationship(model, title, plump) {
     _classCallCheck(this, Relationship);
 
-    this.guild = guild;
+    this.plump = plump;
     this.for = model;
     this.title = title;
   }
@@ -21,27 +21,27 @@ var Relationship = exports.Relationship = function () {
     key: "$otherItem",
     value: function $otherItem(childId) {
       var otherInfo = this.constructor.$sides[this.title].other;
-      return this.guild.find(otherInfo.type, childId);
+      return this.plump.find(otherInfo.type, childId);
     }
   }, {
     key: "$add",
     value: function $add(childId, extras) {
-      return this.guild.add(this.for.constructor, this.for.$id, childId, extras);
+      return this.plump.add(this.for.constructor, this.for.$id, childId, extras);
     }
   }, {
     key: "$remove",
     value: function $remove(childId) {
-      return this.guild.remove(this.for.constructor, this.for.$id, childId);
+      return this.plump.remove(this.for.constructor, this.for.$id, childId);
     }
   }, {
     key: "$list",
     value: function $list() {
-      return this.guild.get(this.for.constructor, this.for.$id, this.title);
+      return this.plump.get(this.for.constructor, this.for.$id, this.title);
     }
   }, {
     key: "$modify",
     value: function $modify(childId, extras) {
-      return this.guild.modifyRelationship(this.for.constructor, this.for.$id, this.title, childId, extras);
+      return this.plump.modifyRelationship(this.for.constructor, this.for.$id, this.title, childId, extras);
     }
   }]);
 

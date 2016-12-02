@@ -1,6 +1,6 @@
 import * as Promise from 'bluebird';
 const $store = Symbol('$store');
-const $guild = Symbol('$guild');
+const $plump = Symbol('$plump');
 const $loaded = Symbol('$loaded');
 const $unsubscribe = Symbol('$unsubscribe');
 
@@ -8,7 +8,7 @@ const $unsubscribe = Symbol('$unsubscribe');
 // and who keeps a roll-backable delta
 
 export class Model {
-  constructor(opts, guild) {
+  constructor(opts, plump) {
     this[$store] = {};
     this.$$copyValuesFrom(opts || {});
     this[$loaded] = false;
@@ -16,17 +16,17 @@ export class Model {
     Object.keys(this.constructor.$fields).forEach((key) => {
       if (this.constructor.$fields[key].type === 'hasMany') {
         const Relationship = this.constructor.$fields[key].relationship;
-        this.$relationships[key] = new Relationship(this, key, guild);
+        this.$relationships[key] = new Relationship(this, key, plump);
       }
     });
-    if (guild) {
-      this.$$connectToGuild(guild);
+    if (plump) {
+      this.$$connectToPlump(plump);
     }
   }
 
-  $$connectToGuild(guild) {
-    this[$guild] = guild;
-    this[$unsubscribe] = guild.subscribe(this.constructor.$name, this.$id, (v) => {
+  $$connectToPlump(plump) {
+    this[$plump] = plump;
+    this[$unsubscribe] = plump.subscribe(this.constructor.$name, this.$id, (v) => {
       this.$$copyValuesFrom(v);
     });
   }
@@ -74,7 +74,7 @@ export class Model {
         if (this.$relationships[key]) {
           return this.$relationships[key].$list();
         }
-        return this[$guild].get(this.constructor, this.$id, key);
+        return this[$plump].get(this.constructor, this.$id, key);
       } else {
         return true;
       }
@@ -109,7 +109,7 @@ export class Model {
 
   $set(update = this[$store]) {
     this.$$copyValuesFrom(update); // this is the optimistic update;
-    return this[$guild].save(this.constructor, update)
+    return this[$plump].save(this.constructor, update)
     .then((updated) => {
       this.$$copyValuesFrom(updated);
       return updated;
@@ -128,7 +128,7 @@ export class Model {
         id = item.$id;
       }
       if ((typeof id === 'number') && (id >= 1)) {
-        return this[$guild].add(this.constructor, this.$id, key, id, extras);
+        return this[$plump].add(this.constructor, this.$id, key, id, extras);
       } else {
         return Promise.reject(new Error('Invalid item added to hasMany'));
       }
@@ -147,7 +147,7 @@ export class Model {
       }
       if ((typeof id === 'number') && (id >= 1)) {
         delete this[$store][key];
-        return this[$guild].modifyRelationship(this.constructor, this.$id, key, id, extras);
+        return this[$plump].modifyRelationship(this.constructor, this.$id, key, id, extras);
       } else {
         return Promise.reject(new Error('Invalid item added to hasMany'));
       }
@@ -166,7 +166,7 @@ export class Model {
       }
       if ((typeof id === 'number') && (id >= 1)) {
         delete this[$store][key];
-        return this[$guild].remove(this.constructor, this.$id, key, id);
+        return this[$plump].remove(this.constructor, this.$id, key, id);
       } else {
         return Promise.reject(new Error('Invalid item $removed from hasMany'));
       }

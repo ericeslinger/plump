@@ -78,7 +78,7 @@ const storageTypes = [
     opts: {
       sql: {
         connection: {
-          database: 'guild_test',
+          database: 'plump_test',
           user: 'postgres',
           host: 'localhost',
           port: 5432,
@@ -87,8 +87,8 @@ const storageTypes = [
       terminal: true,
     },
     before: () => {
-      return runSQL('DROP DATABASE if exists guild_test;')
-      .then(() => runSQL('CREATE DATABASE guild_test;'))
+      return runSQL('DROP DATABASE if exists plump_test;')
+      .then(() => runSQL('CREATE DATABASE plump_test;'))
       .then(() => {
         return runSQL(`
           CREATE SEQUENCE testid_seq
@@ -109,12 +109,12 @@ const storageTypes = [
           CREATE UNIQUE INDEX reactions_join on reactions (parent_id, child_id, reaction);
           CREATE TABLE valence_children (parent_id integer not null, child_id integer not null, perm integer not null);
           --CREATE UNIQUE INDEX valence_children_join on valence_children (parent_id, child_id);
-        `, { database: 'guild_test' });
+        `, { database: 'plump_test' });
       });
     },
     after: (driver) => {
       return driver.teardown()
-      .then(() => runSQL('DROP DATABASE guild_test;'));
+      .then(() => runSQL('DROP DATABASE plump_test;'));
     },
   },
   {
