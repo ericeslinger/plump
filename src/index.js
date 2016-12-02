@@ -1,4 +1,4 @@
-import { Guild } from './guild';
+import { Plump } from './plump';
 import { Model } from './model';
 import { SQLStorage } from './storage/sql';
 import { RedisStorage } from './storage/sql';
@@ -8,7 +8,7 @@ import { MemoryStorage } from './storage/sql';
 import { Relationship } from './relationship';
 
 export {
-  Guild,
+  Plump,
   Model,
   SQLStorage,
   RedisStorage,

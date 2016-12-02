@@ -16,7 +16,7 @@ function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj;
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 var $store = Symbol('$store');
-var $guild = Symbol('$guild');
+var $plump = Symbol('$plump');
 var $loaded = Symbol('$loaded');
 var $unsubscribe = Symbol('$unsubscribe');
 
@@ -24,7 +24,7 @@ var $unsubscribe = Symbol('$unsubscribe');
 // and who keeps a roll-backable delta
 
 var Model = exports.Model = function () {
-  function Model(opts, guild) {
+  function Model(opts, plump) {
     var _this = this;
 
     _classCallCheck(this, Model);
@@ -36,21 +36,21 @@ var Model = exports.Model = function () {
     Object.keys(this.constructor.$fields).forEach(function (key) {
       if (_this.constructor.$fields[key].type === 'hasMany') {
         var Relationship = _this.constructor.$fields[key].relationship;
-        _this.$relationships[key] = new Relationship(_this, key, guild);
+        _this.$relationships[key] = new Relationship(_this, key, plump);
       }
     });
-    if (guild) {
-      this.$$connectToGuild(guild);
+    if (plump) {
+      this.$$connectToPlump(plump);
     }
   }
 
   _createClass(Model, [{
-    key: '$$connectToGuild',
-    value: function $$connectToGuild(guild) {
+    key: '$$connectToPlump',
+    value: function $$connectToPlump(plump) {
       var _this2 = this;
 
-      this[$guild] = guild;
-      this[$unsubscribe] = guild.subscribe(this.constructor.$name, this.$id, function (v) {
+      this[$plump] = plump;
+      this[$unsubscribe] = plump.subscribe(this.constructor.$name, this.$id, function (v) {
         _this2.$$copyValuesFrom(v);
       });
     }
@@ -92,7 +92,7 @@ var Model = exports.Model = function () {
           if (_this4.$relationships[key]) {
             return _this4.$relationships[key].$list();
           }
-          return _this4[$guild].get(_this4.constructor, _this4.$id, key);
+          return _this4[$plump].get(_this4.constructor, _this4.$id, key);
         } else {
           return true;
         }
@@ -137,7 +137,7 @@ var Model = exports.Model = function () {
       var update = arguments.length <= 0 || arguments[0] === undefined ? this[$store] : arguments[0];
 
       this.$$copyValuesFrom(update); // this is the optimistic update;
-      return this[$guild].save(this.constructor, update).then(function (updated) {
+      return this[$plump].save(this.constructor, update).then(function (updated) {
         _this6.$$copyValuesFrom(updated);
         return updated;
       });
@@ -156,7 +156,7 @@ var Model = exports.Model = function () {
           id = item.$id;
         }
         if (typeof id === 'number' && id >= 1) {
-          return this[$guild].add(this.constructor, this.$id, key, id, extras);
+          return this[$plump].add(this.constructor, this.$id, key, id, extras);
         } else {
           return Promise.reject(new Error('Invalid item added to hasMany'));
         }
@@ -176,7 +176,7 @@ var Model = exports.Model = function () {
         }
         if (typeof id === 'number' && id >= 1) {
           delete this[$store][key];
-          return this[$guild].modifyRelationship(this.constructor, this.$id, key, id, extras);
+          return this[$plump].modifyRelationship(this.constructor, this.$id, key, id, extras);
         } else {
           return Promise.reject(new Error('Invalid item added to hasMany'));
         }
@@ -196,7 +196,7 @@ var Model = exports.Model = function () {
         }
         if (typeof id === 'number' && id >= 1) {
           delete this[$store][key];
-          return this[$guild].remove(this.constructor, this.$id, key, id);
+          return this[$plump].remove(this.constructor, this.$id, key, id);
         } else {
           return Promise.reject(new Error('Invalid item $removed from hasMany'));
         }

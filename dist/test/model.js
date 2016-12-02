@@ -10,7 +10,7 @@ var _chaiAsPromised2 = _interopRequireDefault(_chaiAsPromised);
 
 var _memory = require('../storage/memory');
 
-var _guild = require('../guild');
+var _plump = require('../plump');
 
 var _testType = require('./testType');
 
@@ -19,7 +19,7 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 // const memstore1 = new MemoryStorage();
 var memstore2 = new _memory.MemoryStorage({ terminal: true }); /* eslint-env node, mocha*/
 
-var guild = new _guild.Guild({
+var plump = new _plump.Plump({
   storage: [memstore2],
   types: [_testType.TestType]
 });
@@ -38,27 +38,27 @@ describe('model', function () {
       id: 2,
       name: 'potato'
     }).then(function () {
-      var two = guild.find('tests', 2);
+      var two = plump.find('tests', 2);
       return expect(two.$get('name')).to.eventually.equal('potato');
     });
   });
 
   it('should create an id when one is unset', function () {
-    var noID = new _testType.TestType({ name: 'potato' }, guild);
+    var noID = new _testType.TestType({ name: 'potato' }, plump);
     return expect(noID.$save()).to.eventually.have.all.keys('name', 'id');
   });
 
   it('should allow fields to be loaded', function () {
-    var one = new _testType.TestType({ name: 'potato' }, guild);
+    var one = new _testType.TestType({ name: 'potato' }, plump);
     return one.$save().then(function () {
-      return expect(guild.find('tests', one.$id).$get('name')).to.eventually.equal('potato');
+      return expect(plump.find('tests', one.$id).$get('name')).to.eventually.equal('potato');
     }).then(function () {
-      return expect(guild.find('tests', one.$id).$get()).to.eventually.deep.equal({ name: 'potato', id: one.$id });
+      return expect(plump.find('tests', one.$id).$get()).to.eventually.deep.equal({ name: 'potato', id: one.$id });
     });
   });
 
   it('should optimistically update on field updates', function () {
-    var one = new _testType.TestType({ name: 'potato' }, guild);
+    var one = new _testType.TestType({ name: 'potato' }, plump);
     return one.$save().then(function () {
       return one.$set({ name: 'rutabaga' });
     }).then(function () {
@@ -67,14 +67,14 @@ describe('model', function () {
   });
 
   it('should show empty hasMany lists as []', function () {
-    var one = new _testType.TestType({ name: 'frotato' }, guild);
+    var one = new _testType.TestType({ name: 'frotato' }, plump);
     return one.$save().then(function () {
       return expect(one.$get('children')).to.eventually.deep.equal([]);
     });
   });
 
   it('should add hasMany elements', function () {
-    var one = new _testType.TestType({ name: 'frotato' }, guild);
+    var one = new _testType.TestType({ name: 'frotato' }, plump);
     return one.$save().then(function () {
       return one.$add('children', 100);
     }).then(function () {
@@ -86,7 +86,7 @@ describe('model', function () {
   });
 
   it('should remove hasMany elements', function () {
-    var one = new _testType.TestType({ name: 'frotato' }, guild);
+    var one = new _testType.TestType({ name: 'frotato' }, plump);
     return one.$save().then(function () {
       return one.$add('children', 100);
     }).then(function () {
@@ -102,7 +102,7 @@ describe('model', function () {
   });
 
   it('should include valence in hasMany operations', function () {
-    var one = new _testType.TestType({ name: 'grotato' }, guild);
+    var one = new _testType.TestType({ name: 'grotato' }, plump);
     return one.$save().then(function () {
       return one.$add('valenceChildren', 100, { perm: 1 });
     }).then(function () {
