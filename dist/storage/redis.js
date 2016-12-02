@@ -32,7 +32,7 @@ var RedisStorage = exports.RedisStorage = function (_KeyValueStore) {
   _inherits(RedisStorage, _KeyValueStore);
 
   function RedisStorage() {
-    var opts = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+    var opts = arguments.length <= 0 || arguments[0] === undefined ? {} : arguments[0];
 
     _classCallCheck(this, RedisStorage);
 

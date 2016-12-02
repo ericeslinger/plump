@@ -176,7 +176,7 @@ var KeyValueStore = exports.KeyValueStore = function (_Storage) {
     value: function add(type, id, relationshipTitle, childId) {
       var _this4 = this;
 
-      var extras = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : {};
+      var extras = arguments.length <= 4 || arguments[4] === undefined ? {} : arguments[4];
 
       var relationshipBlock = type.$fields[relationshipTitle].relationship;
       var sideInfo = relationshipBlock.$sides[relationshipTitle];
