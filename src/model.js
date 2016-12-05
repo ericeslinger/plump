@@ -178,8 +178,32 @@ export class Model {
   $teardown() {
     this[$unsubscribe].unsubscribe();
   }
-
 }
+
+Model.toJSON = function toJSON() {
+  const retVal = {
+    $id: this.$id,
+    $name: this.$name,
+    $fields: {},
+  };
+  const fieldNames = Object.keys(this.$fields);
+  fieldNames.forEach((k) => {
+    if (this.$fields[k].type === 'hasMany') {
+      retVal.$fields[k] = {
+        type: 'hasMany',
+        childType: this.$fields[k].relationship.$sides[k].self.type,
+        childId: this.$fields[k].relationship.$sides[k].self.field,
+      };
+      if (this.$fields[k].relationship.$extras) {
+        retVal.$fields[k].$extras = this.$fields[k].relationship.$extras;
+      }
+    } else {
+      retVal.$fields[k] = this.$fields[k];
+    }
+  });
+  return retVal;
+};
+
 
 Model.$id = 'id';
 Model.$name = 'Base';
