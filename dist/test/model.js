@@ -33,6 +33,8 @@ describe('model', function () {
     expect(one.$get('name')).to.eventually.equal('potato');
   });
 
+  it('should properly serialize its schema');
+
   it('should load data from datastores', function () {
     return memstore2.write(_testType.TestType, {
       id: 2,

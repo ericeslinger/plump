@@ -24,6 +24,8 @@ describe('model', () => {
     expect(one.$get('name')).to.eventually.equal('potato');
   });
 
+  it('should properly serialize its schema');
+
   it('should load data from datastores', () => {
     return memstore2.write(TestType, {
       id: 2,

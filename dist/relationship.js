@@ -47,3 +47,17 @@ var Relationship = exports.Relationship = function () {
 
   return Relationship;
 }();
+
+Relationship.toJSON = function toJSON() {
+  var rV = {
+    $name: this.$name,
+    $sides: this.$sides
+  };
+  if (this.$restrict) {
+    rV.$restrict = this.$restrict;
+  }
+  if (this.$extras) {
+    rV.$extras = this.$extras;
+  }
+  return rV;
+};
