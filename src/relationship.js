@@ -26,3 +26,17 @@ export class Relationship {
     return this.plump.modifyRelationship(this.for.constructor, this.for.$id, this.title, childId, extras);
   }
 }
+
+Relationship.toJSON = function toJSON() {
+  const rV = {
+    $name: this.$name,
+    $sides: this.$sides,
+  };
+  if (this.$restrict) {
+    rV.$restrict = this.$restrict;
+  }
+  if (this.$extras) {
+    rV.$extras = this.$extras;
+  }
+  return rV;
+};

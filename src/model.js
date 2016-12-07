@@ -191,12 +191,8 @@ Model.toJSON = function toJSON() {
     if (this.$fields[k].type === 'hasMany') {
       retVal.$fields[k] = {
         type: 'hasMany',
-        childType: this.$fields[k].relationship.$sides[k].self.type,
-        childId: this.$fields[k].relationship.$sides[k].self.field,
+        relationship: this.$fields[k].relationship.toJSON(),
       };
-      if (this.$fields[k].relationship.$extras) {
-        retVal.$fields[k].$extras = this.$fields[k].relationship.$extras;
-      }
     } else {
       retVal.$fields[k] = this.$fields[k];
     }

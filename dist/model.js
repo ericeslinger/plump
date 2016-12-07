@@ -224,6 +224,28 @@ var Model = exports.Model = function () {
   return Model;
 }();
 
+Model.toJSON = function toJSON() {
+  var _this7 = this;
+
+  var retVal = {
+    $id: this.$id,
+    $name: this.$name,
+    $fields: {}
+  };
+  var fieldNames = Object.keys(this.$fields);
+  fieldNames.forEach(function (k) {
+    if (_this7.$fields[k].type === 'hasMany') {
+      retVal.$fields[k] = {
+        type: 'hasMany',
+        relationship: _this7.$fields[k].relationship.toJSON()
+      };
+    } else {
+      retVal.$fields[k] = _this7.$fields[k];
+    }
+  });
+  return retVal;
+};
+
 Model.$id = 'id';
 Model.$name = 'Base';
 Model.$fields = {
