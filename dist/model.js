@@ -9,9 +9,15 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 var _bluebird = require('bluebird');
 
-var Promise = _interopRequireWildcard(_bluebird);
+var _bluebird2 = _interopRequireDefault(_bluebird);
 
-function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
+var _relationship = require('./relationship');
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
@@ -35,8 +41,8 @@ var Model = exports.Model = function () {
     this.$relationships = {};
     Object.keys(this.constructor.$fields).forEach(function (key) {
       if (_this.constructor.$fields[key].type === 'hasMany') {
-        var Relationship = _this.constructor.$fields[key].relationship;
-        _this.$relationships[key] = new Relationship(_this, key, plump);
+        var Rel = _this.constructor.$fields[key].relationship;
+        _this.$relationships[key] = new Rel(_this, key, plump);
       }
     });
     if (plump) {
@@ -87,7 +93,7 @@ var Model = exports.Model = function () {
       // fields[key] === 'hasMany' - fetch children (perhaps move this decision to store)
       // otherwise - fetch all, unless $store[key], return $store[key].
 
-      return Promise.resolve().then(function () {
+      return _bluebird2.default.resolve().then(function () {
         if (key === undefined && _this4[$loaded] === false || key && _this4[$store][key] === undefined) {
           if (_this4.$relationships[key]) {
             return _this4.$relationships[key].$list();
@@ -158,10 +164,10 @@ var Model = exports.Model = function () {
         if (typeof id === 'number' && id >= 1) {
           return this[$plump].add(this.constructor, this.$id, key, id, extras);
         } else {
-          return Promise.reject(new Error('Invalid item added to hasMany'));
+          return _bluebird2.default.reject(new Error('Invalid item added to hasMany'));
         }
       } else {
-        return Promise.reject(new Error('Cannot $add except to hasMany field'));
+        return _bluebird2.default.reject(new Error('Cannot $add except to hasMany field'));
       }
     }
   }, {
@@ -178,10 +184,10 @@ var Model = exports.Model = function () {
           delete this[$store][key];
           return this[$plump].modifyRelationship(this.constructor, this.$id, key, id, extras);
         } else {
-          return Promise.reject(new Error('Invalid item added to hasMany'));
+          return _bluebird2.default.reject(new Error('Invalid item added to hasMany'));
         }
       } else {
-        return Promise.reject(new Error('Cannot $add except to hasMany field'));
+        return _bluebird2.default.reject(new Error('Cannot $add except to hasMany field'));
       }
     }
   }, {
@@ -198,10 +204,10 @@ var Model = exports.Model = function () {
           delete this[$store][key];
           return this[$plump].remove(this.constructor, this.$id, key, id);
         } else {
-          return Promise.reject(new Error('Invalid item $removed from hasMany'));
+          return _bluebird2.default.reject(new Error('Invalid item $removed from hasMany'));
         }
       } else {
-        return Promise.reject(new Error('Cannot $remove except from hasMany field'));
+        return _bluebird2.default.reject(new Error('Cannot $remove except from hasMany field'));
       }
     }
   }, {
@@ -224,8 +230,40 @@ var Model = exports.Model = function () {
   return Model;
 }();
 
+Model.fromJSON = function fromJSON(json) {
+  var _this8 = this;
+
+  this.$id = json.$id || 'id';
+  this.$name = json.$name;
+  this.$fields = {};
+  Object.keys(json.$fields).forEach(function (k) {
+    var field = json.$fields[k];
+    if (field.type === 'hasMany') {
+      var DynamicRelationship = function (_Relationship) {
+        _inherits(DynamicRelationship, _Relationship);
+
+        function DynamicRelationship() {
+          _classCallCheck(this, DynamicRelationship);
+
+          return _possibleConstructorReturn(this, (DynamicRelationship.__proto__ || Object.getPrototypeOf(DynamicRelationship)).apply(this, arguments));
+        }
+
+        return DynamicRelationship;
+      }(_relationship.Relationship);
+
+      DynamicRelationship.fromJSON(field.relationship);
+      _this8.$fields[k] = {
+        type: 'hasMany',
+        relationship: DynamicRelationship
+      };
+    } else {
+      _this8.$fields[k] = Object.assign({}, field);
+    }
+  });
+};
+
 Model.toJSON = function toJSON() {
-  var _this7 = this;
+  var _this9 = this;
 
   var retVal = {
     $id: this.$id,
@@ -234,13 +272,13 @@ Model.toJSON = function toJSON() {
   };
   var fieldNames = Object.keys(this.$fields);
   fieldNames.forEach(function (k) {
-    if (_this7.$fields[k].type === 'hasMany') {
+    if (_this9.$fields[k].type === 'hasMany') {
       retVal.$fields[k] = {
         type: 'hasMany',
-        relationship: _this7.$fields[k].relationship.toJSON()
+        relationship: _this9.$fields[k].relationship.toJSON()
       };
     } else {
-      retVal.$fields[k] = _this7.$fields[k];
+      retVal.$fields[k] = _this9.$fields[k];
     }
   });
   return retVal;

@@ -6,6 +6,7 @@ import chaiAsPromised from 'chai-as-promised';
 import { MemoryStorage } from '../storage/memory';
 import { Plump } from '../plump';
 import { TestType } from './testType';
+import { Model } from '../model';
 
 // const memstore1 = new MemoryStorage();
 const memstore2 = new MemoryStorage({ terminal: true });
@@ -24,7 +25,11 @@ describe('model', () => {
     expect(one.$get('name')).to.eventually.equal('potato');
   });
 
-  it('should properly serialize its schema');
+  it('should properly serialize its schema', () => {
+    class MiniTest extends Model {}
+    MiniTest.fromJSON(TestType.toJSON());
+    return expect(MiniTest.toJSON()).to.deep.equal(TestType.toJSON());
+  });
 
   it('should load data from datastores', () => {
     return memstore2.write(TestType, {
