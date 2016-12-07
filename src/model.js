@@ -82,7 +82,7 @@ export class Model {
     }).then((v) => {
       if (v === true) {
         return this[$store][key];
-      } else {
+      } else if (v) {
         this.$$copyValuesFrom(v);
         this[$loaded] = true;
         if (key) {
@@ -90,6 +90,8 @@ export class Model {
         } else {
           return Object.assign({}, this[$store]);
         }
+      } else {
+        return null;
       }
     });
   }
@@ -118,6 +120,10 @@ export class Model {
     // .then((updates) => {
     //   return updates;
     // });
+  }
+
+  $delete() {
+    return this[$plump].delete(this.constructor, this.$id);
   }
 
   $add(key, item, extras) {

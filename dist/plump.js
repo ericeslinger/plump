@@ -88,6 +88,15 @@ var Plump = exports.Plump = function () {
       var retVal = new Type(_defineProperty({}, Type.$id, id), this);
       return retVal;
     }
+  }, {
+    key: 'forge',
+    value: function forge(t, val) {
+      var Type = t;
+      if (typeof t === 'string') {
+        Type = this[$types][t];
+      }
+      return new Type(val, this);
+    }
 
     // LOAD (type/id), SIDELOAD (type/id/side)? Or just LOADALL?
     // LOAD needs to scrub through hot caches first
@@ -144,12 +153,23 @@ var Plump = exports.Plump = function () {
       }
     }
   }, {
-    key: 'add',
-    value: function add() {
+    key: 'delete',
+    value: function _delete() {
       if (this[$terminal]) {
         var _$terminal3;
 
-        return (_$terminal3 = this[$terminal]).add.apply(_$terminal3, arguments);
+        return (_$terminal3 = this[$terminal]).delete.apply(_$terminal3, arguments);
+      } else {
+        return Promise.reject(new Error('Plump has no terminal store'));
+      }
+    }
+  }, {
+    key: 'add',
+    value: function add() {
+      if (this[$terminal]) {
+        var _$terminal4;
+
+        return (_$terminal4 = this[$terminal]).add.apply(_$terminal4, arguments);
       } else {
         return Promise.reject(new Error('Plump has no terminal store'));
       }
@@ -158,9 +178,9 @@ var Plump = exports.Plump = function () {
     key: 'modifyRelationship',
     value: function modifyRelationship() {
       if (this[$terminal]) {
-        var _$terminal4;
+        var _$terminal5;
 
-        return (_$terminal4 = this[$terminal]).modifyRelationship.apply(_$terminal4, arguments);
+        return (_$terminal5 = this[$terminal]).modifyRelationship.apply(_$terminal5, arguments);
       } else {
         return Promise.reject(new Error('Plump has no terminal store'));
       }
@@ -169,21 +189,12 @@ var Plump = exports.Plump = function () {
     key: 'remove',
     value: function remove() {
       if (this[$terminal]) {
-        var _$terminal5;
+        var _$terminal6;
 
-        return (_$terminal5 = this[$terminal]).remove.apply(_$terminal5, arguments);
+        return (_$terminal6 = this[$terminal]).remove.apply(_$terminal6, arguments);
       } else {
         return Promise.reject(new Error('Plump has no terminal store'));
       }
-    }
-  }, {
-    key: 'forge',
-    value: function forge(t, val) {
-      var Type = t;
-      if (typeof t === 'string') {
-        Type = this[$types][t];
-      }
-      return new Type(val, this);
     }
   }]);
 

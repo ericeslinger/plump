@@ -56,6 +56,14 @@ export class Plump {
     return retVal;
   }
 
+  forge(t, val) {
+    let Type = t;
+    if (typeof t === 'string') {
+      Type = this[$types][t];
+    }
+    return new Type(val, this);
+  }
+
   // LOAD (type/id), SIDELOAD (type/id/side)? Or just LOADALL?
   // LOAD needs to scrub through hot caches first
 
@@ -98,6 +106,14 @@ export class Plump {
     }
   }
 
+  delete(...args) {
+    if (this[$terminal]) {
+      return this[$terminal].delete(...args);
+    } else {
+      return Promise.reject(new Error('Plump has no terminal store'));
+    }
+  }
+
   add(...args) {
     if (this[$terminal]) {
       return this[$terminal].add(...args);
@@ -120,13 +136,5 @@ export class Plump {
     } else {
       return Promise.reject(new Error('Plump has no terminal store'));
     }
-  }
-
-  forge(t, val) {
-    let Type = t;
-    if (typeof t === 'string') {
-      Type = this[$types][t];
-    }
-    return new Type(val, this);
   }
 }

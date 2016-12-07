@@ -73,6 +73,17 @@ describe('model', function () {
     return expect(noID.$save()).to.eventually.have.all.keys('name', 'id');
   });
 
+  it('should allow data to be deleted', function () {
+    var one = new _testType.TestType({ name: 'potato' }, plump);
+    return one.$save().then(function () {
+      return expect(plump.find('tests', one.$id).$get('name')).to.eventually.equal('potato');
+    }).then(function () {
+      return one.$delete();
+    }).then(function () {
+      return expect(plump.find('tests', one.$id).$get()).to.eventually.be.null;
+    });
+  });
+
   it('should allow fields to be loaded', function () {
     var one = new _testType.TestType({ name: 'potato' }, plump);
     return one.$save().then(function () {
