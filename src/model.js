@@ -1,4 +1,5 @@
-import * as Promise from 'bluebird';
+import Bluebird from 'bluebird';
+import { Relationship } from './relationship';
 const $store = Symbol('$store');
 const $plump = Symbol('$plump');
 const $loaded = Symbol('$loaded');
@@ -15,8 +16,8 @@ export class Model {
     this.$relationships = {};
     Object.keys(this.constructor.$fields).forEach((key) => {
       if (this.constructor.$fields[key].type === 'hasMany') {
-        const Relationship = this.constructor.$fields[key].relationship;
-        this.$relationships[key] = new Relationship(this, key, plump);
+        const Rel = this.constructor.$fields[key].relationship;
+        this.$relationships[key] = new Rel(this, key, plump);
       }
     });
     if (plump) {
@@ -65,7 +66,7 @@ export class Model {
     // fields[key] === 'hasMany' - fetch children (perhaps move this decision to store)
     // otherwise - fetch all, unless $store[key], return $store[key].
 
-    return Promise.resolve()
+    return Bluebird.resolve()
     .then(() => {
       if (
         ((key === undefined) && (this[$loaded] === false)) ||
@@ -130,10 +131,10 @@ export class Model {
       if ((typeof id === 'number') && (id >= 1)) {
         return this[$plump].add(this.constructor, this.$id, key, id, extras);
       } else {
-        return Promise.reject(new Error('Invalid item added to hasMany'));
+        return Bluebird.reject(new Error('Invalid item added to hasMany'));
       }
     } else {
-      return Promise.reject(new Error('Cannot $add except to hasMany field'));
+      return Bluebird.reject(new Error('Cannot $add except to hasMany field'));
     }
   }
 
@@ -149,10 +150,10 @@ export class Model {
         delete this[$store][key];
         return this[$plump].modifyRelationship(this.constructor, this.$id, key, id, extras);
       } else {
-        return Promise.reject(new Error('Invalid item added to hasMany'));
+        return Bluebird.reject(new Error('Invalid item added to hasMany'));
       }
     } else {
-      return Promise.reject(new Error('Cannot $add except to hasMany field'));
+      return Bluebird.reject(new Error('Cannot $add except to hasMany field'));
     }
   }
 
@@ -168,10 +169,10 @@ export class Model {
         delete this[$store][key];
         return this[$plump].remove(this.constructor, this.$id, key, id);
       } else {
-        return Promise.reject(new Error('Invalid item $removed from hasMany'));
+        return Bluebird.reject(new Error('Invalid item $removed from hasMany'));
       }
     } else {
-      return Promise.reject(new Error('Cannot $remove except from hasMany field'));
+      return Bluebird.reject(new Error('Cannot $remove except from hasMany field'));
     }
   }
 
@@ -179,6 +180,25 @@ export class Model {
     this[$unsubscribe].unsubscribe();
   }
 }
+
+Model.fromJSON = function fromJSON(json) {
+  this.$id = json.$id || 'id';
+  this.$name = json.$name;
+  this.$fields = {};
+  Object.keys(json.$fields).forEach((k) => {
+    const field = json.$fields[k];
+    if (field.type === 'hasMany') {
+      class DynamicRelationship extends Relationship {}
+      DynamicRelationship.fromJSON(field.relationship);
+      this.$fields[k] = {
+        type: 'hasMany',
+        relationship: DynamicRelationship,
+      };
+    } else {
+      this.$fields[k] = Object.assign({}, field);
+    }
+  });
+};
 
 Model.toJSON = function toJSON() {
   const retVal = {

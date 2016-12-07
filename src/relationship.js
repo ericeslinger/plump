@@ -1,3 +1,5 @@
+import deepAssign from 'deep-assign';
+
 export class Relationship {
   constructor(model, title, plump) {
     this.plump = plump;
@@ -26,6 +28,17 @@ export class Relationship {
     return this.plump.modifyRelationship(this.for.constructor, this.for.$id, this.title, childId, extras);
   }
 }
+
+Relationship.fromJSON = function fromJSON(json) {
+  this.$name = json.$name;
+  if (json.$extras) {
+    this.$extras = json.$extras;
+  }
+  if (json.$restrict) {
+    this.$restrict = json.$restrict;
+  }
+  this.$sides = deepAssign({}, json.$sides);
+};
 
 Relationship.toJSON = function toJSON() {
   const rV = {
