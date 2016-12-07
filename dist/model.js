@@ -105,7 +105,7 @@ var Model = exports.Model = function () {
       }).then(function (v) {
         if (v === true) {
           return _this4[$store][key];
-        } else {
+        } else if (v) {
           _this4.$$copyValuesFrom(v);
           _this4[$loaded] = true;
           if (key) {
@@ -113,6 +113,8 @@ var Model = exports.Model = function () {
           } else {
             return Object.assign({}, _this4[$store]);
           }
+        } else {
+          return null;
         }
       });
     }
@@ -150,6 +152,11 @@ var Model = exports.Model = function () {
       // .then((updates) => {
       //   return updates;
       // });
+    }
+  }, {
+    key: '$delete',
+    value: function $delete() {
+      return this[$plump].delete(this.constructor, this.$id);
     }
   }, {
     key: '$add',

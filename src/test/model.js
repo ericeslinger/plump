@@ -46,6 +46,14 @@ describe('model', () => {
     return expect(noID.$save()).to.eventually.have.all.keys('name', 'id');
   });
 
+  it('should allow data to be deleted', () => {
+    const one = new TestType({ name: 'potato' }, plump);
+    return one.$save()
+    .then(() => expect(plump.find('tests', one.$id).$get('name')).to.eventually.equal('potato'))
+    .then(() => one.$delete())
+    .then(() => expect(plump.find('tests', one.$id).$get()).to.eventually.be.null);
+  });
+
   it('should allow fields to be loaded', () => {
     const one = new TestType({ name: 'potato' }, plump);
     return one.$save()
