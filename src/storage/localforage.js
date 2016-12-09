@@ -1,4 +1,4 @@
-import * as localforage from 'localforage';
+import localforage from 'localforage';
 import { keyValueStore } from './keyValueStore';
 
 export class LocalForageStorage extends keyValueStore {

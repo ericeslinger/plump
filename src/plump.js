@@ -36,6 +36,10 @@ export class Plump {
     }
   }
 
+  type(T) {
+    return this[$types][T];
+  }
+
   addStore(store) {
     if (store.terminal) {
       if (this[$terminal] === undefined) {
