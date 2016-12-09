@@ -85,6 +85,19 @@ describe('model', () => {
     });
   });
 
+  it('should add hasMany elements by child field', () => {
+    const one = new TestType({ name: 'frotato' }, plump);
+    return one.$save()
+    .then(() => one.$add('children', { child_id: 100 }))
+    .then(() => {
+      return expect(one.$get('children'))
+      .to.eventually.deep.equal([{
+        child_id: 100,
+        parent_id: one.$id,
+      }]);
+    });
+  });
+
   it('should remove hasMany elements', () => {
     const one = new TestType({ name: 'frotato' }, plump);
     return one.$save()

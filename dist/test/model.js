@@ -117,6 +117,18 @@ describe('model', function () {
     });
   });
 
+  it('should add hasMany elements by child field', function () {
+    var one = new _testType.TestType({ name: 'frotato' }, plump);
+    return one.$save().then(function () {
+      return one.$add('children', { child_id: 100 });
+    }).then(function () {
+      return expect(one.$get('children')).to.eventually.deep.equal([{
+        child_id: 100,
+        parent_id: one.$id
+      }]);
+    });
+  });
+
   it('should remove hasMany elements', function () {
     var one = new _testType.TestType({ name: 'frotato' }, plump);
     return one.$save().then(function () {

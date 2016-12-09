@@ -165,8 +165,10 @@ var Model = exports.Model = function () {
         var id = 0;
         if (typeof item === 'number') {
           id = item;
-        } else {
+        } else if (item.$id) {
           id = item.$id;
+        } else {
+          id = item[this.constructor.$fields[key].relationship.$sides[key].other.field];
         }
         if (typeof id === 'number' && id >= 1) {
           return this[$plump].add(this.constructor, this.$id, key, id, extras);
