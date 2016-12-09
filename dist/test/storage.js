@@ -8,13 +8,7 @@ var _chaiAsPromised = require('chai-as-promised');
 
 var _chaiAsPromised2 = _interopRequireDefault(_chaiAsPromised);
 
-var _memory = require('../storage/memory');
-
-var _redis = require('../storage/redis');
-
-var _rest = require('../storage/rest');
-
-var _sql = require('../storage/sql');
+var _index = require('../index');
 
 var _testType = require('./testType');
 
@@ -30,9 +24,9 @@ var _pg = require('pg');
 
 var pg = _interopRequireWildcard(_pg);
 
-var _redis2 = require('redis');
+var _redis = require('redis');
 
-var Redis = _interopRequireWildcard(_redis2);
+var Redis = _interopRequireWildcard(_redis);
 
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
 
@@ -85,7 +79,7 @@ function flushRedis() {
 
 var storageTypes = [{
   name: 'redis',
-  constructor: _redis.RedisStorage,
+  constructor: _index.RedisStorage,
   opts: {
     terminal: true
   },
@@ -100,7 +94,7 @@ var storageTypes = [{
   }
 }, {
   name: 'sql',
-  constructor: _sql.SQLStorage,
+  constructor: _index.SQLStorage,
   opts: {
     sql: {
       connection: {
@@ -126,14 +120,14 @@ var storageTypes = [{
   }
 }, {
   name: 'rest',
-  constructor: _rest.RestStorage,
+  constructor: _index.RestStorage,
   opts: {
     terminal: true,
     axios: _axiosMocking2.default.mockup(_testType.TestType)
   }
 }, {
   name: 'memory',
-  constructor: _memory.MemoryStorage,
+  constructor: _index.MemoryStorage,
   opts: { terminal: true }
 }];
 

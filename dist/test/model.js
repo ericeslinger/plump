@@ -8,13 +8,9 @@ var _chaiAsPromised = require('chai-as-promised');
 
 var _chaiAsPromised2 = _interopRequireDefault(_chaiAsPromised);
 
-var _memory = require('../storage/memory');
-
-var _plump = require('../plump');
+var _index = require('../index');
 
 var _testType = require('./testType');
-
-var _model = require('../model');
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -25,9 +21,9 @@ function _possibleConstructorReturn(self, call) { if (!self) { throw new Referen
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; } /* eslint-env node, mocha*/
 
 // const memstore1 = new MemoryStorage();
-var memstore2 = new _memory.MemoryStorage({ terminal: true });
+var memstore2 = new _index.MemoryStorage({ terminal: true });
 
-var plump = new _plump.Plump({
+var plump = new _index.Plump({
   storage: [memstore2],
   types: [_testType.TestType]
 });
@@ -52,7 +48,7 @@ describe('model', function () {
       }
 
       return MiniTest;
-    }(_model.Model);
+    }(_index.Model);
 
     MiniTest.fromJSON(_testType.TestType.toJSON());
     return expect(MiniTest.toJSON()).to.deep.equal(_testType.TestType.toJSON());

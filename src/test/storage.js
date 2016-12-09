@@ -3,10 +3,7 @@
 
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
-import { MemoryStorage } from '../storage/memory';
-import { RedisStorage } from '../storage/redis';
-import { RestStorage } from '../storage/rest';
-import { SQLStorage } from '../storage/sql';
+import { MemoryStorage, RedisStorage, RestStorage, SQLStorage } from '../index';
 import { TestType } from './testType';
 import axiosMock from './axiosMocking';
 import Promise from 'bluebird';

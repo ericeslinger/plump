@@ -11,7 +11,7 @@ var _localforage = require('localforage');
 
 var _localforage2 = _interopRequireDefault(_localforage);
 
-var _keyValueStore2 = require('./keyValueStore');
+var _keyValueStore = require('./keyValueStore');
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -21,8 +21,8 @@ function _possibleConstructorReturn(self, call) { if (!self) { throw new Referen
 
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
-var LocalForageStorage = exports.LocalForageStorage = function (_keyValueStore) {
-  _inherits(LocalForageStorage, _keyValueStore);
+var LocalForageStorage = exports.LocalForageStorage = function (_KeyValueStore) {
+  _inherits(LocalForageStorage, _KeyValueStore);
 
   function LocalForageStorage() {
     var opts = arguments.length <= 0 || arguments[0] === undefined ? {} : arguments[0];
@@ -66,4 +66,4 @@ var LocalForageStorage = exports.LocalForageStorage = function (_keyValueStore) 
   }]);
 
   return LocalForageStorage;
-}(_keyValueStore2.keyValueStore);
+}(_keyValueStore.KeyValueStore);

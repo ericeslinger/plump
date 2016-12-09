@@ -3,10 +3,8 @@
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 
-import { MemoryStorage } from '../storage/memory';
-import { Plump } from '../plump';
+import { Plump, Model, MemoryStorage } from '../index';
 import { TestType } from './testType';
-import { Model } from '../model';
 
 // const memstore1 = new MemoryStorage();
 const memstore2 = new MemoryStorage({ terminal: true });
