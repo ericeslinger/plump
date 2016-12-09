@@ -3,6 +3,8 @@ const $storage = Symbol('$storage');
 const $terminal = Symbol('$terminal');
 const $subscriptions = Symbol('$subscriptions');
 
+import { Model } from './model';
+
 import Rx from 'rxjs/Rx';
 
 export class Plump {
@@ -16,6 +18,14 @@ export class Plump {
     this[$types] = {};
     options.storage.forEach((s) => this.addStore(s));
     options.types.forEach((t) => this.addType(t));
+  }
+
+  addTypesFromSchema(schema) {
+    Object.keys(schema).forEach((k) => {
+      class DynamicModel extends Model {}
+      DynamicModel.fromJSON(schema[k]);
+      this.addType(DynamicModel);
+    });
   }
 
   addType(T) {

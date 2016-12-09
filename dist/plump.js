@@ -7,6 +7,8 @@ exports.Plump = undefined;
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
+var _model = require('./model');
+
 var _Rx = require('rxjs/Rx');
 
 var _Rx2 = _interopRequireDefault(_Rx);
@@ -14,6 +16,10 @@ var _Rx2 = _interopRequireDefault(_Rx);
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
+
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
@@ -46,6 +52,28 @@ var Plump = exports.Plump = function () {
   }
 
   _createClass(Plump, [{
+    key: 'addTypesFromSchema',
+    value: function addTypesFromSchema(schema) {
+      var _this3 = this;
+
+      Object.keys(schema).forEach(function (k) {
+        var DynamicModel = function (_Model) {
+          _inherits(DynamicModel, _Model);
+
+          function DynamicModel() {
+            _classCallCheck(this, DynamicModel);
+
+            return _possibleConstructorReturn(this, (DynamicModel.__proto__ || Object.getPrototypeOf(DynamicModel)).apply(this, arguments));
+          }
+
+          return DynamicModel;
+        }(_model.Model);
+
+        DynamicModel.fromJSON(schema[k]);
+        _this3.addType(DynamicModel);
+      });
+    }
+  }, {
     key: 'addType',
     value: function addType(T) {
       if (this[$types][T.$name] === undefined) {
@@ -57,7 +85,7 @@ var Plump = exports.Plump = function () {
   }, {
     key: 'addStore',
     value: function addStore(store) {
-      var _this2 = this;
+      var _this4 = this;
 
       if (store.terminal) {
         if (this[$terminal] === undefined) {
@@ -69,12 +97,12 @@ var Plump = exports.Plump = function () {
         this[$storage].push(store);
       }
       store.onUpdate(function (u) {
-        _this2[$storage].forEach(function (storage) {
-          var Type = _this2[$types][u.type];
+        _this4[$storage].forEach(function (storage) {
+          var Type = _this4[$types][u.type];
           storage.onCacheableRead(Type, Object.assign({}, u.value, _defineProperty({}, Type.$id, u.id)));
         });
-        if (_this2[$subscriptions][u.type] && _this2[$subscriptions][u.type][u.id]) {
-          _this2[$subscriptions][u.type][u.id].next(u.value);
+        if (_this4[$subscriptions][u.type] && _this4[$subscriptions][u.type][u.id]) {
+          _this4[$subscriptions][u.type][u.id].next(u.value);
         }
       });
     }
@@ -115,7 +143,7 @@ var Plump = exports.Plump = function () {
   }, {
     key: 'get',
     value: function get() {
-      var _this3 = this;
+      var _this5 = this;
 
       for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
         args[_key] = arguments[_key];
@@ -130,10 +158,10 @@ var Plump = exports.Plump = function () {
           }
         });
       }, Promise.resolve(null)).then(function (v) {
-        if (v === null && _this3[$terminal]) {
+        if (v === null && _this5[$terminal]) {
           var _$terminal;
 
-          return (_$terminal = _this3[$terminal]).read.apply(_$terminal, args);
+          return (_$terminal = _this5[$terminal]).read.apply(_$terminal, args);
         } else {
           return v;
         }
