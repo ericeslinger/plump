@@ -9,11 +9,11 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 var _localforage = require('localforage');
 
-var localforage = _interopRequireWildcard(_localforage);
+var _localforage2 = _interopRequireDefault(_localforage);
 
 var _keyValueStore2 = require('./keyValueStore');
 
-function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
@@ -32,7 +32,7 @@ var LocalForageStorage = exports.LocalForageStorage = function (_keyValueStore) 
     var _this = _possibleConstructorReturn(this, (LocalForageStorage.__proto__ || Object.getPrototypeOf(LocalForageStorage)).call(this));
 
     _this.isCache = true;
-    localforage.config({
+    _localforage2.default.config({
       name: opts.name || 'Trellis Storage',
       storeName: opts.storeName || 'localCache'
     });
@@ -42,7 +42,7 @@ var LocalForageStorage = exports.LocalForageStorage = function (_keyValueStore) 
   _createClass(LocalForageStorage, [{
     key: '_keys',
     value: function _keys(typeName) {
-      return localforage.keys().then(function (keyArray) {
+      return _localforage2.default.keys().then(function (keyArray) {
         return keyArray.filter(function (k) {
           return k.indexOf(typeName + ':store:') === 0;
         });
@@ -51,17 +51,17 @@ var LocalForageStorage = exports.LocalForageStorage = function (_keyValueStore) 
   }, {
     key: '_get',
     value: function _get(k) {
-      return localforage.getItem(k);
+      return _localforage2.default.getItem(k);
     }
   }, {
     key: '_set',
     value: function _set(k, v) {
-      return localforage.setItem(k, v);
+      return _localforage2.default.setItem(k, v);
     }
   }, {
     key: '_del',
     value: function _del(k) {
-      return localforage.removeItem(k);
+      return _localforage2.default.removeItem(k);
     }
   }]);
 

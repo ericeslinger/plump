@@ -83,6 +83,11 @@ var Plump = exports.Plump = function () {
       }
     }
   }, {
+    key: 'type',
+    value: function type(T) {
+      return this[$types][T];
+    }
+  }, {
     key: 'addStore',
     value: function addStore(store) {
       var _this4 = this;
