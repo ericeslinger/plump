@@ -40,6 +40,10 @@ export class Plump {
     return this[$types][T];
   }
 
+  types() {
+    return Object.keys(this[$types]);
+  }
+
   addStore(store) {
     if (store.terminal) {
       if (this[$terminal] === undefined) {
