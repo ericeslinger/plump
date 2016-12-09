@@ -88,6 +88,11 @@ var Plump = exports.Plump = function () {
       return this[$types][T];
     }
   }, {
+    key: 'types',
+    value: function types() {
+      return Object.keys(this[$types]);
+    }
+  }, {
     key: 'addStore',
     value: function addStore(store) {
       var _this4 = this;
