@@ -159,6 +159,14 @@ var Model = exports.Model = function () {
       return this[$plump].delete(this.constructor, this.$id);
     }
   }, {
+    key: '$rest',
+    value: function $rest(opts) {
+      var restOpts = Object.assign({}, opts, {
+        url: '/' + this.constructor.$name + '/' + this.$id + '/' + opts.url
+      });
+      return this[$plump].restRequest(restOpts);
+    }
+  }, {
     key: '$add',
     value: function $add(key, item, extras) {
       if (this.constructor.$fields[key].type === 'hasMany') {
@@ -291,6 +299,13 @@ Model.toJSON = function toJSON() {
     }
   });
   return retVal;
+};
+
+Model.$rest = function $rest(plump, opts) {
+  var restOpts = Object.assign({}, opts, {
+    url: '/' + this.$name + '/' + opts.url
+  });
+  return plump.restRequest(restOpts);
 };
 
 Model.$id = 'id';

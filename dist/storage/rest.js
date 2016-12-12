@@ -52,6 +52,11 @@ var RestStorage = exports.RestStorage = function (_Storage) {
     key: 'onCacheableRead',
     value: function onCacheableRead() {}
   }, {
+    key: 'rest',
+    value: function rest(options) {
+      return this[$axios](options);
+    }
+  }, {
     key: 'write',
     value: function write(t, v) {
       var _this2 = this;

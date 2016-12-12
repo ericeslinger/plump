@@ -213,6 +213,15 @@ var Plump = exports.Plump = function () {
       }
     }
   }, {
+    key: 'restRequest',
+    value: function restRequest(opts) {
+      if (this[$terminal] && this[$terminal].rest) {
+        return this[$terminal].rest(opts);
+      } else {
+        return Promise.reject(new Error('No Rest terminal store'));
+      }
+    }
+  }, {
     key: 'modifyRelationship',
     value: function modifyRelationship() {
       if (this[$terminal]) {

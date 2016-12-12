@@ -20,6 +20,10 @@ export class RestStorage extends Storage {
 
   onCacheableRead() {}
 
+  rest(options) {
+    return this[$axios](options);
+  }
+
   write(t, v) {
     return Promise.resolve()
     .then(() => {

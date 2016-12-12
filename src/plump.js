@@ -140,6 +140,14 @@ export class Plump {
     }
   }
 
+  restRequest(opts) {
+    if (this[$terminal] && this[$terminal].rest) {
+      return this[$terminal].rest(opts);
+    } else {
+      return Promise.reject(new Error('No Rest terminal store'));
+    }
+  }
+
   modifyRelationship(...args) {
     if (this[$terminal]) {
       return this[$terminal].modifyRelationship(...args);

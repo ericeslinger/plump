@@ -126,6 +126,17 @@ export class Model {
     return this[$plump].delete(this.constructor, this.$id);
   }
 
+  $rest(opts) {
+    const restOpts = Object.assign(
+      {},
+      opts,
+      {
+        url: `/${this.constructor.$name}/${this.$id}/${opts.url}`,
+      }
+    );
+    return this[$plump].restRequest(restOpts);
+  }
+
   $add(key, item, extras) {
     if (this.constructor.$fields[key].type === 'hasMany') {
       let id = 0;
@@ -228,6 +239,16 @@ Model.toJSON = function toJSON() {
   return retVal;
 };
 
+Model.$rest = function $rest(plump, opts) {
+  const restOpts = Object.assign(
+    {},
+    opts,
+    {
+      url: `/${this.$name}/${opts.url}`,
+    }
+  );
+  return plump.restRequest(restOpts);
+};
 
 Model.$id = 'id';
 Model.$name = 'Base';
