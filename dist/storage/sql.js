@@ -57,7 +57,7 @@ var SQLStorage = exports.SQLStorage = function (_Storage) {
   _inherits(SQLStorage, _Storage);
 
   function SQLStorage() {
-    var opts = arguments.length <= 0 || arguments[0] === undefined ? {} : arguments[0];
+    var opts = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
 
     _classCallCheck(this, SQLStorage);
 
@@ -180,7 +180,7 @@ var SQLStorage = exports.SQLStorage = function (_Storage) {
     value: function add(type, id, relationshipTitle, childId) {
       var _newField;
 
-      var extras = arguments.length <= 4 || arguments[4] === undefined ? {} : arguments[4];
+      var extras = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : {};
 
       var relationshipBlock = type.$fields[relationshipTitle];
       var sideInfo = relationshipBlock.relationship.$sides[relationshipTitle];
@@ -202,7 +202,7 @@ var SQLStorage = exports.SQLStorage = function (_Storage) {
     value: function modifyRelationship(type, id, relationshipTitle, childId) {
       var _whereBlock;
 
-      var extras = arguments.length <= 4 || arguments[4] === undefined ? {} : arguments[4];
+      var extras = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : {};
 
       var relationshipBlock = type.$fields[relationshipTitle];
       var sideInfo = relationshipBlock.relationship.$sides[relationshipTitle];

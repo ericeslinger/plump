@@ -7,9 +7,9 @@ exports.Relationship = undefined;
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _deepAssign = require('deep-assign');
+var _mergeOptions = require('merge-options');
 
-var _deepAssign2 = _interopRequireDefault(_deepAssign);
+var _mergeOptions2 = _interopRequireDefault(_mergeOptions);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -63,7 +63,7 @@ Relationship.fromJSON = function fromJSON(json) {
   if (json.$restrict) {
     this.$restrict = json.$restrict;
   }
-  this.$sides = (0, _deepAssign2.default)({}, json.$sides);
+  this.$sides = (0, _mergeOptions2.default)({}, json.$sides);
 };
 
 Relationship.toJSON = function toJSON() {

@@ -1,4 +1,4 @@
-import deepAssign from 'deep-assign';
+import mergeOptions from 'merge-options';
 
 export class Relationship {
   constructor(model, title, plump) {
@@ -37,7 +37,7 @@ Relationship.fromJSON = function fromJSON(json) {
   if (json.$restrict) {
     this.$restrict = json.$restrict;
   }
-  this.$sides = deepAssign({}, json.$sides);
+  this.$sides = mergeOptions({}, json.$sides);
 };
 
 Relationship.toJSON = function toJSON() {

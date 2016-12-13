@@ -102,6 +102,7 @@ export class Model {
       this.getSelf()
       .then((data) => {
         this.$$copyValuesFrom(data);
+        return this;
       });
     }
   }
@@ -115,11 +116,8 @@ export class Model {
     return this[$plump].save(this.constructor, update)
     .then((updated) => {
       this.$$copyValuesFrom(updated);
-      return updated;
+      return this;
     });
-    // .then((updates) => {
-    //   return updates;
-    // });
   }
 
   $delete() {

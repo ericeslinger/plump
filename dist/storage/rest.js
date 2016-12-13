@@ -35,7 +35,7 @@ var RestStorage = exports.RestStorage = function (_Storage) {
   _inherits(RestStorage, _Storage);
 
   function RestStorage() {
-    var opts = arguments.length <= 0 || arguments[0] === undefined ? {} : arguments[0];
+    var opts = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
 
     _classCallCheck(this, RestStorage);
 

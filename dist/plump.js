@@ -32,7 +32,7 @@ var Plump = exports.Plump = function () {
   function Plump() {
     var _this = this;
 
-    var opts = arguments.length <= 0 || arguments[0] === undefined ? {} : arguments[0];
+    var opts = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
 
     _classCallCheck(this, Plump);
 
