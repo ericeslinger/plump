@@ -1,5 +1,6 @@
 import Bluebird from 'bluebird';
 import { Relationship } from './relationship';
+import mergeOptions from 'merge-options';
 const $store = Symbol('$store');
 const $plump = Symbol('$plump');
 const $loaded = Symbol('$loaded');
@@ -111,7 +112,8 @@ export class Model {
     return this.$set();
   }
 
-  $set(update = this[$store]) {
+  $set(u = this[$store]) {
+    const update = mergeOptions({}, this[$store], u)
     this.$$copyValuesFrom(update); // this is the optimistic update;
     return this[$plump].save(this.constructor, update)
     .then((updated) => {
