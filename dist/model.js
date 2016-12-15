@@ -65,7 +65,7 @@ var Model = exports.Model = function () {
     value: function $$copyValuesFrom() {
       var _this3 = this;
 
-      var opts = arguments.length <= 0 || arguments[0] === undefined ? {} : arguments[0];
+      var opts = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
 
       Object.keys(this.constructor.$fields).forEach(function (fieldName) {
         if (opts[fieldName] !== undefined) {
@@ -123,7 +123,7 @@ var Model = exports.Model = function () {
     value: function $load() {
       var _this5 = this;
 
-      var opts = arguments.length <= 0 || arguments[0] === undefined ? {} : arguments[0];
+      var opts = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
 
       var options = Object.assign({}, { self: true }, opts);
       if (options.self) {
@@ -142,7 +142,7 @@ var Model = exports.Model = function () {
     value: function $set() {
       var _this6 = this;
 
-      var update = arguments.length <= 0 || arguments[0] === undefined ? this[$store] : arguments[0];
+      var update = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : this[$store];
 
       this.$$copyValuesFrom(update); // this is the optimistic update;
       return this[$plump].save(this.constructor, update).then(function (updated) {

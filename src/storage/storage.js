@@ -1,7 +1,7 @@
 /* eslint no-unused-vars: 0 */
 
 import * as Promise from 'bluebird';
-import Rx from 'rxjs/Rx';
+import { Subject } from 'rxjs/Rx';
 
 const $emitter = Symbol('$emitter');
 
@@ -28,7 +28,7 @@ export class Storage {
     // authorization questions, but the design may allow for authorization to be
     // cached.
     this.terminal = opts.terminal || false;
-    this[$emitter] = new Rx.Subject();
+    this[$emitter] = new Subject();
   }
 
   hot(type, id) {

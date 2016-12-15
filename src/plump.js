@@ -5,7 +5,7 @@ const $subscriptions = Symbol('$subscriptions');
 
 import { Model } from './model';
 
-import Rx from 'rxjs/Rx';
+import { Subject } from 'rxjs/Rx';
 
 export class Plump {
   constructor(opts = {}) {
@@ -90,7 +90,7 @@ export class Plump {
       this[$subscriptions][typeName] = {};
     }
     if (this[$subscriptions][typeName][id] === undefined) {
-      this[$subscriptions][typeName][id] = new Rx.Subject();
+      this[$subscriptions][typeName][id] = new Subject();
     }
     return this[$subscriptions][typeName][id].subscribe(handler);
   }

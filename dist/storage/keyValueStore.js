@@ -138,10 +138,9 @@ var KeyValueStore = exports.KeyValueStore = function (_Storage) {
         }
         return Bluebird.all(resolves);
       }).then(function (_ref) {
-        var _ref2 = _slicedToArray(_ref, 2);
-
-        var arrayString = _ref2[0];
-        var context = _ref2[1];
+        var _ref2 = _slicedToArray(_ref, 2),
+            arrayString = _ref2[0],
+            context = _ref2[1];
 
         var relationshipArray = JSON.parse(arrayString) || [];
         if (sideInfo.self.query) {
@@ -176,7 +175,7 @@ var KeyValueStore = exports.KeyValueStore = function (_Storage) {
     value: function add(type, id, relationshipTitle, childId) {
       var _this4 = this;
 
-      var extras = arguments.length <= 4 || arguments[4] === undefined ? {} : arguments[4];
+      var extras = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : {};
 
       var relationshipBlock = type.$fields[relationshipTitle].relationship;
       var sideInfo = relationshipBlock.$sides[relationshipTitle];
@@ -185,10 +184,9 @@ var KeyValueStore = exports.KeyValueStore = function (_Storage) {
       return Bluebird.all([this._get(thisKeyString), this._get(otherKeyString)]).then(function (_ref4) {
         var _newField;
 
-        var _ref5 = _slicedToArray(_ref4, 2);
-
-        var thisArrayString = _ref5[0];
-        var otherArrayString = _ref5[1];
+        var _ref5 = _slicedToArray(_ref4, 2),
+            thisArrayString = _ref5[0],
+            otherArrayString = _ref5[1];
 
         var thisArray = JSON.parse(thisArrayString) || [];
         var otherArray = JSON.parse(otherArrayString) || [];
@@ -227,10 +225,9 @@ var KeyValueStore = exports.KeyValueStore = function (_Storage) {
       return Bluebird.all([this._get(thisKeyString), this._get(otherKeyString)]).then(function (_ref6) {
         var _target;
 
-        var _ref7 = _slicedToArray(_ref6, 2);
-
-        var thisArrayString = _ref7[0];
-        var otherArrayString = _ref7[1];
+        var _ref7 = _slicedToArray(_ref6, 2),
+            thisArrayString = _ref7[0],
+            otherArrayString = _ref7[1];
 
         var thisArray = JSON.parse(thisArrayString) || [];
         var otherArray = JSON.parse(otherArrayString) || [];
@@ -261,10 +258,9 @@ var KeyValueStore = exports.KeyValueStore = function (_Storage) {
       return Bluebird.all([this._get(thisKeyString), this._get(otherKeyString)]).then(function (_ref8) {
         var _target2;
 
-        var _ref9 = _slicedToArray(_ref8, 2);
-
-        var thisArrayString = _ref9[0];
-        var otherArrayString = _ref9[1];
+        var _ref9 = _slicedToArray(_ref8, 2),
+            thisArrayString = _ref9[0],
+            otherArrayString = _ref9[1];
 
         var thisArray = JSON.parse(thisArrayString) || [];
         var otherArray = JSON.parse(otherArrayString) || [];

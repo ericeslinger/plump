@@ -11,10 +11,6 @@ var _model = require('./model');
 
 var _Rx = require('rxjs/Rx');
 
-var _Rx2 = _interopRequireDefault(_Rx);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
 function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
 
 function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
@@ -32,7 +28,7 @@ var Plump = exports.Plump = function () {
   function Plump() {
     var _this = this;
 
-    var opts = arguments.length <= 0 || arguments[0] === undefined ? {} : arguments[0];
+    var opts = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
 
     _classCallCheck(this, Plump);
 
@@ -146,7 +142,7 @@ var Plump = exports.Plump = function () {
         this[$subscriptions][typeName] = {};
       }
       if (this[$subscriptions][typeName][id] === undefined) {
-        this[$subscriptions][typeName][id] = new _Rx2.default.Subject();
+        this[$subscriptions][typeName][id] = new _Rx.Subject();
       }
       return this[$subscriptions][typeName][id].subscribe(handler);
     }

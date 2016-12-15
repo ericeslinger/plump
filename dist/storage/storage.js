@@ -13,10 +13,6 @@ var Promise = _interopRequireWildcard(_bluebird);
 
 var _Rx = require('rxjs/Rx');
 
-var _Rx2 = _interopRequireDefault(_Rx);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -36,7 +32,7 @@ var $emitter = Symbol('$emitter');
 
 var Storage = exports.Storage = function () {
   function Storage() {
-    var opts = arguments.length <= 0 || arguments[0] === undefined ? {} : arguments[0];
+    var opts = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
 
     _classCallCheck(this, Storage);
 
@@ -49,7 +45,7 @@ var Storage = exports.Storage = function () {
     // authorization questions, but the design may allow for authorization to be
     // cached.
     this.terminal = opts.terminal || false;
-    this[$emitter] = new _Rx2.default.Subject();
+    this[$emitter] = new _Rx.Subject();
   }
 
   _createClass(Storage, [{
@@ -110,7 +106,7 @@ var Storage = exports.Storage = function () {
   }, {
     key: 'add',
     value: function add(type, id, relationship, childId) {
-      var valence = arguments.length <= 4 || arguments[4] === undefined ? {} : arguments[4];
+      var valence = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : {};
 
       // add to a hasMany relationship
       // note that hasMany fields can have (impl-specific) valence data
@@ -126,7 +122,7 @@ var Storage = exports.Storage = function () {
   }, {
     key: 'modifyRelationship',
     value: function modifyRelationship(type, id, relationship, childId) {
-      var valence = arguments.length <= 4 || arguments[4] === undefined ? {} : arguments[4];
+      var valence = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : {};
 
       // should modify an existing hasMany valence data. Throw if not existing.
       return Promise.reject(new Error('modifyRelationship not implemented'));
