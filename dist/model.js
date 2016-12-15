@@ -13,6 +13,10 @@ var _bluebird2 = _interopRequireDefault(_bluebird);
 
 var _relationship = require('./relationship');
 
+var _mergeOptions = require('merge-options');
+
+var _mergeOptions2 = _interopRequireDefault(_mergeOptions);
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
@@ -129,6 +133,7 @@ var Model = exports.Model = function () {
       if (options.self) {
         this.getSelf().then(function (data) {
           _this5.$$copyValuesFrom(data);
+          return _this5;
         });
       }
     }
@@ -142,16 +147,14 @@ var Model = exports.Model = function () {
     value: function $set() {
       var _this6 = this;
 
-      var update = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : this[$store];
+      var u = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : this[$store];
 
+      var update = (0, _mergeOptions2.default)({}, this[$store], u);
       this.$$copyValuesFrom(update); // this is the optimistic update;
       return this[$plump].save(this.constructor, update).then(function (updated) {
         _this6.$$copyValuesFrom(updated);
-        return updated;
+        return _this6;
       });
-      // .then((updates) => {
-      //   return updates;
-      // });
     }
   }, {
     key: '$delete',

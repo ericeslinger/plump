@@ -41,7 +41,7 @@ describe('model', () => {
 
   it('should create an id when one is unset', () => {
     const noID = new TestType({ name: 'potato' }, plump);
-    return expect(noID.$save()).to.eventually.have.all.keys('name', 'id');
+    return expect(noID.$save().then((m) => m.$get())).to.eventually.have.all.keys('name', 'id');
   });
 
   it('should allow data to be deleted', () => {

@@ -66,7 +66,9 @@ describe('model', function () {
 
   it('should create an id when one is unset', function () {
     var noID = new _testType.TestType({ name: 'potato' }, plump);
-    return expect(noID.$save()).to.eventually.have.all.keys('name', 'id');
+    return expect(noID.$save().then(function (m) {
+      return m.$get();
+    })).to.eventually.have.all.keys('name', 'id');
   });
 
   it('should allow data to be deleted', function () {
