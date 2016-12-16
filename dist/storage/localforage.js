@@ -35,8 +35,6 @@ var LocalForageStorage = exports.LocalForageStorage = function (_KeyValueStore) 
     _localforage2.default.config({
       name: opts.name || 'Trellis Storage',
       storeName: opts.storeName || 'localCache'
-    }).catch(function (err) {
-      console.log(err);
     });
     return _this;
   }

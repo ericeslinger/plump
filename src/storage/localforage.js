@@ -9,8 +9,6 @@ export class LocalForageStorage extends KeyValueStore {
     localforage.config({
       name: opts.name || 'Trellis Storage',
       storeName: opts.storeName || 'localCache',
-    }).catch((err) => {
-      console.log(err);
     });
   }
 
