@@ -90,7 +90,11 @@ export class Model {
       }
     }).then((v) => {
       if (v === true) {
-        return this[$store][key];
+        if (key) {
+          return this[$store][key];
+        } else {
+          return Object.assign({}, this[$store]);
+        }
       } else if (v) {
         this.$$copyValuesFrom(v);
         this[$loaded] = true;

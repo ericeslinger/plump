@@ -118,7 +118,11 @@ var Model = exports.Model = function () {
         }
       }).then(function (v) {
         if (v === true) {
-          return _this4[$store][key];
+          if (key) {
+            return _this4[$store][key];
+          } else {
+            return Object.assign({}, _this4[$store]);
+          }
         } else if (v) {
           _this4.$$copyValuesFrom(v);
           _this4[$loaded] = true;
