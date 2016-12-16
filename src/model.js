@@ -1,10 +1,12 @@
 import Bluebird from 'bluebird';
 import { Relationship } from './relationship';
 import mergeOptions from 'merge-options';
+import { BehaviorSubject } from 'rxjs/Rx';
 const $store = Symbol('$store');
 const $plump = Symbol('$plump');
 const $loaded = Symbol('$loaded');
 const $unsubscribe = Symbol('$unsubscribe');
+const $subject = Symbol('$subject');
 
 // TODO: figure out where error events originate (storage or model)
 // and who keeps a roll-backable delta
@@ -12,15 +14,16 @@ const $unsubscribe = Symbol('$unsubscribe');
 export class Model {
   constructor(opts, plump) {
     this[$store] = {};
-    this.$$copyValuesFrom(opts || {});
     this[$loaded] = false;
     this.$relationships = {};
+    this[$subject] = new BehaviorSubject();
     Object.keys(this.constructor.$fields).forEach((key) => {
       if (this.constructor.$fields[key].type === 'hasMany') {
         const Rel = this.constructor.$fields[key].relationship;
         this.$relationships[key] = new Rel(this, key, plump);
       }
     });
+    this.$$copyValuesFrom(opts || {});
     if (plump) {
       this.$$connectToPlump(plump);
     }
@@ -57,6 +60,11 @@ export class Model {
         }
       }
     });
+    this[$subject].next(this[$store]);
+  }
+
+  $subscribe(l) {
+    return this[$subject].subscribe(l);
   }
 
   // TODO: don't fetch if we $get() something that we already have

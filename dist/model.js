@@ -17,6 +17,8 @@ var _mergeOptions = require('merge-options');
 
 var _mergeOptions2 = _interopRequireDefault(_mergeOptions);
 
+var _Rx = require('rxjs/Rx');
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
@@ -29,6 +31,7 @@ var $store = Symbol('$store');
 var $plump = Symbol('$plump');
 var $loaded = Symbol('$loaded');
 var $unsubscribe = Symbol('$unsubscribe');
+var $subject = Symbol('$subject');
 
 // TODO: figure out where error events originate (storage or model)
 // and who keeps a roll-backable delta
@@ -40,15 +43,16 @@ var Model = exports.Model = function () {
     _classCallCheck(this, Model);
 
     this[$store] = {};
-    this.$$copyValuesFrom(opts || {});
     this[$loaded] = false;
     this.$relationships = {};
+    this[$subject] = new _Rx.BehaviorSubject();
     Object.keys(this.constructor.$fields).forEach(function (key) {
       if (_this.constructor.$fields[key].type === 'hasMany') {
         var Rel = _this.constructor.$fields[key].relationship;
         _this.$relationships[key] = new Rel(_this, key, plump);
       }
     });
+    this.$$copyValuesFrom(opts || {});
     if (plump) {
       this.$$connectToPlump(plump);
     }
@@ -83,6 +87,12 @@ var Model = exports.Model = function () {
           }
         }
       });
+      this[$subject].next(this[$store]);
+    }
+  }, {
+    key: '$subscribe',
+    value: function $subscribe(l) {
+      return this[$subject].subscribe(l);
     }
 
     // TODO: don't fetch if we $get() something that we already have
