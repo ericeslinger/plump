@@ -52,9 +52,11 @@ var Plump = exports.Plump = function () {
     value: function addTypesFromSchema(schema) {
       var _this3 = this;
 
+      var ExtendingModel = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : _model.Model;
+
       Object.keys(schema).forEach(function (k) {
-        var DynamicModel = function (_Model) {
-          _inherits(DynamicModel, _Model);
+        var DynamicModel = function (_ExtendingModel) {
+          _inherits(DynamicModel, _ExtendingModel);
 
           function DynamicModel() {
             _classCallCheck(this, DynamicModel);
@@ -63,7 +65,7 @@ var Plump = exports.Plump = function () {
           }
 
           return DynamicModel;
-        }(_model.Model);
+        }(ExtendingModel);
 
         DynamicModel.fromJSON(schema[k]);
         _this3.addType(DynamicModel);

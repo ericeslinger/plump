@@ -20,9 +20,9 @@ export class Plump {
     options.types.forEach((t) => this.addType(t));
   }
 
-  addTypesFromSchema(schema) {
+  addTypesFromSchema(schema, ExtendingModel = Model) {
     Object.keys(schema).forEach((k) => {
-      class DynamicModel extends Model {}
+      class DynamicModel extends ExtendingModel {}
       DynamicModel.fromJSON(schema[k]);
       this.addType(DynamicModel);
     });
