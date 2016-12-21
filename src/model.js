@@ -125,7 +125,7 @@ export class Model {
   }
 
   $set(u = this[$store]) {
-    const update = mergeOptions({}, this[$store], u)
+    const update = mergeOptions({}, this[$store], u);
     this.$$copyValuesFrom(update); // this is the optimistic update;
     return this[$plump].save(this.constructor, update)
     .then((updated) => {

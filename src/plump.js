@@ -54,15 +54,21 @@ export class Plump {
     } else {
       this[$storage].push(store);
     }
-    store.onUpdate((u) => {
-      this[$storage].forEach((storage) => {
-        const Type = this[$types][u.type];
-        storage.onCacheableRead(Type, Object.assign({}, u.value, { [Type.$id]: u.id }));
+    if (store.terminal) {
+      store.onUpdate(({ type, id, value, field }) => {
+        this[$storage].forEach((storage) => {
+          if (field) {
+            storage.writeHasMany(type, id, field, value);
+          } else {
+            storage.write(type, value);
+          }
+          // storage.onCacheableRead(Type, Object.assign({}, u.value, { [Type.$id]: u.id }));
+        });
+        if (this[$subscriptions][type] && this[$subscriptions][type][id]) {
+          this[$subscriptions][type][id].next(value);
+        }
       });
-      if (this[$subscriptions][u.type] && this[$subscriptions][u.type][u.id]) {
-        this[$subscriptions][u.type][u.id].next(u.value);
-      }
-    });
+    }
   }
 
   find(t, id) {
@@ -163,4 +169,7 @@ export class Plump {
       return Promise.reject(new Error('Plump has no terminal store'));
     }
   }
+
+  dispatchUpdateToStores(update) {}
+  dispatchUpdateToModels(update) {}
 }

@@ -27,6 +27,49 @@ function findEntryCallback(relationship, relationshipTitle, target) {
   };
 }
 
+function maybePush(array, val, keystring, store, idx) {
+  return Bluebird.resolve()
+  .then(() => {
+    if (idx < 0) {
+      array.push(val);
+      return store._set(keystring, JSON.stringify(array));
+    } else {
+      return null;
+    }
+  });
+}
+
+
+function maybeUpdate(array, val, keystring, store, extras, idx) {
+  return Bluebird.resolve()
+  .then(() => {
+    if (idx >= 0) {
+      const modifiedRelationship = Object.assign(
+        {},
+        array[idx],
+        extras
+      );
+      array[idx] = modifiedRelationship; // eslint-disable-line no-param-reassign
+      return store._set(keystring, JSON.stringify(array));
+    } else {
+      return null;
+    }
+  });
+}
+
+function maybeDelete(array, idx, keystring, store) {
+  return Bluebird.resolve()
+  .then(() => {
+    if (idx >= 0) {
+      array.splice(idx, 1);
+      return store._set(keystring, JSON.stringify(array));
+    } else {
+      return null;
+    }
+  });
+}
+
+
 export class KeyValueStore extends Storage {
   $$maxKey(t) {
     return this._keys(t)
@@ -66,6 +109,9 @@ export class KeyValueStore extends Storage {
         .then((n) => {
           const toSave = Object.assign({}, { [t.$id]: n + 1 }, updateObject);
           return this._set(this.keyString(t.$name, n + 1), JSON.stringify(toSave))
+          .then(() => {
+            return this.notifyUpdate(t, toSave[t.$id], toSave);
+          })
           .then(() => toSave);
         });
       } else {
@@ -76,6 +122,9 @@ export class KeyValueStore extends Storage {
       .then((origValue) => {
         const update = Object.assign({}, JSON.parse(origValue), updateObject);
         return this._set(this.keyString(t.$name, id), JSON.stringify(update))
+        .then(() => {
+          return this.notifyUpdate(t, id, update);
+        })
         .then(() => update);
       });
     }
@@ -91,7 +140,7 @@ export class KeyValueStore extends Storage {
     const sideInfo = relationshipType.$sides[relationship];
     return Bluebird.resolve()
     .then(() => {
-      const resolves = [this._get(this.keyString(t.$name, id, relationship))];
+      const resolves = [this._get(this.keyString(t.$name, id, relationshipType.$name))];
       if (sideInfo.self.query && sideInfo.self.query.requireLoad) {
         resolves.push(this.readOne(t, id));
       } else {
@@ -129,11 +178,26 @@ export class KeyValueStore extends Storage {
     return this._del(this.keyString(t.$name, id));
   }
 
+  writeHasMany(type, id, field, value) {
+    let toSave = value;
+    const relationshipBlock = type.$fields[field].relationship;
+    if (relationshipBlock.$restrict) {
+      const restrictBlock = {};
+      Object.keys(relationshipBlock.$restrict).forEach((k) => {
+        restrictBlock[k] = relationshipBlock.$restrict[k].value;
+      });
+      toSave = toSave.map((v) => Object.assign({}, v, restrictBlock));
+    }
+    // const sideInfo = relationshipBlock.$sides[field];
+    const thisKeyString = this.keyString(type.$name, id, relationshipBlock.$name);
+    return this._set(thisKeyString, JSON.stringify(toSave));
+  }
+
   add(type, id, relationshipTitle, childId, extras = {}) {
     const relationshipBlock = type.$fields[relationshipTitle].relationship;
     const sideInfo = relationshipBlock.$sides[relationshipTitle];
-    const thisKeyString = this.keyString(type.$name, id, relationshipTitle);
-    const otherKeyString = this.keyString(sideInfo.other.type, childId, sideInfo.other.title);
+    const thisKeyString = this.keyString(type.$name, id, relationshipBlock.$name);
+    const otherKeyString = this.keyString(sideInfo.other.type, childId, relationshipBlock.$name);
     return Bluebird.all([
       this._get(thisKeyString),
       this._get(otherKeyString),
@@ -145,36 +209,32 @@ export class KeyValueStore extends Storage {
         [sideInfo.other.field]: childId,
         [sideInfo.self.field]: id,
       };
-      const idx = thisArray.findIndex(findEntryCallback(relationshipBlock, relationshipTitle, newField));
-      if (idx < 0) {
-        if (relationshipBlock.$restrict) {
-          Object.keys(relationshipBlock.$restrict).forEach((restriction) => {
-            newField[restriction] = relationshipBlock.$restrict[restriction].value;
-          });
-        }
-        if (relationshipBlock.$extras) {
-          Object.keys(relationshipBlock.$extras).forEach((extra) => {
-            newField[extra] = extras[extra];
-          });
-        }
-        thisArray.push(newField);
-        otherArray.push(newField);
-        return Bluebird.all([
-          this._set(thisKeyString, JSON.stringify(thisArray)),
-          this._set(otherKeyString, JSON.stringify(otherArray)),
-        ])
-        .then(() => thisArray);
-      } else {
-        return thisArray;
+      if (relationshipBlock.$restrict) {
+        Object.keys(relationshipBlock.$restrict).forEach((restriction) => {
+          newField[restriction] = relationshipBlock.$restrict[restriction].value;
+        });
       }
+      if (relationshipBlock.$extras) {
+        Object.keys(relationshipBlock.$extras).forEach((extra) => {
+          newField[extra] = extras[extra];
+        });
+      }
+      const thisIdx = thisArray.findIndex(findEntryCallback(relationshipBlock, relationshipTitle, newField));
+      const otherIdx = otherArray.findIndex(findEntryCallback(relationshipBlock, relationshipTitle, newField));
+      return Bluebird.all([
+        maybePush(thisArray, newField, thisKeyString, this, thisIdx),
+        maybePush(otherArray, newField, otherKeyString, this, otherIdx),
+      ])
+      .then(() => this.notifyRelationshipUpdate(type, id, relationshipTitle))
+      .then(() => thisArray);
     });
   }
 
   modifyRelationship(type, id, relationshipTitle, childId, extras) {
     const relationshipBlock = type.$fields[relationshipTitle].relationship;
     const sideInfo = relationshipBlock.$sides[relationshipTitle];
-    const thisKeyString = this.keyString(type.$name, id, relationshipTitle);
-    const otherKeyString = this.keyString(sideInfo.other.type, childId, sideInfo.other.title);
+    const thisKeyString = this.keyString(type.$name, id, relationshipBlock.$name);
+    const otherKeyString = this.keyString(sideInfo.other.type, childId, relationshipBlock.$name);
     return Bluebird.all([
       this._get(thisKeyString),
       this._get(otherKeyString),
@@ -188,30 +248,18 @@ export class KeyValueStore extends Storage {
       };
       const thisIdx = thisArray.findIndex(findEntryCallback(relationshipBlock, relationshipTitle, target));
       const otherIdx = otherArray.findIndex(findEntryCallback(relationshipBlock, relationshipTitle, target));
-      if (thisIdx >= 0) {
-        const modifiedRelationship = Object.assign(
-          {},
-          thisArray[thisIdx],
-          extras
-        );
-        thisArray[thisIdx] = modifiedRelationship;
-        otherArray[otherIdx] = modifiedRelationship;
-        return Bluebird.all([
-          this._set(thisKeyString, JSON.stringify(thisArray)),
-          this._set(otherKeyString, JSON.stringify(otherArray)),
-        ])
-        .then(() => thisArray);
-      } else {
-        return thisArray;
-      }
+      return Bluebird.all([
+        maybeUpdate(thisArray, target, thisKeyString, this, extras, thisIdx),
+        maybeUpdate(otherArray, target, otherKeyString, this, extras, otherIdx),
+      ]);
     });
   }
 
   remove(type, id, relationshipTitle, childId) {
     const relationshipBlock = type.$fields[relationshipTitle].relationship;
     const sideInfo = relationshipBlock.$sides[relationshipTitle];
-    const thisKeyString = this.keyString(type.$name, id, relationshipTitle);
-    const otherKeyString = this.keyString(sideInfo.other.type, childId, sideInfo.other.title);
+    const thisKeyString = this.keyString(type.$name, id, relationshipBlock.$name);
+    const otherKeyString = this.keyString(sideInfo.other.type, childId, relationshipBlock.$name);
     return Bluebird.all([
       this._get(thisKeyString),
       this._get(otherKeyString),
@@ -225,17 +273,10 @@ export class KeyValueStore extends Storage {
       };
       const thisIdx = thisArray.findIndex(findEntryCallback(relationshipBlock, relationshipTitle, target));
       const otherIdx = otherArray.findIndex(findEntryCallback(relationshipBlock, relationshipTitle, target));
-      if (thisIdx >= 0) {
-        thisArray.splice(thisIdx, 1);
-        otherArray.splice(otherIdx, 1);
-        return Bluebird.all([
-          this._set(thisKeyString, JSON.stringify(thisArray)),
-          this._set(otherKeyString, JSON.stringify(otherArray)),
-        ])
-        .then(() => thisArray);
-      } else {
-        return thisArray;
-      }
+      return Bluebird.all([
+        maybeDelete(thisArray, thisIdx, thisKeyString, this),
+        maybeDelete(otherArray, otherIdx, otherKeyString, this),
+      ]);
     });
   }
 
