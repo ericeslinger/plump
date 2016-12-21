@@ -225,7 +225,7 @@ export class KeyValueStore extends Storage {
         maybePush(thisArray, newField, thisKeyString, this, thisIdx),
         maybePush(otherArray, newField, otherKeyString, this, otherIdx),
       ])
-      .then(() => this.notifyRelationshipUpdate(type, id, relationshipTitle))
+      .then(() => this.notifyUpdate(type, id, null, relationshipTitle))
       .then(() => thisArray);
     });
   }
@@ -252,7 +252,8 @@ export class KeyValueStore extends Storage {
         maybeUpdate(thisArray, target, thisKeyString, this, extras, thisIdx),
         maybeUpdate(otherArray, target, otherKeyString, this, extras, otherIdx),
       ]);
-    });
+    })
+    .then((res) => this.notifyUpdate(type, id, null, relationshipTitle).then(() => res));
   }
 
   remove(type, id, relationshipTitle, childId) {
@@ -277,7 +278,8 @@ export class KeyValueStore extends Storage {
         maybeDelete(thisArray, thisIdx, thisKeyString, this),
         maybeDelete(otherArray, otherIdx, otherKeyString, this),
       ]);
-    });
+    })
+    .then((res) => this.notifyUpdate(type, id, null, relationshipTitle).then(() => res));
   }
 
   keyString(typeName, id, relationship) {

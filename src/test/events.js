@@ -5,6 +5,9 @@ import chaiAsPromised from 'chai-as-promised';
 import { Plump, MemoryStorage } from '../index';
 import { TestType } from './testType';
 
+import Bluebird from 'bluebird';
+Bluebird.config({ longStackTraces: true });
+
 const memstore1 = new MemoryStorage();
 const memstore2 = new MemoryStorage({ terminal: true });
 
@@ -55,6 +58,30 @@ describe('Events', () => {
           {
             parent_id: 100,
             child_id: 4,
+          },
+        ],
+      });
+    });
+  });
+
+  it('should pass cacheable-read events on hasMany relationships to other datastores', () => {
+    const memstore3 = new MemoryStorage();
+    return memstore2.write(TestType, {
+      id: 5,
+      name: 'potato',
+    }).then(() => {
+      return memstore2.add(TestType, 5, 'likers', 100);
+    }).then(() => {
+      plump.addStore(memstore3);
+      return expect(memstore3.read(TestType, 5)).to.eventually.be.null;
+    }).then(() => {
+      return memstore2.read(TestType, 5, 'likers');
+    }).then(() => {
+      return expect(memstore3.read(TestType, 5, 'likers')).to.eventually.deep.equal({
+        likers: [
+          {
+            parent_id: 100,
+            child_id: 5,
           },
         ],
       });

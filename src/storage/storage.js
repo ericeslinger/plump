@@ -67,7 +67,7 @@ export class Storage {
         return this.readOne(type, id);
       }
     }).then((result) => {
-      return this.notifyUpdate(type, id, result)
+      return this.notifyUpdate(type, id, result, key)
       .then(() => result);
     });
   }
@@ -114,29 +114,28 @@ export class Storage {
     return this[$emitter].subscribe(observer);
   }
 
-  notifyRelationshipUpdate(type, id, field) {
+  notifyUpdate(type, id, value, field) {
     return Bluebird.resolve()
     .then(() => {
       if (this.terminal) {
-        return this.readMany(type, id, field)
-        .then((value) => {
+        if (field) {
+          if (value !== null) {
+            return this[$emitter].next({
+              type, id, field, value: value[field],
+            });
+          } else {
+            return this.readMany(type, id, field)
+            .then((list) => {
+              return this[$emitter].next({
+                type, id, field, value: list[field],
+              });
+            });
+          }
+        } else {
           return this[$emitter].next({
-            type, id, field, value: value[field],
+            type, id, value,
           });
-        });
-      } else {
-        return null;
-      }
-    });
-  }
-
-  notifyUpdate(type, id, value) {
-    return Bluebird.resolve()
-    .then(() => {
-      if (this.terminal) {
-        return this[$emitter].next({
-          type, id, value,
-        });
+        }
       } else {
         return null;
       }
