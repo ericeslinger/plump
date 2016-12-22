@@ -59,39 +59,42 @@ export class SQLStorage extends Storage {
     return this[$knex].destroy();
   }
 
-  onCacheableRead() {}
-
   write(t, v) {
-    const id = v[t.$id];
-    const updateObject = {};
-    Object.keys(t.$fields).forEach((fieldName) => {
-      if (v[fieldName] !== undefined) {
-        // copy from v to the best of our ability
-        if (
-          (t.$fields[fieldName].type === 'array') ||
-          (t.$fields[fieldName].type === 'hasMany')
-        ) {
-          updateObject[fieldName] = v[fieldName].concat();
-        } else if (t.$fields[fieldName].type === 'object') {
-          updateObject[fieldName] = Object.assign({}, v[fieldName]);
-        } else {
-          updateObject[fieldName] = v[fieldName];
+    return Bluebird.resolve()
+    .then(() => {
+      const id = v[t.$id];
+      const updateObject = {};
+      Object.keys(t.$fields).forEach((fieldName) => {
+        if (v[fieldName] !== undefined) {
+          // copy from v to the best of our ability
+          if (
+            (t.$fields[fieldName].type === 'array') ||
+            (t.$fields[fieldName].type === 'hasMany')
+          ) {
+            updateObject[fieldName] = v[fieldName].concat();
+          } else if (t.$fields[fieldName].type === 'object') {
+            updateObject[fieldName] = Object.assign({}, v[fieldName]);
+          } else {
+            updateObject[fieldName] = v[fieldName];
+          }
         }
+      });
+      if ((id === undefined) && (this.terminal)) {
+        return this[$knex](t.$name).insert(updateObject).returning(t.$id)
+        .then((createdId) => {
+          return this.read(t, createdId[0]);
+        });
+      } else if (id !== undefined) {
+        return this[$knex](t.$name).where({ [t.$id]: id }).update(updateObject)
+        .then(() => {
+          return this.read(t, id);
+        });
+      } else {
+        throw new Error('Cannot create new content in a non-terminal store');
       }
+    }).then((result) => {
+      return this.notifyUpdate(t, result[t.$id], result).then(() => result);
     });
-    if ((id === undefined) && (this.terminal)) {
-      return this[$knex](t.$name).insert(updateObject).returning(t.$id)
-      .then((createdId) => {
-        return this.read(t, createdId[0]);
-      });
-    } else if (id !== undefined) {
-      return this[$knex](t.$name).where({ [t.$id]: id }).update(updateObject)
-      .then(() => {
-        return this.read(t, id);
-      });
-    } else {
-      throw new Error('Cannot create new content in a non-terminal store');
-    }
   }
 
   readOne(t, id) {
@@ -159,7 +162,8 @@ export class SQLStorage extends Storage {
       });
     }
     return this[$knex](relationshipBlock.relationship.$name)
-    .insert(newField);
+    .insert(newField)
+    .then(() => this.notifyUpdate(type, id, null, relationshipTitle));
   }
 
   modifyRelationship(type, id, relationshipTitle, childId, extras = {}) {
@@ -181,7 +185,8 @@ export class SQLStorage extends Storage {
       });
     }
     return objectToWhereChain(this[$knex](relationshipBlock.relationship.$name), whereBlock, { id, childId })
-    .update(newField);
+    .update(newField)
+    .then(() => this.notifyUpdate(type, id, null, relationshipTitle));
   }
 
   remove(type, id, relationshipTitle, childId) {
@@ -196,7 +201,8 @@ export class SQLStorage extends Storage {
         whereBlock[restriction] = relationshipBlock.relationship.$restrict[restriction].value;
       });
     }
-    return objectToWhereChain(this[$knex](relationshipBlock.relationship.$name), whereBlock).delete();
+    return objectToWhereChain(this[$knex](relationshipBlock.relationship.$name), whereBlock).delete()
+    .then(() => this.notifyUpdate(type, id, null, relationshipTitle));
   }
 
   query(q) {

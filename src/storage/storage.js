@@ -50,11 +50,6 @@ export class Storage {
     return Bluebird.reject(new Error('Write not implemented'));
   }
 
-  onCacheableRead(type, value) {
-    // override this if you want to not react to cacheableRead events.
-    return this.write(type, value);
-  }
-
   // TODO: write the two-way has/get logic into this method
   // and provide override hooks for readOne readMany
 

@@ -2,6 +2,7 @@ const $types = Symbol('$types');
 const $storage = Symbol('$storage');
 const $terminal = Symbol('$terminal');
 const $subscriptions = Symbol('$subscriptions');
+const $storeSubscriptions = Symbol('$storeSubscriptions');
 
 import { Model } from './model';
 
@@ -14,6 +15,7 @@ export class Plump {
       types: [],
     }, opts);
     this[$subscriptions] = {};
+    this[$storeSubscriptions] = [];
     this[$storage] = [];
     this[$types] = {};
     options.storage.forEach((s) => this.addStore(s));
@@ -55,7 +57,7 @@ export class Plump {
       this[$storage].push(store);
     }
     if (store.terminal) {
-      store.onUpdate(({ type, id, value, field }) => {
+      this[$storeSubscriptions].push(store.onUpdate(({ type, id, value, field }) => {
         this[$storage].forEach((storage) => {
           if (field) {
             storage.writeHasMany(type, id, field, value);
@@ -67,7 +69,7 @@ export class Plump {
         if (this[$subscriptions][type] && this[$subscriptions][type][id]) {
           this[$subscriptions][type][id].next(value);
         }
-      });
+      }));
     }
   }
 
@@ -99,6 +101,12 @@ export class Plump {
       this[$subscriptions][typeName][id] = new Subject();
     }
     return this[$subscriptions][typeName][id].subscribe(handler);
+  }
+
+  teardown() {
+    this[$storeSubscriptions].forEach((s) => s.unsubscribe());
+    this[$subscriptions] = undefined;
+    this[$storeSubscriptions] = undefined;
   }
 
   get(...args) {
@@ -169,7 +177,4 @@ export class Plump {
       return Promise.reject(new Error('Plump has no terminal store'));
     }
   }
-
-  dispatchUpdateToStores(update) {}
-  dispatchUpdateToModels(update) {}
 }

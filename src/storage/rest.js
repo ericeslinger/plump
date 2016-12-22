@@ -18,8 +18,6 @@ export class RestStorage extends Storage {
     this[$axios] = options.axios || axios.create(options);
   }
 
-  onCacheableRead() {}
-
   rest(options) {
     return this[$axios](options);
   }
@@ -34,7 +32,9 @@ export class RestStorage extends Storage {
       } else {
         throw new Error('Cannot create new content in a non-terminal store');
       }
-    }).then((d) => d.data[t.$name][0]);
+    })
+    .then((d) => d.data[t.$name][0])
+    .then((result) => this.notifyUpdate(t, result[t.$id], result).then(() => result));
   }
 
   readOne(t, id) {
@@ -72,15 +72,18 @@ export class RestStorage extends Storage {
         newField[extra] = extras[extra];
       });
     }
-    return this[$axios].put(`/${type.$name}/${id}/${relationshipTitle}`, newField);
+    return this[$axios].put(`/${type.$name}/${id}/${relationshipTitle}`, newField)
+    .then(() => this.notifyUpdate(type, id, null, relationshipTitle));
   }
 
-  remove(t, id, relationship, childId) {
-    return this[$axios].delete(`/${t.$name}/${id}/${relationship}/${childId}`);
+  remove(t, id, relationshipTitle, childId) {
+    return this[$axios].delete(`/${t.$name}/${id}/${relationshipTitle}/${childId}`)
+    .then(() => this.notifyUpdate(t, id, null, relationshipTitle));
   }
 
-  modifyRelationship(t, id, relationship, childId, extras) {
-    return this[$axios].patch(`/${t.$name}/${id}/${relationship}/${childId}`, extras);
+  modifyRelationship(t, id, relationshipTitle, childId, extras) {
+    return this[$axios].patch(`/${t.$name}/${id}/${relationshipTitle}/${childId}`, extras)
+    .then(() => this.notifyUpdate(t, id, null, relationshipTitle));
   }
 
   delete(t, id) {
