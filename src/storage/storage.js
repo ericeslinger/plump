@@ -2,6 +2,7 @@
 
 import * as Bluebird from 'bluebird';
 import { Subject } from 'rxjs/Rx';
+import { $self } from '../model';
 
 const $emitter = Symbol('$emitter');
 
@@ -53,10 +54,10 @@ export class Storage {
   // TODO: write the two-way has/get logic into this method
   // and provide override hooks for readOne readMany
 
-  read(type, id, key) {
+  read(type, id, key = $self) {
     return Bluebird.resolve()
     .then(() => {
-      if (key && type.$fields[key].type === 'hasMany') {
+      if ((key !== $self) && (type.$fields[key].type === 'hasMany')) {
         return this.readMany(type, id, key);
       } else {
         return this.readOne(type, id);
@@ -109,11 +110,11 @@ export class Storage {
     return this[$emitter].subscribe(observer);
   }
 
-  notifyUpdate(type, id, value, field) {
+  notifyUpdate(type, id, value, field = $self) {
     return Bluebird.resolve()
     .then(() => {
       if (this.terminal) {
-        if (field) {
+        if (field !== $self) {
           if (value !== null) {
             return this[$emitter].next({
               type, id, field, value: value[field],

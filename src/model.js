@@ -7,20 +7,26 @@ const $plump = Symbol('$plump');
 const $loaded = Symbol('$loaded');
 const $unsubscribe = Symbol('$unsubscribe');
 const $subject = Symbol('$subject');
+export const $self = Symbol('$self');
 
 // TODO: figure out where error events originate (storage or model)
 // and who keeps a roll-backable delta
 
 export class Model {
   constructor(opts, plump) {
-    this[$store] = {};
-    this[$loaded] = false;
+    this[$store] = {
+      [$loaded]: false,
+    };
     this.$relationships = {};
     this[$subject] = new BehaviorSubject();
     Object.keys(this.constructor.$fields).forEach((key) => {
       if (this.constructor.$fields[key].type === 'hasMany') {
         const Rel = this.constructor.$fields[key].relationship;
         this.$relationships[key] = new Rel(this, key, plump);
+        this[$store][key] = [];
+        this[$store][key][$loaded] = false;
+      } else {
+        this[$store][key] = this.constructor.$fields[key].default || null;
       }
     });
     this.$$copyValuesFrom(opts || {});
@@ -60,16 +66,19 @@ export class Model {
         }
       }
     });
-    this[$subject].next(this[$store]);
   }
 
   $subscribe(l) {
     return this[$subject].subscribe(l);
   }
 
+  $$fireUpdate() {
+    this[$subject].next(this[$store]);
+  }
+
   // TODO: don't fetch if we $get() something that we already have
 
-  $get(key) {
+  $get(key = $self) {
     // three cases.
     // key === undefined - fetch all, unless $loaded, but return all.
     // fields[key] === 'hasMany' - fetch children (perhaps move this decision to store)
@@ -77,47 +86,42 @@ export class Model {
 
     return Bluebird.resolve()
     .then(() => {
-      if (
-        ((key === undefined) && (this[$loaded] === false)) ||
-        (key && (this[$store][key] === undefined))
-      ) {
-        if (this.$relationships[key]) {
-          return this.$relationships[key].$list();
+      if ((key === $self) || (this.constructor.$fields[key].type !== 'hasMany')) {
+        if (this[$store][$loaded] === false && this[$plump]) {
+          return this[$plump].get(this.constructor, this.$id, key);
+        } else {
+          return true;
         }
-        return this[$plump].get(this.constructor, this.$id, key);
       } else {
-        return true;
+        if (this[$store][key][$loaded] === false && this[$plump]) { // eslint-disable-line no-lonely-if
+          return this.$relationships[key].$list();
+        } else {
+          return true;
+        }
       }
     }).then((v) => {
       if (v === true) {
-        if (key) {
-          return this[$store][key];
-        } else {
+        if (key === $self) {
           return Object.assign({}, this[$store]);
+        } else {
+          return this[$store][key];
         }
       } else if (v) {
         this.$$copyValuesFrom(v);
-        this[$loaded] = true;
-        if (key) {
-          return this[$store][key];
-        } else {
+        if (key === $self) {
+          this[$store][$loaded] = true;
+        } else if (this.constructor.$fields[key].type === 'hasMany') {
+          this[$store][key][$loaded] = true;
+        }
+        if (key === $self) {
           return Object.assign({}, this[$store]);
+        } else {
+          return this[$store][key];
         }
       } else {
         return null;
       }
     });
-  }
-
-  $load(opts = {}) {
-    const options = Object.assign({}, { self: true }, opts);
-    if (options.self) {
-      this.getSelf()
-      .then((data) => {
-        this.$$copyValuesFrom(data);
-        return this;
-      });
-    }
   }
 
   $save() {
@@ -262,8 +266,25 @@ Model.$rest = function $rest(plump, opts) {
   return plump.restRequest(restOpts);
 };
 
+Model.assign = function assign(opts) {
+  const start = {};
+  Object.keys(this.$fields).forEach((key) => {
+    if (opts[key]) {
+      start[key] = opts[key];
+    } else if (this.$fields[key].default) {
+      start[key] = this.$fields[key].default;
+    } else if (this.$fields[key].type === 'hasMany') {
+      start[key] = [];
+    } else {
+      start[key] = null;
+    }
+  });
+  return start;
+};
+
 Model.$id = 'id';
 Model.$name = 'Base';
+Model.$self = $self;
 Model.$fields = {
   id: {
     type: 'number',

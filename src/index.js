@@ -1,5 +1,5 @@
 import { Plump } from './plump';
-import { Model } from './model';
+import { Model, $self } from './model';
 import { SQLStorage } from './storage/sql';
 import { RedisStorage } from './storage/redis';
 import { RestStorage } from './storage/rest';
@@ -16,4 +16,5 @@ export {
   LocalForageStorage,
   MemoryStorage,
   Relationship,
+  $self,
 };
