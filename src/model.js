@@ -19,12 +19,15 @@ export class Model {
     };
     this.$relationships = {};
     this[$subject] = new BehaviorSubject();
+    this[$loaded] = {
+      [$self]: false,
+    };
     Object.keys(this.constructor.$fields).forEach((key) => {
       if (this.constructor.$fields[key].type === 'hasMany') {
         const Rel = this.constructor.$fields[key].relationship;
         this.$relationships[key] = new Rel(this, key, plump);
         this[$store][key] = [];
-        this[$store][key][$loaded] = false;
+        this[$loaded][key] = false;
       } else {
         this[$store][key] = this.constructor.$fields[key].default || null;
       }
@@ -37,9 +40,9 @@ export class Model {
 
   $$connectToPlump(plump) {
     this[$plump] = plump;
-    this[$unsubscribe] = plump.subscribe(this.constructor.$name, this.$id, (v) => {
-      this.$$copyValuesFrom(v);
-    });
+    // this[$unsubscribe] = plump.subscribe(this.constructor.$name, this.$id, (v) => {
+    //   this.$$copyValuesFrom(v);
+    // });
   }
 
   get $name() {
@@ -59,6 +62,7 @@ export class Model {
           (this.constructor.$fields[fieldName].type === 'hasMany')
         ) {
           this[$store][fieldName] = (opts[fieldName] || []).concat();
+          this[$loaded][fieldName] = true;
         } else if (this.constructor.$fields[fieldName].type === 'object') {
           this[$store][fieldName] = Object.assign({}, opts[fieldName]);
         } else {
@@ -87,13 +91,13 @@ export class Model {
     return Bluebird.resolve()
     .then(() => {
       if ((key === $self) || (this.constructor.$fields[key].type !== 'hasMany')) {
-        if (this[$store][$loaded] === false && this[$plump]) {
+        if (this[$loaded][$self] === false && this[$plump]) {
           return this[$plump].get(this.constructor, this.$id, key);
         } else {
           return true;
         }
       } else {
-        if (this[$store][key][$loaded] === false && this[$plump]) { // eslint-disable-line no-lonely-if
+        if ((this[$loaded][key] === false) && this[$plump]) { // eslint-disable-line no-lonely-if
           return this.$relationships[key].$list();
         } else {
           return true;
@@ -108,10 +112,8 @@ export class Model {
         }
       } else if (v) {
         this.$$copyValuesFrom(v);
-        if (key === $self) {
-          this[$store][$loaded] = true;
-        } else if (this.constructor.$fields[key].type === 'hasMany') {
-          this[$store][key][$loaded] = true;
+        if ((key === $self) || (this.constructor.$fields[key].type === 'hasMany')) {
+          this[$loaded][key] = true;
         }
         if (key === $self) {
           return Object.assign({}, this[$store]);
@@ -130,6 +132,11 @@ export class Model {
 
   $set(u = this[$store]) {
     const update = mergeOptions({}, this[$store], u);
+    Object.keys(this.constructor.$fields).forEach((key) => {
+      if (this.constructor.$fields[key].type === 'hasMany') {
+        delete update[key];
+      }
+    });
     this.$$copyValuesFrom(update); // this is the optimistic update;
     return this[$plump].save(this.constructor, update)
     .then((updated) => {
@@ -182,7 +189,8 @@ export class Model {
         id = item.$id;
       }
       if ((typeof id === 'number') && (id >= 1)) {
-        delete this[$store][key];
+        this[$store][key] = [];
+        this[$loaded][key] = false;
         return this[$plump].modifyRelationship(this.constructor, this.$id, key, id, extras);
       } else {
         return Bluebird.reject(new Error('Invalid item added to hasMany'));
@@ -201,7 +209,8 @@ export class Model {
         id = item.$id;
       }
       if ((typeof id === 'number') && (id >= 1)) {
-        delete this[$store][key];
+        this[$store][key] = [];
+        this[$loaded][key] = false;
         return this[$plump].remove(this.constructor, this.$id, key, id);
       } else {
         return Bluebird.reject(new Error('Invalid item $removed from hasMany'));
