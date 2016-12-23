@@ -57,7 +57,10 @@ describe('model', () => {
       const one = new TestType({ name: 'p' }, plump);
       return one.$save()
       .then(() => expect(plump.find('tests', one.$id).$get('name')).to.eventually.equal('p'))
-      .then(() => expect(plump.find('tests', one.$id).$get()).to.eventually.deep.equal(TestType.assign({ name: 'p', id: one.$id })));
+      .then(() => {
+        return expect(plump.find('tests', one.$id).$get())
+        .to.eventually.deep.equal(TestType.assign({ name: 'p', id: one.$id }));
+      });
     });
 
     it('should optimistically update on field updates', () => {
@@ -149,18 +152,23 @@ describe('model', () => {
         try {
           console.log(`${phase}: ${JSON.stringify(v, null, 2)}`);
           if (phase === 0) {
+            if (v.name) {
+              phase = 1;
+            }
+          }
+          if (phase === 1) {
             expect(v).to.have.property('name', 'potato');
             if (v.id !== undefined) {
               phase = 1;
             }
           }
-          if (phase === 1) {
+          if (phase === 2) {
             if (v.name !== 'potato') {
               expect(v).to.have.property('name', 'grotato');
               phase = 2;
             }
           }
-          if (phase === 2) {
+          if (phase === 3) {
             if (v.children) {
               expect(v.children).to.deep.equal([{
                 child_id: 100,

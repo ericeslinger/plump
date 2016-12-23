@@ -19,6 +19,7 @@ export class Model {
     };
     this.$relationships = {};
     this[$subject] = new BehaviorSubject();
+    this[$subject].next({});
     this[$loaded] = {
       [$self]: false,
     };
