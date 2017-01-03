@@ -15,7 +15,6 @@ export const $self = Symbol('$self');
 export class Model {
   constructor(opts, plump) {
     this[$store] = {
-      [$loaded]: false,
     };
     this.$relationships = {};
     this[$subject] = new BehaviorSubject();
@@ -81,6 +80,9 @@ export class Model {
 
   $subscribe(l) {
     this.$$hookToPlump();
+    if (this[$loaded][$self] === false) {
+      this.$get();
+    }
     return this[$subject].subscribe(l);
   }
 

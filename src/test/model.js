@@ -7,26 +7,10 @@ import Bluebird from 'bluebird';
 import { Plump, Model, MemoryStorage } from '../index';
 import { TestType } from './testType';
 
-const memstore1 = new MemoryStorage();
 const memstore2 = new MemoryStorage({ terminal: true });
 
-const DelayProxy = {
-  get: (target, name) => {
-    if (['read', 'write', 'add', 'remove'].indexOf(name) >= 0) {
-      return (...args) => {
-        return new Bluebird((resolve) => {
-          setTimeout(resolve, 200);
-        }).then(() => target[name](...args));
-      };
-    } else {
-      return target[name];
-    }
-  },
-};
-
-const delayedMemstore = new Proxy(memstore2, DelayProxy);
 const plump = new Plump({
-  storage: [memstore1, delayedMemstore],
+  storage: [memstore2],
   types: [TestType],
 });
 
@@ -204,6 +188,62 @@ describe('model', () => {
       })
       .then(() => one.$set({ name: 'grotato' }))
       .then(() => one.$add('children', { child_id: 100 }));
+    });
+
+    it('should update on cacheable read events', (done) => {
+      const DelayProxy = {
+        get: (target, name) => {
+          if (['read', 'write', 'add', 'remove'].indexOf(name) >= 0) {
+            return (...args) => {
+              return Bluebird.delay(200)
+              .then(() => target[name](...args));
+            };
+          } else {
+            return target[name];
+          }
+        },
+      };
+      const delayedMemstore = new Proxy(new MemoryStorage({ terminal: true }), DelayProxy);
+      const coldMemstore = new MemoryStorage();
+      const otherPlump = new Plump({
+        storage: [coldMemstore, delayedMemstore],
+        types: [TestType],
+      });
+      const one = new TestType({ name: 'slowtato' }, otherPlump);
+      return one.$save()
+      .then(() => one.$get())
+      .then((val) => {
+        return coldMemstore.write(TestType, {
+          name: 'potato',
+          id: val.id,
+        })
+        .then(() => {
+          let phase = 0;
+          const two = otherPlump.find('tests', val.id);
+          const subscription = two.$subscribe((v) => {
+            try {
+              console.log(phase);
+              console.log(JSON.stringify(v, null, 2));
+              if (phase === 0) {
+                if (v.name) {
+                  expect(v).to.have.property('name', 'potato');
+                  phase = 1;
+                }
+              }
+              if (phase === 1) {
+                if (v.name !== 'potato') {
+                  expect(v).to.have.property('name', 'slowtato');
+                  subscription.unsubscribe();
+                  done();
+                }
+              }
+            } catch (err) {
+              subscription.unsubscribe();
+              done(err);
+            }
+          });
+        });
+      });
     });
   });
 });
