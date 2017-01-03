@@ -11,8 +11,8 @@ const memstore1 = new MemoryStorage();
 const memstore2 = new MemoryStorage({ terminal: true });
 
 const DelayProxy = {
-  get: function(target, name) {
-    if (typeof target[name] === 'function') {
+  get: (target, name) => {
+    if (['read', 'write', 'add', 'remove'].indexOf(name) >= 0) {
       return (...args) => {
         return new Bluebird((resolve) => {
           setTimeout(resolve, 200);
@@ -26,7 +26,7 @@ const DelayProxy = {
 
 const delayedMemstore = new Proxy(memstore2, DelayProxy);
 const plump = new Plump({
-  storage: [memstore1, memstore2],
+  storage: [memstore1, delayedMemstore],
   types: [TestType],
 });
 
