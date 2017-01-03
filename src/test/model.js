@@ -2,17 +2,34 @@
 
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
+import Bluebird from 'bluebird';
 
 import { Plump, Model, MemoryStorage } from '../index';
 import { TestType } from './testType';
 
-// const memstore1 = new MemoryStorage();
+const memstore1 = new MemoryStorage();
 const memstore2 = new MemoryStorage({ terminal: true });
 
+const DelayProxy = {
+  get: function(target, name) {
+    if (typeof target[name] === 'function') {
+      return (...args) => {
+        return new Bluebird((resolve) => {
+          setTimeout(resolve, 200);
+        }).then(() => target[name](...args));
+      };
+    } else {
+      return target[name];
+    }
+  },
+};
+
+const delayedMemstore = new Proxy(memstore2, DelayProxy);
 const plump = new Plump({
-  storage: [memstore2],
+  storage: [memstore1, memstore2],
   types: [TestType],
 });
+
 
 chai.use(chaiAsPromised);
 const expect = chai.expect;

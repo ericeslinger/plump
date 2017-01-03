@@ -1,12 +1,12 @@
+import { Model } from './model';
+import { Subject } from 'rxjs/Rx';
+import Bluebird from 'bluebird';
+
 const $types = Symbol('$types');
 const $storage = Symbol('$storage');
 const $terminal = Symbol('$terminal');
 const $subscriptions = Symbol('$subscriptions');
 const $storeSubscriptions = Symbol('$storeSubscriptions');
-
-import { Model } from './model';
-
-import { Subject } from 'rxjs/Rx';
 
 export class Plump {
   constructor(opts = {}) {
@@ -140,7 +140,11 @@ export class Plump {
 
   delete(...args) {
     if (this[$terminal]) {
-      return this[$terminal].delete(...args);
+      return this[$terminal].delete(...args).then(() => {
+        return Bluebird.all(this[$storage].map((store) => {
+          return store.delete(...args);
+        }));
+      });
     } else {
       return Promise.reject(new Error('Plump has no terminal store'));
     }
