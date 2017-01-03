@@ -63,8 +63,12 @@ export class Storage {
         return this.readOne(type, id);
       }
     }).then((result) => {
-      return this.notifyUpdate(type, id, result, key)
-      .then(() => result);
+      if (result) {
+        return this.notifyUpdate(type, id, result, key)
+        .then(() => result);
+      } else {
+        return result;
+      }
     });
   }
 
