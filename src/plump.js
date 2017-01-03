@@ -66,9 +66,9 @@ export class Plump {
           }
           // storage.onCacheableRead(Type, Object.assign({}, u.value, { [Type.$id]: u.id }));
         });
-        if (this[$subscriptions][type] && this[$subscriptions][type][id]) {
-          console.log('firing from store in plump');
-          this[$subscriptions][type][id].next(value);
+        console.log(`FIRING ${type.$name} / ${field} / ${id}`);
+        if (this[$subscriptions][type.$name] && this[$subscriptions][type.$name][id]) {
+          this[$subscriptions][type.$name][id].next({ field, value });
         }
       }));
     }

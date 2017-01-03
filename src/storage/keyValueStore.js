@@ -103,11 +103,11 @@ export class KeyValueStore extends Storage {
         }
       }
     });
-    if (id === undefined) {
+    if ((id === undefined) || (id === null)) {
       if (this.terminal) {
         return this.$$maxKey(t.$name)
         .then((n) => {
-          const toSave = Object.assign({}, { [t.$id]: n + 1 }, updateObject);
+          const toSave = Object.assign({}, updateObject, { [t.$id]: n + 1 });
           return this._set(this.keyString(t.$name, n + 1), JSON.stringify(toSave))
           .then(() => {
             return this.notifyUpdate(t, toSave[t.$id], toSave);

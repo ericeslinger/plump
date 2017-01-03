@@ -148,41 +148,43 @@ describe('model', () => {
     it('should allow subscription to model data', (done) => {
       const one = new TestType({ name: 'potato' }, plump);
       let phase = 0;
-      const subscription = one.$subscribe((v) => {
-        try {
-          console.log(`${phase}: ${JSON.stringify(v, null, 2)}`);
-          if (phase === 0) {
-            if (v.name) {
-              phase = 1;
-            }
-          }
-          if (phase === 1) {
-            expect(v).to.have.property('name', 'potato');
-            if (v.id !== undefined) {
-              phase = 2;
-            }
-          }
-          if (phase === 2) {
-            if (v.name !== 'potato') {
-              expect(v).to.have.property('name', 'grotato');
-              phase = 3;
-            }
-          }
-          if (phase === 3) {
-            if ((v.children) && (v.children.length > 0)) {
-              expect(v.children).to.deep.equal([{
-                child_id: 100,
-                parent_id: one.$id,
-              }]);
-              subscription.unsubscribe();
-              done();
-            }
-          }
-        } catch (err) {
-          done(err);
-        }
-      });
       one.$save()
+      .then(() => {
+        const subscription = one.$subscribe((v) => {
+          try {
+            console.log(`${phase}: ${JSON.stringify(v, null, 2)}`);
+            if (phase === 0) {
+              if (v.name) {
+                phase = 1;
+              }
+            }
+            if (phase === 1) {
+              expect(v).to.have.property('name', 'potato');
+              if (v.id !== undefined) {
+                phase = 2;
+              }
+            }
+            if (phase === 2) {
+              if (v.name !== 'potato') {
+                expect(v).to.have.property('name', 'grotato');
+                phase = 3;
+              }
+            }
+            if (phase === 3) {
+              if ((v.children) && (v.children.length > 0)) {
+                expect(v.children).to.deep.equal([{
+                  child_id: 100,
+                  parent_id: one.$id,
+                }]);
+                subscription.unsubscribe();
+                done();
+              }
+            }
+          } catch (err) {
+            done(err);
+          }
+        });
+      })
       .then(() => one.$set({ name: 'grotato' }))
       .then(() => one.$add('children', { child_id: 100 }));
     });
