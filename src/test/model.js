@@ -152,7 +152,7 @@ describe('model', () => {
       .then(() => {
         const subscription = one.$subscribe((v) => {
           try {
-            console.log(`${phase}: ${JSON.stringify(v, null, 2)}`);
+            // console.log(`${phase}: ${JSON.stringify(v, null, 2)}`);
             if (phase === 0) {
               if (v.name) {
                 phase = 1;

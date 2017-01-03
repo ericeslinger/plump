@@ -66,7 +66,6 @@ export class Plump {
           }
           // storage.onCacheableRead(Type, Object.assign({}, u.value, { [Type.$id]: u.id }));
         });
-        console.log(`FIRING ${type.$name} / ${field} / ${id}`);
         if (this[$subscriptions][type.$name] && this[$subscriptions][type.$name][id]) {
           this[$subscriptions][type.$name][id].next({ field, value });
         }

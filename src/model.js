@@ -69,10 +69,12 @@ export class Model {
 
   $$hookToPlump() {
     if (this[$unsubscribe] === undefined) {
-      this[$unsubscribe] = this[$plump].subscribe(this.constructor.$name, this.$id, (v) => {
-        console.log('subscription fired');
-        console.log(JSON.stringify(v, null, 2));
-        this.$$copyValuesFrom(v);
+      this[$unsubscribe] = this[$plump].subscribe(this.constructor.$name, this.$id, ({ field, value }) => {
+        if (field !== undefined) {
+          this.$$copyValuesFrom({ [field]: value });
+        } else {
+          this.$$copyValuesFrom(value);
+        }
       });
     }
   }
