@@ -35,15 +35,8 @@ export class Model {
     });
     this.$$copyValuesFrom(opts || {});
     if (plump) {
-      this.$$connectToPlump(plump);
+      this[$plump] = plump;
     }
-  }
-
-  $$connectToPlump(plump) {
-    this[$plump] = plump;
-    // this[$unsubscribe] = plump.subscribe(this.constructor.$name, this.$id, (v) => {
-    //   this.$$copyValuesFrom(v);
-    // });
   }
 
   get $name() {
@@ -71,9 +64,19 @@ export class Model {
         }
       }
     });
+    this.$$fireUpdate();
+  }
+
+  $$hookToPlump() {
+    if (this[$unsubscribe] === undefined) {
+      this[$unsubscribe] = this[$plump].subscribe(this.constructor.$name, this.$id, (v) => {
+        this.$$copyValuesFrom(v);
+      });
+    }
   }
 
   $subscribe(l) {
+    this.$$hookToPlump();
     return this[$subject].subscribe(l);
   }
 
@@ -138,7 +141,7 @@ export class Model {
         delete update[key];
       }
     });
-    this.$$copyValuesFrom(update); // this is the optimistic update;
+    // this.$$copyValuesFrom(update); // this is the optimistic update;
     return this[$plump].save(this.constructor, update)
     .then((updated) => {
       this.$$copyValuesFrom(updated);
@@ -222,7 +225,9 @@ export class Model {
   }
 
   $teardown() {
-    this[$unsubscribe].unsubscribe();
+    if (this[$unsubscribe]) {
+      this[$unsubscribe].unsubscribe();
+    }
   }
 }
 

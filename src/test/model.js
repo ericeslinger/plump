@@ -159,17 +159,17 @@ describe('model', () => {
           if (phase === 1) {
             expect(v).to.have.property('name', 'potato');
             if (v.id !== undefined) {
-              phase = 1;
+              phase = 2;
             }
           }
           if (phase === 2) {
             if (v.name !== 'potato') {
               expect(v).to.have.property('name', 'grotato');
-              phase = 2;
+              phase = 3;
             }
           }
           if (phase === 3) {
-            if (v.children) {
+            if ((v.children) && (v.children.length > 0)) {
               expect(v.children).to.deep.equal([{
                 child_id: 100,
                 parent_id: one.$id,
