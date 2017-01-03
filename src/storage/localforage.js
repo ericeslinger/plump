@@ -1,7 +1,7 @@
-import * as localforage from 'localforage';
-import { keyValueStore } from './keyValueStore';
+import localforage from 'localforage';
+import { KeyValueStore } from './keyValueStore';
 
-export class LocalForageStorage extends keyValueStore {
+export class LocalForageStorage extends KeyValueStore {
 
   constructor(opts = {}) {
     super();

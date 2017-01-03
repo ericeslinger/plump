@@ -185,6 +185,7 @@ TestType.$fields = {
   },
   extended: {
     type: 'object',
+    default: {},
   },
   children: {
     type: 'hasMany',

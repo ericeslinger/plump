@@ -1,9 +1,12 @@
+import { Model } from './model';
+import { Subject } from 'rxjs/Rx';
+import Bluebird from 'bluebird';
+
 const $types = Symbol('$types');
 const $storage = Symbol('$storage');
 const $terminal = Symbol('$terminal');
 const $subscriptions = Symbol('$subscriptions');
-
-import Rx from 'rxjs/Rx';
+const $storeSubscriptions = Symbol('$storeSubscriptions');
 
 export class Plump {
   constructor(opts = {}) {
@@ -12,10 +15,19 @@ export class Plump {
       types: [],
     }, opts);
     this[$subscriptions] = {};
+    this[$storeSubscriptions] = [];
     this[$storage] = [];
     this[$types] = {};
     options.storage.forEach((s) => this.addStore(s));
     options.types.forEach((t) => this.addType(t));
+  }
+
+  addTypesFromSchema(schema, ExtendingModel = Model) {
+    Object.keys(schema).forEach((k) => {
+      class DynamicModel extends ExtendingModel {}
+      DynamicModel.fromJSON(schema[k]);
+      this.addType(DynamicModel);
+    });
   }
 
   addType(T) {
@@ -24,6 +36,14 @@ export class Plump {
     } else {
       throw new Error(`Duplicate Type registered: ${T.$name}`);
     }
+  }
+
+  type(T) {
+    return this[$types][T];
+  }
+
+  types() {
+    return Object.keys(this[$types]);
   }
 
   addStore(store) {
@@ -36,15 +56,21 @@ export class Plump {
     } else {
       this[$storage].push(store);
     }
-    store.onUpdate((u) => {
-      this[$storage].forEach((storage) => {
-        const Type = this[$types][u.type];
-        storage.onCacheableRead(Type, Object.assign({}, u.value, { [Type.$id]: u.id }));
-      });
-      if (this[$subscriptions][u.type] && this[$subscriptions][u.type][u.id]) {
-        this[$subscriptions][u.type][u.id].next(u.value);
-      }
-    });
+    if (store.terminal) {
+      this[$storeSubscriptions].push(store.onUpdate(({ type, id, value, field }) => {
+        this[$storage].forEach((storage) => {
+          if (field) {
+            storage.writeHasMany(type, id, field, value);
+          } else {
+            storage.write(type, value);
+          }
+          // storage.onCacheableRead(Type, Object.assign({}, u.value, { [Type.$id]: u.id }));
+        });
+        if (this[$subscriptions][type.$name] && this[$subscriptions][type.$name][id]) {
+          this[$subscriptions][type.$name][id].next({ field, value });
+        }
+      }));
+    }
   }
 
   find(t, id) {
@@ -72,9 +98,15 @@ export class Plump {
       this[$subscriptions][typeName] = {};
     }
     if (this[$subscriptions][typeName][id] === undefined) {
-      this[$subscriptions][typeName][id] = new Rx.Subject();
+      this[$subscriptions][typeName][id] = new Subject();
     }
     return this[$subscriptions][typeName][id].subscribe(handler);
+  }
+
+  teardown() {
+    this[$storeSubscriptions].forEach((s) => s.unsubscribe());
+    this[$subscriptions] = undefined;
+    this[$storeSubscriptions] = undefined;
   }
 
   get(...args) {
@@ -108,7 +140,11 @@ export class Plump {
 
   delete(...args) {
     if (this[$terminal]) {
-      return this[$terminal].delete(...args);
+      return this[$terminal].delete(...args).then(() => {
+        return Bluebird.all(this[$storage].map((store) => {
+          return store.delete(...args);
+        }));
+      });
     } else {
       return Promise.reject(new Error('Plump has no terminal store'));
     }
@@ -119,6 +155,14 @@ export class Plump {
       return this[$terminal].add(...args);
     } else {
       return Promise.reject(new Error('Plump has no terminal store'));
+    }
+  }
+
+  restRequest(opts) {
+    if (this[$terminal] && this[$terminal].rest) {
+      return this[$terminal].rest(opts);
+    } else {
+      return Promise.reject(new Error('No Rest terminal store'));
     }
   }
 

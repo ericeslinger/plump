@@ -1,7 +1,8 @@
 /* eslint no-unused-vars: 0 */
 
-import * as Promise from 'bluebird';
-import Rx from 'rxjs/Rx';
+import * as Bluebird from 'bluebird';
+import { Subject } from 'rxjs/Rx';
+import { $self } from '../model';
 
 const $emitter = Symbol('$emitter');
 
@@ -28,7 +29,7 @@ export class Storage {
     // authorization questions, but the design may allow for authorization to be
     // cached.
     this.terminal = opts.terminal || false;
-    this[$emitter] = new Rx.Subject();
+    this[$emitter] = new Subject();
   }
 
   hot(type, id) {
@@ -47,58 +48,63 @@ export class Storage {
   write(type, value) {
     // if value.id exists, this is an update. If it doesn't, it is an
     // insert. In the case of an update, it should merge down the tree.
-    return Promise.reject(new Error('Write not implemented'));
-  }
-
-  onCacheableRead(type, value) {
-    // override this if you want to not react to cacheableRead events.
-    return this.write(type, value);
+    return Bluebird.reject(new Error('Write not implemented'));
   }
 
   // TODO: write the two-way has/get logic into this method
   // and provide override hooks for readOne readMany
 
-  read(type, id, key) {
-    if (key && type.$fields[key].type === 'hasMany') {
-      return this.readMany(type, id, key);
-    } else {
-      return this.readOne(type, id);
-    }
+  read(type, id, key = $self) {
+    return Bluebird.resolve()
+    .then(() => {
+      if ((key !== $self) && (type.$fields[key].type === 'hasMany')) {
+        return this.readMany(type, id, key);
+      } else {
+        return this.readOne(type, id);
+      }
+    }).then((result) => {
+      if (result) {
+        return this.notifyUpdate(type, id, result, key)
+        .then(() => result);
+      } else {
+        return result;
+      }
+    });
   }
 
   readOne(type, id) {
-    return Promise.reject(new Error('ReadOne not implemented'));
+    return Bluebird.reject(new Error('ReadOne not implemented'));
   }
 
   readMany(type, id, key) {
-    return Promise.reject(new Error('ReadMany not implemented'));
+    return Bluebird.reject(new Error('ReadMany not implemented'));
   }
 
   delete(type, id) {
-    return Promise.reject(new Error('Delete not implemented'));
+    return Bluebird.reject(new Error('Delete not implemented'));
   }
 
   add(type, id, relationship, childId, valence = {}) {
     // add to a hasMany relationship
     // note that hasMany fields can have (impl-specific) valence data
     // example: membership between profile and community can have perm 1, 2, 3
-    return Promise.reject(new Error('Add not implemented'));
+    return Bluebird.reject(new Error('Add not implemented'));
   }
 
   remove(type, id, relationship, childId) {
     // remove from a hasMany relationship
-    return Promise.reject(new Error('remove not implemented'));
+    return Bluebird.reject(new Error('remove not implemented'));
   }
 
   modifyRelationship(type, id, relationship, childId, valence = {}) {
     // should modify an existing hasMany valence data. Throw if not existing.
-    return Promise.reject(new Error('modifyRelationship not implemented'));
+    return Bluebird.reject(new Error('modifyRelationship not implemented'));
   }
 
   query(q) {
     // q: {type: string, query: any}
     // q.query is impl defined - a string for sql (raw sql)
-    return Promise.reject(new Error('Query not implemented'));
+    return Bluebird.reject(new Error('Query not implemented'));
   }
 
   onUpdate(observer) {
@@ -108,9 +114,31 @@ export class Storage {
     return this[$emitter].subscribe(observer);
   }
 
-  update(type, id, value) {
-    this[$emitter]({
-      type, id, value,
+  notifyUpdate(type, id, value, field = $self) {
+    return Bluebird.resolve()
+    .then(() => {
+      if (this.terminal) {
+        if (field !== $self) {
+          if (value !== null) {
+            return this[$emitter].next({
+              type, id, field, value: value[field],
+            });
+          } else {
+            return this.readMany(type, id, field)
+            .then((list) => {
+              return this[$emitter].next({
+                type, id, field, value: list[field],
+              });
+            });
+          }
+        } else {
+          return this[$emitter].next({
+            type, id, value,
+          });
+        }
+      } else {
+        return null;
+      }
     });
   }
 
@@ -137,4 +165,4 @@ Storage.massReplace = function massReplace(block, context) {
       return v;
     }
   });
-}
+};

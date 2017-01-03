@@ -1,10 +1,10 @@
 import { Plump } from './plump';
-import { Model } from './model';
+import { Model, $self } from './model';
 import { SQLStorage } from './storage/sql';
-import { RedisStorage } from './storage/sql';
-import { RestStorage } from './storage/sql';
-import { LocalForageStorage } from './storage/sql';
-import { MemoryStorage } from './storage/sql';
+import { RedisStorage } from './storage/redis';
+import { RestStorage } from './storage/rest';
+import { LocalForageStorage } from './storage/localforage';
+import { MemoryStorage } from './storage/memory';
 import { Relationship } from './relationship';
 
 export {
@@ -16,4 +16,5 @@ export {
   LocalForageStorage,
   MemoryStorage,
   Relationship,
+  $self,
 };
