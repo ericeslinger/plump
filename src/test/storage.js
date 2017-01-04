@@ -3,7 +3,7 @@
 
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
-import { MemoryStorage, RedisStorage, RestStorage, SQLStorage, Plump } from '../index';
+import { MemoryStorage, RedisStorage, RestStorage, SQLStorage, Plump, $self } from '../index';
 import { TestType } from './testType';
 import axiosMock from './axiosMocking';
 import Promise from 'bluebird';
@@ -232,6 +232,45 @@ storageTypes.forEach((store) => {
         });
       });
 
+      it('can fetch a base and hasmany in one read', () => {
+        return actualStore.write(TestType, sampleObject)
+        .then((createdObject) => {
+          return actualStore.add(TestType, createdObject.id, 'children', 200)
+          .then(() => actualStore.add(TestType, createdObject.id, 'children', 201))
+          .then(() => actualStore.add(TestType, createdObject.id, 'children', 202))
+          .then(() => actualStore.add(TestType, createdObject.id, 'children', 203))
+          .then(() => {
+            return expect(actualStore.read(TestType, createdObject.id, ['children', $self]))
+            .to.eventually.deep.equal(
+              Object.assign(
+                {},
+                createdObject,
+                {
+                  children: [
+                    {
+                      child_id: 200,
+                      parent_id: createdObject.id,
+                    },
+                    {
+                      child_id: 201,
+                      parent_id: createdObject.id,
+                    },
+                    {
+                      child_id: 202,
+                      parent_id: createdObject.id,
+                    },
+                    {
+                      child_id: 203,
+                      parent_id: createdObject.id,
+                    },
+                  ],
+                }
+              )
+            );
+          });
+        });
+      });
+
       it('can add to a hasMany relationship', () => {
         return actualStore.write(TestType, sampleObject)
         .then((createdObject) => {
@@ -240,7 +279,7 @@ storageTypes.forEach((store) => {
           .then(() => actualStore.add(TestType, createdObject.id, 'children', 102))
           .then(() => actualStore.add(TestType, createdObject.id, 'children', 103))
           .then(() => {
-            return expect(actualStore.read(TestType, createdObject.id, 'children'))
+            return expect(actualStore.read(TestType, createdObject.id, ['children']))
             .to.eventually.deep.equal({
               children: [
                 {
@@ -262,7 +301,7 @@ storageTypes.forEach((store) => {
               ],
             });
           }).then(() => {
-            return expect(actualStore.read(TestType, 100, 'parents'))
+            return expect(actualStore.read(TestType, 100, ['parents']))
             .to.eventually.deep.equal({
               parents: [
                 {

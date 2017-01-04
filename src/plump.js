@@ -114,13 +114,15 @@ export class Plump {
       return thenable.then((v) => {
         if (v !== null) {
           return v;
-        } else {
+        } else if (storage.hot(...args)) {
           return storage.read(...args);
+        } else {
+          return null;
         }
       });
     }, Promise.resolve(null))
     .then((v) => {
-      if ((v === null) && (this[$terminal])) {
+      if (((v === null) || (v[$self] === null)) && (this[$terminal])) {
         return this[$terminal].read(...args);
       } else {
         return v;

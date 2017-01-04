@@ -8,6 +8,7 @@ const $loaded = Symbol('$loaded');
 const $unsubscribe = Symbol('$unsubscribe');
 const $subject = Symbol('$subject');
 export const $self = Symbol('$self');
+export const $all = Symbol('$all');
 
 // TODO: figure out where error events originate (storage or model)
 // and who keeps a roll-backable delta
@@ -70,6 +71,7 @@ export class Model {
     if (this[$unsubscribe] === undefined) {
       this[$unsubscribe] = this[$plump].subscribe(this.constructor.$name, this.$id, ({ field, value }) => {
         if (field !== undefined) {
+          // this.$$copyValuesFrom(value);
           this.$$copyValuesFrom({ [field]: value });
         } else {
           this.$$copyValuesFrom(value);
@@ -121,7 +123,7 @@ export class Model {
         } else {
           return this[$store][key];
         }
-      } else if (v) {
+      } else if (v && (v[$self] !== null)) {
         this.$$copyValuesFrom(v);
         if ((key === $self) || (this.constructor.$fields[key].type === 'hasMany')) {
           this[$loaded][key] = true;

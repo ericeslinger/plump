@@ -2,7 +2,7 @@
 
 import * as Bluebird from 'bluebird';
 import { Subject } from 'rxjs/Rx';
-import { $self } from '../model';
+import { $self, $all } from '../model';
 
 const $emitter = Symbol('$emitter');
 
@@ -54,17 +54,49 @@ export class Storage {
   // TODO: write the two-way has/get logic into this method
   // and provide override hooks for readOne readMany
 
-  read(type, id, key = $self) {
+  read(type, id, key) {
+    let keys = [$self];
+    if (Array.isArray(key)) {
+      keys = key;
+    } else if (key && key !== $all) {
+      keys = [key];
+    } else if (key === $all) {
+      keys = Object.keys(type.$fields)
+      .map((k) => type.$fields[k].type === 'hasMany' ? k : null)
+      .filter((v) => v !== null)
+      .push($self);
+    }
+    // if (keys.indexOf($self) < 0) {
+    //   keys.push($self);
+    // }
     return Bluebird.resolve()
     .then(() => {
-      if ((key !== $self) && (type.$fields[key].type === 'hasMany')) {
-        return this.readMany(type, id, key);
-      } else {
-        return this.readOne(type, id);
-      }
+      return Bluebird.all(keys.map((k) => {
+        if ((k !== $self) && (type.$fields[k].type === 'hasMany')) {
+          return this.readMany(type, id, k);
+        } else {
+          return this.readOne(type, id);
+        }
+      })).then((valArray) => {
+        const selfIdx = keys.indexOf($self);
+        const retVal = {};
+        if (selfIdx >= 0) {
+          if (valArray[selfIdx] === null) {
+            return null;
+          } else {
+            Object.assign(retVal, valArray[selfIdx]);
+          }
+        }
+        valArray.forEach((val, idx) => {
+          if (idx !== selfIdx) {
+            Object.assign(retVal, val);
+          }
+        });
+        return retVal;
+      });
     }).then((result) => {
       if (result) {
-        return this.notifyUpdate(type, id, result, key)
+        return this.notifyUpdate(type, id, result, keys)
         .then(() => result);
       } else {
         return result;
@@ -114,32 +146,38 @@ export class Storage {
     return this[$emitter].subscribe(observer);
   }
 
-  notifyUpdate(type, id, value, field = $self) {
-    return Bluebird.resolve()
-    .then(() => {
-      if (this.terminal) {
-        if (field !== $self) {
-          if (value !== null) {
-            return this[$emitter].next({
-              type, id, field, value: value[field],
-            });
-          } else {
-            return this.readMany(type, id, field)
-            .then((list) => {
+  notifyUpdate(type, id, value, opts = [$self]) {
+    let keys = opts;
+    if (!Array.isArray(keys)) {
+      keys = [keys];
+    }
+    return Bluebird.all(keys.map((field) => {
+      return Bluebird.resolve()
+      .then(() => {
+        if (this.terminal) {
+          if (field !== $self) {
+            if (value !== null) {
               return this[$emitter].next({
-                type, id, field, value: list[field],
+                type, id, field, value: value[field],
               });
+            } else {
+              return this.readMany(type, id, field)
+              .then((list) => {
+                return this[$emitter].next({
+                  type, id, field, value: list[field],
+                });
+              });
+            }
+          } else {
+            return this[$emitter].next({
+              type, id, value,
             });
           }
         } else {
-          return this[$emitter].next({
-            type, id, value,
-          });
+          return null;
         }
-      } else {
-        return null;
-      }
-    });
+      });
+    }));
   }
 
   $$testIndex(...args) {
