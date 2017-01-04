@@ -222,8 +222,6 @@ describe('model', () => {
           const two = otherPlump.find('tests', val.id);
           const subscription = two.$subscribe((v) => {
             try {
-              // console.log(phase);
-              // console.log(JSON.stringify(v, null, 2));
               if (phase === 0) {
                 if (v.name) {
                   expect(v).to.have.property('name', 'potato');
