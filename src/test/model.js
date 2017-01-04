@@ -210,7 +210,7 @@ describe('model', () => {
         types: [TestType],
       });
       const one = new TestType({ name: 'slowtato' }, otherPlump);
-      return one.$save()
+      one.$save()
       .then(() => one.$get())
       .then((val) => {
         return coldMemstore.write(TestType, {
@@ -222,8 +222,8 @@ describe('model', () => {
           const two = otherPlump.find('tests', val.id);
           const subscription = two.$subscribe((v) => {
             try {
-              console.log(phase);
-              console.log(JSON.stringify(v, null, 2));
+              // console.log(phase);
+              // console.log(JSON.stringify(v, null, 2));
               if (phase === 0) {
                 if (v.name) {
                   expect(v).to.have.property('name', 'potato');

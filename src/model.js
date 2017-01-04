@@ -81,7 +81,8 @@ export class Model {
   $subscribe(l) {
     this.$$hookToPlump();
     if (this[$loaded][$self] === false) {
-      this.$get();
+      this[$plump].streamGet(this.constructor, this.$id, $self)
+      .subscribe((v) => this.$$copyValuesFrom(v));
     }
     return this[$subject].subscribe(l);
   }

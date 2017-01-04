@@ -1,5 +1,5 @@
-import { Model } from './model';
-import { Subject } from 'rxjs/Rx';
+import { Model, $self } from './model';
+import { Subject, Observable } from 'rxjs/Rx';
 import Bluebird from 'bluebird';
 
 const $types = Symbol('$types');
@@ -127,6 +127,37 @@ export class Plump {
       }
     }).then((v) => {
       return v;
+    });
+  }
+
+  streamGet(type, id, key = $self) {
+    return Observable.create((observer) => {
+      return Bluebird.all((this[$storage].map((store) => {
+        return store.read(type, id, key)
+        .then((v) => {
+          observer.next(v);
+          if (store.hot(type, id)) {
+            return v;
+          } else {
+            return null;
+          }
+        });
+      })))
+      .then((valArray) => {
+        const possiVal = valArray.filter((v) => v !== null);
+        if ((possiVal.length === 0) && (this[$terminal])) {
+          return this[$terminal].read(type, id, key)
+          .then((val) => {
+            observer.next(val);
+            return val;
+          });
+        } else {
+          return possiVal[0];
+        }
+      }).then((v) => {
+        observer.complete();
+        return v;
+      });
     });
   }
 
