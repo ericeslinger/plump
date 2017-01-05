@@ -4,7 +4,7 @@ import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 import Bluebird from 'bluebird';
 
-import { Plump, Model, MemoryStorage } from '../index';
+import { Plump, Model, MemoryStorage, $all } from '../index';
 import { TestType } from './testType';
 
 const memstore2 = new MemoryStorage({ terminal: true });
@@ -195,9 +195,9 @@ describe('model', () => {
       one.$save()
       .then(() => one.$add('children', { child_id: 100 }))
       .then(() => {
-        const subscription = one.$subscribe(['all'], (v) => {
+        const subscription = one.$subscribe([$all], (v) => {
           try {
-            // console.log(`${phase}: ${JSON.stringify(v, null, 2)}`);
+            console.log(`${phase}: ${JSON.stringify(v, null, 2)}`);
             if (phase === 0) {
               if (v.name) {
                 phase = 1;

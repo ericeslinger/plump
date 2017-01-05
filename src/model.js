@@ -80,13 +80,24 @@ export class Model {
     }
   }
 
-  $subscribe(l) {
+  $subscribe(...args) {
+    let fields = [$self];
+    let cb;
+    if (args.length === 2) {
+      fields = args[0];
+      if (!Array.isArray(fields)) {
+        fields = [fields];
+      }
+      cb = args[1];
+    } else {
+      cb = args[0];
+    }
     this.$$hookToPlump();
     if (this[$loaded][$self] === false) {
-      this[$plump].streamGet(this.constructor, this.$id, $self)
+      this[$plump].streamGet(this.constructor, this.$id, fields)
       .subscribe((v) => this.$$copyValuesFrom(v));
     }
-    return this[$subject].subscribe(l);
+    return this[$subject].subscribe(cb);
   }
 
   $$fireUpdate() {
