@@ -109,19 +109,28 @@ export class Plump {
     this[$storeSubscriptions] = undefined;
   }
 
-  get(...args) {
+  get(type, id, keyOpts) {
+    let keys = keyOpts;
+    if (!keys) {
+      keys = [$self];
+    }
+    if (!Array.isArray(keys)) {
+      keys = [keys];
+    }
     return this[$storage].reduce((thenable, storage) => {
       return thenable.then((v) => {
         if (v !== null) {
           return v;
+        } else if (storage.hot(type, id)) {
+          return storage.read(type, id, keys);
         } else {
-          return storage.read(...args);
+          return null;
         }
       });
     }, Promise.resolve(null))
     .then((v) => {
-      if ((v === null) && (this[$terminal])) {
-        return this[$terminal].read(...args);
+      if (((v === null) || (v[$self] === null)) && (this[$terminal])) {
+        return this[$terminal].read(type, id, keys);
       } else {
         return v;
       }
@@ -130,10 +139,17 @@ export class Plump {
     });
   }
 
-  streamGet(type, id, key = $self) {
+  streamGet(type, id, keyOpts) {
+    let keys = keyOpts;
+    if (!keys) {
+      keys = [$self];
+    }
+    if (!Array.isArray(keys)) {
+      keys = [keys];
+    }
     return Observable.create((observer) => {
       return Bluebird.all((this[$storage].map((store) => {
-        return store.read(type, id, key)
+        return store.read(type, id, keys)
         .then((v) => {
           observer.next(v);
           if (store.hot(type, id)) {
@@ -146,7 +162,7 @@ export class Plump {
       .then((valArray) => {
         const possiVal = valArray.filter((v) => v !== null);
         if ((possiVal.length === 0) && (this[$terminal])) {
-          return this[$terminal].read(type, id, key)
+          return this[$terminal].read(type, id, keys)
           .then((val) => {
             observer.next(val);
             return val;
