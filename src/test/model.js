@@ -4,7 +4,7 @@ import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 import Bluebird from 'bluebird';
 
-import { Plump, Model, MemoryStorage, $all } from '../index';
+import { Plump, Model, MemoryStorage, $all, $self } from '../index';
 import { TestType } from './testType';
 
 const memstore2 = new MemoryStorage({ terminal: true });
@@ -73,10 +73,10 @@ describe('model', () => {
   });
 
   describe('relationships', () => {
-    it('should show empty hasMany lists as []', () => {
+    it('should show empty hasMany lists as {key: []}', () => {
       const one = new TestType({ name: 'frotato' }, plump);
       return one.$save()
-      .then(() => expect(one.$get('children')).to.eventually.deep.equal([]));
+      .then(() => expect(one.$get('children')).to.eventually.deep.equal({ children: [] }));
     });
 
     it('should add hasMany elements', () => {
@@ -85,10 +85,10 @@ describe('model', () => {
       .then(() => one.$add('children', 100))
       .then(() => {
         return expect(one.$get('children'))
-        .to.eventually.deep.equal([{
+        .to.eventually.deep.equal({ children: [{
           child_id: 100,
           parent_id: one.$id,
-        }]);
+        }] });
       });
     });
 
@@ -98,10 +98,10 @@ describe('model', () => {
       .then(() => one.$add('children', { child_id: 100 }))
       .then(() => {
         return expect(one.$get('children'))
-        .to.eventually.deep.equal([{
+        .to.eventually.deep.equal({ children: [{
           child_id: 100,
           parent_id: one.$id,
-        }]);
+        }] });
       });
     });
 
@@ -111,13 +111,13 @@ describe('model', () => {
       .then(() => one.$add('children', 100))
       .then(() => {
         return expect(one.$get('children'))
-        .to.eventually.deep.equal([{
+        .to.eventually.deep.equal({ children: [{
           child_id: 100,
           parent_id: one.$id,
-        }]);
+        }] });
       })
       .then(() => one.$remove('children', 100))
-      .then(() => expect(one.$get('children')).to.eventually.deep.equal([]));
+      .then(() => expect(one.$get('children')).to.eventually.deep.equal({ children: [] }));
     });
 
     it('should include valence in hasMany operations', () => {
@@ -127,20 +127,20 @@ describe('model', () => {
       .then(() => one.$get('valenceChildren'))
       .then(() => {
         return expect(one.$get('valenceChildren'))
-        .to.eventually.deep.equal([{
+        .to.eventually.deep.equal({ valenceChildren: [{
           child_id: 100,
           parent_id: one.$id,
           perm: 1,
-        }]);
+        }] });
       })
       .then(() => one.$modifyRelationship('valenceChildren', 100, { perm: 2 }))
       .then(() => {
         return expect(one.$get('valenceChildren'))
-        .to.eventually.deep.equal([{
+        .to.eventually.deep.equal({ valenceChildren: [{
           child_id: 100,
           parent_id: one.$id,
           perm: 2,
-        }]);
+        }] });
       });
     });
   });
@@ -194,10 +194,10 @@ describe('model', () => {
       let phase = 0;
       one.$save()
       .then(() => one.$add('children', { child_id: 100 }))
+      // .then(() => one.$get([$self, 'children']).then((v) => console.log(JSON.stringify(v, null, 2))))
       .then(() => {
         const subscription = one.$subscribe([$all], (v) => {
           try {
-            console.log(`${phase}: ${JSON.stringify(v, null, 2)}`);
             if (phase === 0) {
               if (v.name) {
                 phase = 1;

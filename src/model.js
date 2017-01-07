@@ -106,15 +106,38 @@ export class Model {
 
   // TODO: don't fetch if we $get() something that we already have
 
-  $get(key = $self) {
+  $get(opts) {
+    let keys = [$self];
+    if (Array.isArray(opts)) {
+      keys = opts;
+    } else if (opts !== undefined) {
+      keys = [opts];
+    }
+    return Bluebird.all(keys.map((key) => this.$$singleGet(key)))
+    .then((valueArray) => {
+      const selfIdx = keys.indexOf($self);
+      if ((selfIdx >= 0) && (valueArray[selfIdx] === null)) {
+        return null;
+      } else {
+        return valueArray.reduce((accum, curr) => Object.assign(accum, curr), {});
+      }
+    });
+  }
+
+  $$singleGet(opt = $self) {
     // three cases.
     // key === undefined - fetch all, unless $loaded, but return all.
     // fields[key] === 'hasMany' - fetch children (perhaps move this decision to store)
     // otherwise - fetch all, unless $store[key], return $store[key].
-
+    let key;
+    if ((opt !== $self) && (this.constructor.$fields[opt].type !== 'hasMany')) {
+      key = $self;
+    } else {
+      key = opt;
+    }
     return Bluebird.resolve()
     .then(() => {
-      if ((key === $self) || (this.constructor.$fields[key].type !== 'hasMany')) {
+      if (key === $self) {
         if (this[$loaded][$self] === false && this[$plump]) {
           return this[$plump].get(this.constructor, this.$id, key);
         } else {
@@ -132,17 +155,15 @@ export class Model {
         if (key === $self) {
           return Object.assign({}, this[$store]);
         } else {
-          return this[$store][key];
+          return Object.assign({}, { [key]: this[$store][key] });
         }
       } else if (v && (v[$self] !== null)) {
         this.$$copyValuesFrom(v);
-        if ((key === $self) || (this.constructor.$fields[key].type === 'hasMany')) {
-          this[$loaded][key] = true;
-        }
+        this[$loaded][key] = true;
         if (key === $self) {
           return Object.assign({}, this[$store]);
         } else {
-          return this[$store][key];
+          return Object.assign({}, { [key]: this[$store][key] });
         }
       } else {
         return null;
@@ -185,23 +206,29 @@ export class Model {
   }
 
   $add(key, item, extras) {
-    if (this.constructor.$fields[key].type === 'hasMany') {
-      let id = 0;
-      if (typeof item === 'number') {
-        id = item;
-      } else if (item.$id) {
-        id = item.$id;
+    return Bluebird.resolve()
+    .then(() => {
+      if (this.constructor.$fields[key].type === 'hasMany') {
+        let id = 0;
+        if (typeof item === 'number') {
+          id = item;
+        } else if (item.$id) {
+          id = item.$id;
+        } else {
+          id = item[this.constructor.$fields[key].relationship.$sides[key].other.field];
+        }
+        if ((typeof id === 'number') && (id >= 1)) {
+          return this[$plump].add(this.constructor, this.$id, key, id, extras);
+        } else {
+          return Bluebird.reject(new Error('Invalid item added to hasMany'));
+        }
       } else {
-        id = item[this.constructor.$fields[key].relationship.$sides[key].other.field];
+        return Bluebird.reject(new Error('Cannot $add except to hasMany field'));
       }
-      if ((typeof id === 'number') && (id >= 1)) {
-        return this[$plump].add(this.constructor, this.$id, key, id, extras);
-      } else {
-        return Bluebird.reject(new Error('Invalid item added to hasMany'));
-      }
-    } else {
-      return Bluebird.reject(new Error('Cannot $add except to hasMany field'));
-    }
+    }).then((l) => {
+      this.$$copyValuesFrom({ [key]: l });
+      return l;
+    });
   }
 
   $modifyRelationship(key, item, extras) {

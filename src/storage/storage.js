@@ -58,13 +58,13 @@ export class Storage {
     let keys = [$self];
     if (Array.isArray(key)) {
       keys = key;
-    } else if (key && key !== $all) {
+    } else if (key) {
       keys = [key];
-    } else if (key === $all) {
+    }
+    if (keys.indexOf($all) >= 0) {
       keys = Object.keys(type.$fields)
-      .map((k) => type.$fields[k].type === 'hasMany' ? k : null)
-      .filter((v) => v !== null)
-      .push($self);
+      .filter((k) => type.$fields[k].type === 'hasMany');
+      keys.push($self);
     }
     // if (keys.indexOf($self) < 0) {
     //   keys.push($self);
