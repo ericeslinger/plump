@@ -1,6 +1,7 @@
 import * as Bluebird from 'bluebird';
 import { Storage } from './storage';
 import { createFilter } from './createFilter';
+import { $self } from '../model';
 
 function saneNumber(i) {
   return ((typeof i === 'number') && (!isNaN(i)) && (i !== Infinity) & (i !== -Infinity));
@@ -176,6 +177,14 @@ export class KeyValueStore extends Storage {
 
   delete(t, id) {
     return this._del(this.keyString(t.$name, id));
+  }
+
+  wipe(t, id, field) {
+    if (field === $self) {
+      return this._del(this.keyString(t.$name, id));
+    } else {
+      return this._del(this.keyString(t.$name, id, field));
+    }
   }
 
   writeHasMany(type, id, field, value) {

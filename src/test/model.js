@@ -4,7 +4,7 @@ import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 import Bluebird from 'bluebird';
 
-import { Plump, Model, MemoryStorage, $all, $self } from '../index';
+import { Plump, Model, MemoryStorage, $all } from '../index';
 import { TestType } from './testType';
 
 const memstore2 = new MemoryStorage({ terminal: true });
