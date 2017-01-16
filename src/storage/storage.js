@@ -104,6 +104,15 @@ export class Storage {
     });
   }
 
+  // wipe should quietly erase a value from the store. This is used during
+  // cache invalidation events when the current value is known to be incorrect.
+  // it is not a delete (which is a user-initiated, event-causing thing), but
+  // should result in this value not stored in storage anymore.
+
+  wipe(type, id, field) {
+    return Bluebird.reject(new Error('Wipe not implemented'));
+  }
+
   readOne(type, id) {
     return Bluebird.reject(new Error('ReadOne not implemented'));
   }
