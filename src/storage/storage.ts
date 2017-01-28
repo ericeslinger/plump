@@ -18,8 +18,9 @@ const $emitter = Symbol('$emitter');
 // just stores and removes integers.
 
 export class Storage {
+  terminal: any;
 
-  constructor(opts = {}) {
+  constructor(opts: { terminal?: any } = {}) {
     // a "terminal" storage facility is the end of the storage chain.
     // usually sql on the server side and rest on the client side, it *must*
     // receive the writes, and is the final authoritative answer on whether
@@ -32,7 +33,7 @@ export class Storage {
     this[$emitter] = new Subject();
   }
 
-  hot(type, id) {
+  hot(type: any, id: number): boolean {
     // t: type, id: id (integer).
     // if hot, then consider this value authoritative, no need to go down
     // the datastore chain. Consider a memorystorage used as a top-level cache.
@@ -55,7 +56,7 @@ export class Storage {
   // and provide override hooks for readOne readMany
 
   read(type, id, key) {
-    let keys = [$self];
+    let keys: Array<symbol | string> = [$self];
     if (Array.isArray(key)) {
       keys = key;
     } else if (key) {
@@ -155,7 +156,7 @@ export class Storage {
     return this[$emitter].subscribe(observer);
   }
 
-  notifyUpdate(type, id, value, opts = [$self]) {
+  notifyUpdate(type, id, value, opts: (string | symbol)[] = [$self]) {
     let keys = opts;
     if (!Array.isArray(keys)) {
       keys = [keys];
@@ -198,18 +199,16 @@ export class Storage {
       throw new Error('Illegal operation on an unsaved new model');
     }
   }
+
+  static massReplace(block, context) {
+    return block.map((v) => {
+      if (Array.isArray(v)) {
+        return Storage.massReplace(v, context);
+      } else if ((typeof v === 'string') && (v.match(/^\{(.*)\}$/))) {
+        return context[v.match(/^\{(.*)\}$/)[1]];
+      } else {
+        return v;
+      }
+    });
+  }
 }
-
-
-// convenience function that walks an array replacing any {id} with context.id
-Storage.massReplace = function massReplace(block, context) {
-  return block.map((v) => {
-    if (Array.isArray(v)) {
-      return massReplace(v, context);
-    } else if ((typeof v === 'string') && (v.match(/^\{(.*)\}$/))) {
-      return context[v.match(/^\{(.*)\}$/)[1]];
-    } else {
-      return v;
-    }
-  });
-};
