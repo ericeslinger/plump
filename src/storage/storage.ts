@@ -17,7 +17,7 @@ const $emitter = Symbol('$emitter');
 // hasMany relationships are treated like id arrays. So, add / remove / has
 // just stores and removes integers.
 
-export class Storage {
+export abstract class Storage {
   terminal: any;
 
   constructor(opts: { terminal?: any } = {}) {
@@ -55,7 +55,7 @@ export class Storage {
   // TODO: write the two-way has/get logic into this method
   // and provide override hooks for readOne readMany
 
-  read(type, id, key) {
+  read(type, id, key?) {
     let keys: Array<symbol | string> = [$self];
     if (Array.isArray(key)) {
       keys = key;

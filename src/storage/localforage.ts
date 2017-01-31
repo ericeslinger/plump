@@ -1,9 +1,10 @@
-import localforage from 'localforage';
+import * as localforage from 'localforage';
 import { KeyValueStore } from './keyValueStore';
 
 export class LocalForageStorage extends KeyValueStore {
+  isCache: boolean;
 
-  constructor(opts = {}) {
+  constructor(opts: { name?: string, storeName?: string } = {}) {
     super();
     this.isCache = true;
     localforage.config({

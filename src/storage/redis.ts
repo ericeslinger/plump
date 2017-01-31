@@ -3,10 +3,11 @@ import * as Redis from 'redis';
 import { KeyValueStore } from './keyValueStore';
 
 
-const RedisService = Promise.promisifyAll(Redis);
+const RedisService: any = Promise.promisifyAll(Redis);
 const $redis = Symbol('$redis');
 
 export class RedisStorage extends KeyValueStore {
+  isCache: boolean;
 
   constructor(opts = {}) {
     super(opts);

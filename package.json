@@ -23,7 +23,11 @@
   },
   "homepage": "https://github.com/kstf/plump#readme",
   "devDependencies": {
+    "@types/axios": "^0.9.35",
+    "@types/bluebird": "^3.0.37",
     "@types/core-js": "^0.9.35",
+    "@types/knex": "0.0.40",
+    "@types/redis": "^0.12.34",
     "axios-mock-adapter": "^1.6.1",
     "babel": "^6.5.2",
     "babel-plugin-add-module-exports": "^0.2.1",
@@ -40,7 +44,6 @@
     "mocha": "^3.0.2"
   },
   "dependencies": {
-    "@types/bluebird": "^3.0.37",
     "axios": "^0.14.0",
     "bluebird": "^3.4.6",
     "knex": "^0.12.1",

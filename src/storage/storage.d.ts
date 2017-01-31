@@ -59,8 +59,9 @@ declare class Storage {
  *~ place them in this block.
  */
 declare namespace Storage {
-    export interface MyClassMethodOptions {
-        width?: number;
-        height?: number;
-    }
+  export interface TrellisType {
+    $id: number,
+    $name: string,
+    $fields: any[],
+  }
 }

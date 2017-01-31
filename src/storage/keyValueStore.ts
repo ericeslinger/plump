@@ -3,8 +3,10 @@ import { Storage } from './storage';
 import { createFilter } from './createFilter';
 import { $self } from '../model';
 
+import { TrellisType } from './storage.d';
+
 function saneNumber(i) {
-  return ((typeof i === 'number') && (!isNaN(i)) && (i !== Infinity) & (i !== -Infinity));
+  return ((typeof i === 'number') && (!isNaN(i)) && (i !== Infinity) && (i !== -Infinity));
 }
 
 function findEntryCallback(relationship, relationshipTitle, target) {
@@ -70,8 +72,18 @@ function maybeDelete(array, idx, keystring, store) {
   });
 }
 
+export abstract class KeyValueStore extends Storage {
+  abstract isCache: boolean;
+  
+  constructor(opts?: { terminal?: any}) {
+    super(opts);
+  }
 
-export class KeyValueStore extends Storage {
+  abstract _keys(typeName: string): Bluebird<string[]>;
+  abstract _set(key: string, value: any): Bluebird<void>;
+  abstract _get(key: string): Bluebird<any>;
+  abstract _del(key: string): Bluebird<any>;
+
   $$maxKey(t) {
     return this._keys(t)
     .then((keyArray) => {
@@ -86,7 +98,7 @@ export class KeyValueStore extends Storage {
     });
   }
 
-  write(t, v) {
+  write(t: TrellisType, v) {
     const id = v[t.$id];
     const updateObject = {};
     Object.keys(t.$fields).forEach((fieldName) => {
@@ -291,7 +303,7 @@ export class KeyValueStore extends Storage {
     .then((res) => this.notifyUpdate(type, id, null, relationshipTitle).then(() => res));
   }
 
-  keyString(typeName, id, relationship) {
+  keyString(typeName, id, relationship?) {
     return `${typeName}:${relationship || 'store'}:${id}`;
   }
 }
