@@ -1,12 +1,12 @@
-import axios from 'axios';
+import * as axios from 'axios';
 import { Storage } from './storage';
 
 const $axios = Symbol('$axios');
-import * as Bluebird from 'bluebird';
+import Promise from 'bluebird';
 
 export class RestStorage extends Storage {
 
-  constructor(opts: { baseURL?: string, axios?: any } = {}) {
+  constructor(opts = {}) {
     super(opts);
     const options = Object.assign(
       {},
@@ -23,7 +23,7 @@ export class RestStorage extends Storage {
   }
 
   write(t, v) {
-    return Bluebird.resolve()
+    return Promise.resolve()
     .then(() => {
       if (v[t.$id]) {
         return this[$axios].patch(`/${t.$name}/${v[t.$id]}`, v);
@@ -38,7 +38,7 @@ export class RestStorage extends Storage {
   }
 
   readOne(t, id) {
-    return Bluebird.resolve()
+    return Promise.resolve()
     .then(() => this[$axios].get(`/${t.$name}/${id}`))
     .then((response) => {
       return response.data[t.$name][0];

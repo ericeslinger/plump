@@ -1,8 +1,7 @@
-import * as Bluebird from 'bluebird';
+import Bluebird from 'bluebird';
 import { Relationship } from './relationship';
-import * as mergeOptions from 'merge-options';
+import mergeOptions from 'merge-options';
 import { BehaviorSubject } from 'rxjs/Rx';
-import * as Rx from 'rxjs/Rx.d';
 const $store = Symbol('$store');
 const $plump = Symbol('$plump');
 const $loaded = Symbol('$loaded');
@@ -15,104 +14,23 @@ export const $all = Symbol('$all');
 // and who keeps a roll-backable delta
 
 export class Model {
-  static $id = 'id';
-  static $name = 'Base';
-  static $self = $self;
-  static $fields = {
-    id: {
-      type: 'number',
-    },
-  };
-
-  static fromJSON = function fromJSON(json) {
-    this.$id = json.$id || 'id';
-    this.$name = json.$name;
-    this.$fields = {};
-    Object.keys(json.$fields).forEach((k) => {
-      const field = json.$fields[k];
-      if (field.type === 'hasMany') {
-        class DynamicRelationship extends Relationship {}
-        DynamicRelationship.fromJSON(field.relationship);
-        this.$fields[k] = {
-          type: 'hasMany',
-          relationship: DynamicRelationship,
-        };
-      } else {
-        this.$fields[k] = Object.assign({}, field);
-      }
-    });
-  };
-
-  static toJSON = function toJSON() {
-    const retVal = {
-      $id: this.$id,
-      $name: this.$name,
-      $fields: {},
-    };
-    const fieldNames = Object.keys(this.$fields);
-    fieldNames.forEach((k) => {
-      if (this.$fields[k].type === 'hasMany') {
-        retVal.$fields[k] = {
-          type: 'hasMany',
-          relationship: this.$fields[k].relationship.toJSON(),
-        };
-      } else {
-        retVal.$fields[k] = this.$fields[k];
-      }
-    });
-    return retVal;
-  };
-
-  static $rest = function $rest(plump, opts) {
-    const restOpts = Object.assign(
-      {},
-      opts,
-      {
-        url: `/${this.$name}/${opts.url}`,
-      }
-    );
-    return plump.restRequest(restOpts);
-  };
-
-  static assign = function assign(opts) {
-    const start = {};
-    Object.keys(this.$fields).forEach((key) => {
-      if (opts[key]) {
-        start[key] = opts[key];
-      } else if (this.$fields[key].default) {
-        start[key] = this.$fields[key].default;
-      } else if (this.$fields[key].type === 'hasMany') {
-        start[key] = [];
-      } else {
-        start[key] = null;
-      }
-    });
-    return start;
-  };
-
-  $store: any;
-  $relationships: any;
-  $subject: Rx.BehaviorSubject<any>;
-  $loaded: any;
-
   constructor(opts, plump) {
     this[$store] = {
     };
     this.$relationships = {};
-    this[$subject] = new BehaviorSubject<any>({});
+    this[$subject] = new BehaviorSubject();
     this[$subject].next({});
     this[$loaded] = {
       [$self]: false,
     };
-
-    Object.keys((this.constructor as typeof Model).$fields).forEach((key) => {
-      if ((this.constructor as typeof Model).$fields[key].type === 'hasMany') {
-        const Rel = (this.constructor as typeof Model).$fields[key].relationship;
+    Object.keys(this.constructor.$fields).forEach((key) => {
+      if (this.constructor.$fields[key].type === 'hasMany') {
+        const Rel = this.constructor.$fields[key].relationship;
         this.$relationships[key] = new Rel(this, key, plump);
         this[$store][key] = [];
         this[$loaded][key] = false;
       } else {
-        this[$store][key] = (this.constructor as typeof Model).$fields[key].default || null;
+        this[$store][key] = this.constructor.$fields[key].default || null;
       }
     });
     this.$$copyValuesFrom(opts || {});
@@ -122,24 +40,24 @@ export class Model {
   }
 
   get $name() {
-    return (this.constructor as typeof Model).$name;
+    return this.constructor.$name;
   }
 
   get $id() {
-    return this[$store][(this.constructor as typeof Model).$id];
+    return this[$store][this.constructor.$id];
   }
 
   $$copyValuesFrom(opts = {}) {
-    Object.keys((this.constructor as typeof Model).$fields).forEach((fieldName) => {
+    Object.keys(this.constructor.$fields).forEach((fieldName) => {
       if (opts[fieldName] !== undefined) {
         // copy from opts to the best of our ability
         if (
-          ((this.constructor as typeof Model).$fields[fieldName].type === 'array') ||
-          ((this.constructor as typeof Model).$fields[fieldName].type === 'hasMany')
+          (this.constructor.$fields[fieldName].type === 'array') ||
+          (this.constructor.$fields[fieldName].type === 'hasMany')
         ) {
           this[$store][fieldName] = (opts[fieldName] || []).concat();
           this[$loaded][fieldName] = true;
-        } else if ((this.constructor as typeof Model).$fields[fieldName].type === 'object') {
+        } else if (this.constructor.$fields[fieldName].type === 'object') {
           this[$store][fieldName] = Object.assign({}, opts[fieldName]);
         } else {
           this[$store][fieldName] = opts[fieldName];
@@ -151,7 +69,7 @@ export class Model {
 
   $$hookToPlump() {
     if (this[$unsubscribe] === undefined) {
-      this[$unsubscribe] = this[$plump].subscribe((this.constructor as typeof Model).$name, this.$id, ({ field, value }) => {
+      this[$unsubscribe] = this[$plump].subscribe(this.constructor.$name, this.$id, ({ field, value }) => {
         if (field !== undefined) {
           // this.$$copyValuesFrom(value);
           this.$$copyValuesFrom({ [field]: value });
@@ -176,7 +94,7 @@ export class Model {
     }
     this.$$hookToPlump();
     if (this[$loaded][$self] === false) {
-      this[$plump].streamGet((this.constructor as typeof Model), this.$id, fields)
+      this[$plump].streamGet(this.constructor, this.$id, fields)
       .subscribe((v) => this.$$copyValuesFrom(v));
     }
     return this[$subject].subscribe(cb);
@@ -212,7 +130,7 @@ export class Model {
     // fields[key] === 'hasMany' - fetch children (perhaps move this decision to store)
     // otherwise - fetch all, unless $store[key], return $store[key].
     let key;
-    if ((opt !== $self) && ((this.constructor as typeof Model).$fields[opt].type !== 'hasMany')) {
+    if ((opt !== $self) && (this.constructor.$fields[opt].type !== 'hasMany')) {
       key = $self;
     } else {
       key = opt;
@@ -221,7 +139,7 @@ export class Model {
     .then(() => {
       if (key === $self) {
         if (this[$loaded][$self] === false && this[$plump]) {
-          return this[$plump].get((this.constructor as typeof Model), this.$id, key);
+          return this[$plump].get(this.constructor, this.$id, key);
         } else {
           return true;
         }
@@ -258,14 +176,14 @@ export class Model {
   }
 
   $set(u = this[$store]) {
-    const update = mergeOptions.call({}, this[$store], u);
-    Object.keys((this.constructor as typeof Model).$fields).forEach((key) => {
-      if ((this.constructor as typeof Model).$fields[key].type === 'hasMany') {
+    const update = mergeOptions({}, this[$store], u);
+    Object.keys(this.constructor.$fields).forEach((key) => {
+      if (this.constructor.$fields[key].type === 'hasMany') {
         delete update[key];
       }
     });
     // this.$$copyValuesFrom(update); // this is the optimistic update;
-    return this[$plump].save((this.constructor as typeof Model), update)
+    return this[$plump].save(this.constructor, update)
     .then((updated) => {
       this.$$copyValuesFrom(updated);
       return this;
@@ -273,7 +191,7 @@ export class Model {
   }
 
   $delete() {
-    return this[$plump].delete((this.constructor as typeof Model), this.$id);
+    return this[$plump].delete(this.constructor, this.$id);
   }
 
   $rest(opts) {
@@ -281,7 +199,7 @@ export class Model {
       {},
       opts,
       {
-        url: `/${(this.constructor as typeof Model).$name}/${this.$id}/${opts.url}`,
+        url: `/${this.constructor.$name}/${this.$id}/${opts.url}`,
       }
     );
     return this[$plump].restRequest(restOpts);
@@ -290,17 +208,17 @@ export class Model {
   $add(key, item, extras) {
     return Bluebird.resolve()
     .then(() => {
-      if ((this.constructor as typeof Model).$fields[key].type === 'hasMany') {
+      if (this.constructor.$fields[key].type === 'hasMany') {
         let id = 0;
         if (typeof item === 'number') {
           id = item;
         } else if (item.$id) {
           id = item.$id;
         } else {
-          id = item[(this.constructor as typeof Model).$fields[key].relationship.$sides[key].other.field];
+          id = item[this.constructor.$fields[key].relationship.$sides[key].other.field];
         }
         if ((typeof id === 'number') && (id >= 1)) {
-          return this[$plump].add((this.constructor as typeof Model), this.$id, key, id, extras);
+          return this[$plump].add(this.constructor, this.$id, key, id, extras);
         } else {
           return Bluebird.reject(new Error('Invalid item added to hasMany'));
         }
@@ -314,7 +232,7 @@ export class Model {
   }
 
   $modifyRelationship(key, item, extras) {
-    if ((this.constructor as typeof Model).$fields[key].type === 'hasMany') {
+    if (this.constructor.$fields[key].type === 'hasMany') {
       let id = 0;
       if (typeof item === 'number') {
         id = item;
@@ -324,7 +242,7 @@ export class Model {
       if ((typeof id === 'number') && (id >= 1)) {
         this[$store][key] = [];
         this[$loaded][key] = false;
-        return this[$plump].modifyRelationship((this.constructor as typeof Model), this.$id, key, id, extras);
+        return this[$plump].modifyRelationship(this.constructor, this.$id, key, id, extras);
       } else {
         return Bluebird.reject(new Error('Invalid item added to hasMany'));
       }
@@ -334,7 +252,7 @@ export class Model {
   }
 
   $remove(key, item) {
-    if ((this.constructor as typeof Model).$fields[key].type === 'hasMany') {
+    if (this.constructor.$fields[key].type === 'hasMany') {
       let id = 0;
       if (typeof item === 'number') {
         id = item;
@@ -344,7 +262,7 @@ export class Model {
       if ((typeof id === 'number') && (id >= 1)) {
         this[$store][key] = [];
         this[$loaded][key] = false;
-        return this[$plump].remove((this.constructor as typeof Model), this.$id, key, id);
+        return this[$plump].remove(this.constructor, this.$id, key, id);
       } else {
         return Bluebird.reject(new Error('Invalid item $removed from hasMany'));
       }
@@ -359,3 +277,78 @@ export class Model {
     }
   }
 }
+
+Model.fromJSON = function fromJSON(json) {
+  this.$id = json.$id || 'id';
+  this.$name = json.$name;
+  this.$fields = {};
+  Object.keys(json.$fields).forEach((k) => {
+    const field = json.$fields[k];
+    if (field.type === 'hasMany') {
+      class DynamicRelationship extends Relationship {}
+      DynamicRelationship.fromJSON(field.relationship);
+      this.$fields[k] = {
+        type: 'hasMany',
+        relationship: DynamicRelationship,
+      };
+    } else {
+      this.$fields[k] = Object.assign({}, field);
+    }
+  });
+};
+
+Model.toJSON = function toJSON() {
+  const retVal = {
+    $id: this.$id,
+    $name: this.$name,
+    $fields: {},
+  };
+  const fieldNames = Object.keys(this.$fields);
+  fieldNames.forEach((k) => {
+    if (this.$fields[k].type === 'hasMany') {
+      retVal.$fields[k] = {
+        type: 'hasMany',
+        relationship: this.$fields[k].relationship.toJSON(),
+      };
+    } else {
+      retVal.$fields[k] = this.$fields[k];
+    }
+  });
+  return retVal;
+};
+
+Model.$rest = function $rest(plump, opts) {
+  const restOpts = Object.assign(
+    {},
+    opts,
+    {
+      url: `/${this.$name}/${opts.url}`,
+    }
+  );
+  return plump.restRequest(restOpts);
+};
+
+Model.assign = function assign(opts) {
+  const start = {};
+  Object.keys(this.$fields).forEach((key) => {
+    if (opts[key]) {
+      start[key] = opts[key];
+    } else if (this.$fields[key].default) {
+      start[key] = this.$fields[key].default;
+    } else if (this.$fields[key].type === 'hasMany') {
+      start[key] = [];
+    } else {
+      start[key] = null;
+    }
+  });
+  return start;
+};
+
+Model.$id = 'id';
+Model.$name = 'Base';
+Model.$self = $self;
+Model.$fields = {
+  id: {
+    type: 'number',
+  },
+};

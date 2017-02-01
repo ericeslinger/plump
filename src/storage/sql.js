@@ -1,5 +1,5 @@
 import * as Bluebird from 'bluebird';
-import * as knex from 'knex';
+import knex from 'knex';
 import { Storage } from './storage';
 const $knex = Symbol('$knex');
 
@@ -13,7 +13,7 @@ function deserializeWhere(query, block) {
   }
 }
 
-function objectToWhereChain(query, block, context?) {
+function objectToWhereChain(query, block, context) {
   return Object.keys(block).reduce((q, key) => {
     if (Array.isArray(block[key])) {
       return deserializeWhere(query, Storage.massReplace(block[key], context));
@@ -23,8 +23,9 @@ function objectToWhereChain(query, block, context?) {
   }, query);
 }
 
+
 export class SQLStorage extends Storage {
-  constructor(opts: { sql? } = {}) {
+  constructor(opts = {}) {
     super(opts);
     const options = Object.assign(
       {},

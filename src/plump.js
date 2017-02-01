@@ -1,6 +1,6 @@
 import { Model, $self } from './model';
 import { Subject, Observable } from 'rxjs/Rx';
-import * as Bluebird from 'bluebird';
+import Bluebird from 'bluebird';
 
 const $types = Symbol('$types');
 const $storage = Symbol('$storage');

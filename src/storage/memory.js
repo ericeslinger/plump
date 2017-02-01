@@ -5,8 +5,8 @@ const $store = Symbol('$store');
 
 export class MemoryStorage extends KeyValueStore {
 
-  constructor(opts?: { terminal?: any }) {
-    super(opts);
+  constructor(...args) {
+    super(...args);
     this[$store] = {};
   }
 

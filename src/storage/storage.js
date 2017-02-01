@@ -17,10 +17,9 @@ const $emitter = Symbol('$emitter');
 // hasMany relationships are treated like id arrays. So, add / remove / has
 // just stores and removes integers.
 
-export abstract class Storage {
-  terminal: any;
+export class Storage {
 
-  constructor(opts: { terminal?: any } = {}) {
+  constructor(opts = {}) {
     // a "terminal" storage facility is the end of the storage chain.
     // usually sql on the server side and rest on the client side, it *must*
     // receive the writes, and is the final authoritative answer on whether
@@ -33,7 +32,7 @@ export abstract class Storage {
     this[$emitter] = new Subject();
   }
 
-  hot(type: any, id: number): boolean {
+  hot(type, id) {
     // t: type, id: id (integer).
     // if hot, then consider this value authoritative, no need to go down
     // the datastore chain. Consider a memorystorage used as a top-level cache.
@@ -55,8 +54,8 @@ export abstract class Storage {
   // TODO: write the two-way has/get logic into this method
   // and provide override hooks for readOne readMany
 
-  read(type, id, key?) {
-    let keys: Array<symbol | string> = [$self];
+  read(type, id, key) {
+    let keys = [$self];
     if (Array.isArray(key)) {
       keys = key;
     } else if (key) {
@@ -156,7 +155,7 @@ export abstract class Storage {
     return this[$emitter].subscribe(observer);
   }
 
-  notifyUpdate(type, id, value, opts: (string | symbol)[] = [$self]) {
+  notifyUpdate(type, id, value, opts = [$self]) {
     let keys = opts;
     if (!Array.isArray(keys)) {
       keys = [keys];
@@ -199,16 +198,18 @@ export abstract class Storage {
       throw new Error('Illegal operation on an unsaved new model');
     }
   }
-
-  static massReplace(block, context) {
-    return block.map((v) => {
-      if (Array.isArray(v)) {
-        return Storage.massReplace(v, context);
-      } else if ((typeof v === 'string') && (v.match(/^\{(.*)\}$/))) {
-        return context[v.match(/^\{(.*)\}$/)[1]];
-      } else {
-        return v;
-      }
-    });
-  }
 }
+
+
+// convenience function that walks an array replacing any {id} with context.id
+Storage.massReplace = function massReplace(block, context) {
+  return block.map((v) => {
+    if (Array.isArray(v)) {
+      return massReplace(v, context);
+    } else if ((typeof v === 'string') && (v.match(/^\{(.*)\}$/))) {
+      return context[v.match(/^\{(.*)\}$/)[1]];
+    } else {
+      return v;
+    }
+  });
+};
