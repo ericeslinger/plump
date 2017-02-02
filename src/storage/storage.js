@@ -132,12 +132,12 @@ export class Storage {
     return Bluebird.reject(new Error('Add not implemented'));
   }
 
-  remove(type, id, relationship, childId) {
+  remove(type, id, relationshipTitle, childId) {
     // remove from a hasMany relationship
     return Bluebird.reject(new Error('remove not implemented'));
   }
 
-  modifyRelationship(type, id, relationship, childId, valence = {}) {
+  modifyRelationship(type, id, relationshipTitle, childId, extras = {}) {
     // should modify an existing hasMany valence data. Throw if not existing.
     return Bluebird.reject(new Error('modifyRelationship not implemented'));
   }

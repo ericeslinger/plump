@@ -4,4 +4,5 @@ module.exports = {
   tests: 'test',
   types: 'types',
   scripts: ['**/*.js'],
+  typings: ['**/*.d.ts'],
 };
