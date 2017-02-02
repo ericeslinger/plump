@@ -12,7 +12,7 @@ function getComparator(comparatorString) {
   } else if (comparatorString === '!=') {
     return (a, b) => a !== b;
   } else {
-    return (a, b) => true;
+    return (a, b) => true; // eslint-disable-line
   }
 }
 
@@ -24,7 +24,7 @@ function handleWhere(blockFilter) {
   }
 
   if (Array.isArray(blockFilter[0])) {
-    return blockFilter.map(createFilter).reduce((prev, curr) => {
+    return blockFilter.map(createFilter).reduce((prev, curr) => { // eslint-disable-line
       return (elem) => prev(elem) && curr(elem);
     }, () => { return true; });
   } else {

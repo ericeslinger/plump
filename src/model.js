@@ -15,8 +15,7 @@ export const $all = Symbol('$all');
 
 export class Model {
   constructor(opts, plump) {
-    this[$store] = {
-    };
+    this[$store] = {};
     this.$relationships = {};
     this[$subject] = new BehaviorSubject();
     this[$subject].next({});
