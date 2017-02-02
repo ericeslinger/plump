@@ -5,146 +5,318 @@
 import * as Rx from 'rxjs/Rx.d';
 import * as Bluebird from '@types/bluebird';
 
+interface StringIndexed<T> {
+  [index: string]: T,
+}
+
 export as namespace plump;
 
-/*~ This declaration specifies that the class constructor function
- *~ is the exported object from the file
- */
 export = Plump;
 
-/*~ Write your module's methods and properties in this class */
 declare class Plump {
-    new (opts?: { storage?: Array<Plump.Storage>, types?: Array<Plump.PlumpObject>});
+    new (opts?: {
+      storage?: Array<Plump.Storage>,
+      types?: Array<typeof Plump.Model>
+    });
 
-    $subscriptions: any;
-    $storeSubscriptions: any;
-    $storage: Array<Plump.Storage>;
-    $types: Plump.PlumpObject;
+    addTypesFromSchema(
+      schema: Plump.Fields, // representation of Model.$fields
+      ExtendingModel: Plump.Model
+    ): void;
 
-    addTypesFromSchema(schema: any, ExtendingModel: Plump.Model): void;
+    addType(T: typeof Plump.Model): void;
 
-    addType(T: Plump.PlumpObject): void;
+    type(T: string): typeof Plump.Model;
 
-    type(T: string): Plump.PlumpObject;
-
-    types(): Plump.PlumpObject[];
+    types(): (typeof Plump.Model)[];
 
     addStore(store: Plump.Storage): void;
 
-    find(t: string | Plump.PlumpObject, id: number): Plump.PlumpObject;
+    find(
+      t: string | typeof Plump.Model,
+      id: number
+    ): Plump.Model;
 
-    forge(t: string | Plump.PlumpObject, val: any): Plump.PlumpObject;
+    forge(
+      t: string | typeof Plump.Model,
+      val: Plump.Fields
+    ): Plump.Model;
 
-    subscribe(typeName: string, id: number, handler): Rx.Subscription;
+    subscribe(
+      typeName: string,
+      id: number,
+      handler: () => void
+    ): Rx.Subscription;
 
     teardown(): void;
 
-    get(type: Plump.PlumpObject, id: number, keyOpts?: PropertyKey[]): Bluebird<Plump.PlumpObject>;
+    get(
+      type: typeof Plump.Model,
+      id: number,
+      keyOpts?: PropertyKey[]
+    ): Bluebird<Plump.Model>;
 
-    streamGet(type: Plump.PlumpObject, id: number, keyOpts?: PropertyKey[]): Rx.Observable<Plump.PlumpObject>;
+    streamGet(
+      type: typeof Plump.Model,
+      id: number,
+      keyOpts?: PropertyKey[]
+    ): Rx.Observable<Plump.Model>;
 
-    save(...args: Array<any>): Bluebird<any>;
+    save(
+      type: typeof Plump.Model,
+      val: any
+    ): Bluebird<any>;
 
-    delete(...args: Array<any>): Bluebird<Plump.PlumpObject>;
+    delete(
+      type: typeof Plump.Model,
+      id: number
+    ): Bluebird<Plump.Model>;
 
-    add(...args: Array<any>): Bluebird<any>;
+    add(
+      type: typeof Plump.Model,
+      id: number,
+      relationshipTitle: string,
+      childId: number,
+      extras?: any
+    ): Bluebird<Plump.Model>;
 
     restRequest(opts: any): Bluebird<any>;
 
-    modifyRelationship(...args: Array<any>): Bluebird<any>;
+    modifyRelationship(
+      type: typeof Plump.Model,
+      id: number,
+      relationshipTitle: string,
+      childId: number,
+      extras?: any
+    ): Bluebird<any>;
 
-    remove(...args: Array<any>): any;
+    remove(
+      type: typeof Plump.Model,
+      id: number,
+      relationshipTitle: string,
+      childId: number
+    ): Bluebird<any>;
 
-    invalidate(type: Plump.PlumpObject, id: number): Bluebird<any>;
+    invalidate(
+      type: typeof Plump.Model,
+      id: number,
+      field: symbol | string
+    ): Bluebird<any>;
 }
 
 /*~ If you want to expose types from your module as well, you can
  *~ place them in this block.
  */
 declare namespace Plump {
-  class Storage {
-    constructor(opts: { terminal?: any });
+  interface NumericIDed {
+    $id: number
+  }
 
-    terminal: any;
-    $emitter: Rx.Subject<any>;
-
-    hot(type: PlumpObject, id: number): boolean;
-
-    write(type: PlumpObject, value: { id: any }): Bluebird<any>;
-
-    read(type: PlumpObject, id: number, key: string | string[]): Bluebird<any>;
-
-    wipe(type: PlumpObject, id: number, field: string): Bluebird<any>;
-
-    readOne(type: PlumpObject, id: number): Bluebird<any>;
-
-    readMany(type: PlumpObject, id: number): Bluebird<any>;
-
-    delete(type: PlumpObject, id: number): Bluebird<any>;
-
-    add(type: PlumpObject, id: number, relationship: any, childId: number, valence: any): Bluebird<any>;
-
-    remove(type: PlumpObject, id: number, relationship: any, childId: number): Bluebird<any>;
-
-    modifyRelationship(type: PlumpObject, id: number, relationship: any, childId: number, valuence: any): Bluebird<any>;
-
-    query(q: { type: string, query: any }): Bluebird<any>;
-
-    onUpdate(observer: Rx.Observer<any>): { unsubscribe(): any };
-
-    notifyUpdate(type: PlumpObject, id: number, value: any, opts: any[]): Bluebird<any>;
-
-    $$testIndex(...args: any[]): void | never;
-
-
-    static massReplace(block: any[], context: any): any[];
+  interface Fields {
+    [field: string]: {
+      type: "number" | "string" | "date" | "array" | "hasMany" | "boolean",
+      readOnly: boolean,
+      default?: any,
+      relationship: Relationship,
+    }
   }
 
   class Model {
     static $id: string;
     static $name: string;
     static $self: symbol;
-    static $fields: any;
+    static $fields: Fields;
 
-    static fromJSON(json: PlumpObject): void;
 
-    static toJSON(): PlumpObject;
+    static fromJSON(json: Model): void;
 
-    static $rest(plump: Plump, opts?: any): Bluebird<any>;
+    static toJSON(): Model;
 
-    static assign(opts: any): any;
+    // TODO: Figure out shape of opts
+    static $rest(
+      plump: Plump,
+      opts?: StringIndexed<any>
+    ): Bluebird<any>;
 
-    $store: Storage;
-    $relationships: any;
-    $subject: Rx.BehaviorSubject<any>;
-    $loaded: any;
+    // The keys of opts here should be a subset of the keys of Model.$fields
+    static assign(opts: StringIndexed<any>): StringIndexed<any>;
 
-    new (opts: any, plump: Plump);
+    // TODO: Determine whether these properties should be exposed in the API
+    // $store: any;
+    // $relationships: { [rel: string]: Relationship };
+    // $subject: Rx.BehaviorSubject<any>;
+    // Symbol($loaded): any;
 
-    $get(opts?: any): any;
 
-    $save(): any;
+    new (opts: StringIndexed<any>, plump: Plump);
 
-    $set(u?: Storage): Model;
+    $subscribe(callback: () => void): Rx.Subscription;
+    $subscribe(fields: string | string[], callback: () => void): Rx.Subscription;
 
-    $delete(): PlumpObject;
+    $get(opts?: (string | symbol)[]): StringIndexed<any>;
 
-    $rest(opts?): any;
+    $save(): Model;
 
-    $add(key: PropertyKey, item: any, extras: any): Bluebird<any>;
+    $set(u?: StringIndexed<any>): Model;
 
-    $modifyRelationship(key: PropertyKey, item: any, extras: any): Bluebird<any>;
+    $delete(): Bluebird<Model>;
 
-    $remove(key: PropertyKey, item: any): Bluebird<any>;
+    // TODO: Figure out Plump.restRequest to resolve this
+    $rest(opts?: StringIndexed<any>): any;
+
+    $add(
+      key: PropertyKey,
+      item: number | NumericIDed | { [field: string]: any },
+      extras?: StringIndexed<any>
+    ): Bluebird<any>;
+
+    $modifyRelationship(
+      key: PropertyKey,
+      item: number | NumericIDed,
+      extras?: StringIndexed<any>
+    ): Bluebird<any>;
+
+    $remove(
+      key: PropertyKey,
+      item: number | NumericIDed
+    ): Bluebird<any>;
 
     $teardown(): void;
   }
 
-  namespace Model {}
+  class Relationship {
+    static fromJSON(
+      json: {
+        $name: string,
+        $extras?: StringIndexed<any>,
+        $restrict?: StringIndexed<{ value: string, type: string }>,
+        $sides: Relationship.Sides,
+      }): void;
 
-  export interface PlumpObject {
-    $id: number,
-    $name: string,
-    $fields: any[],
+    static toJSON(): {
+      $name: string,
+      $sides: Relationship.Sides;
+      $restrict?: StringIndexed<{ value: string, type: string }>;
+      $extras?: StringIndexed<any>;
+    }
+
+
+    static $sides: Relationship.Sides;
+
+
+    new (model: typeof Model, title: string, plump: Plump);
+
+    $otherItem(childId: number): Model;
+
+    $add(
+      childId: number,
+      extras: StringIndexed<any>
+    ): Bluebird<any>;
+
+    $remove(childId: number): Bluebird<any>;
+
+    $list(): Bluebird<Model[]>;
+
+    $modify(
+      childId: number,
+      extras: StringIndexed<any>
+    ): Bluebird<any>;
+  }
+
+  export namespace Relationship {
+    interface GenericSideData {
+      field: string,
+      type: string,
+      query?: { logic: Storage.BlockFilter },
+    }
+
+    interface OtherSideData extends GenericSideData {
+      title: string,
+    }
+
+    export interface Sides {
+      [relationshipName: string]: {
+        self: GenericSideData,
+        other: OtherSideData,
+      }
+    }
+  }
+
+  class Storage {
+    static massReplace(
+      block: any[],
+      context: StringIndexed<any>
+    ): any[];
+
+
+    new (opts: { isTerminal?: boolean });
+
+    hot(type: typeof Model, id: number): boolean;
+
+    write(
+      type: typeof Model,
+      value: {
+        [index: string]: any,
+        id?: number
+      }
+    ): Bluebird<any>;
+
+    read(
+      type: typeof Model,
+      id: number,
+      key?: string | string[]
+    ): Bluebird<any>;
+
+    wipe(
+      type: typeof Model,
+      id: number,
+      field: string | symbol
+    ): Bluebird<any>;
+
+    delete(
+      type: typeof Model,
+      id: number
+    ): Bluebird<any>;
+
+    add(
+      type: typeof Model,
+      id: number,
+      relationshipTitle: string,
+      childId: number,
+      extras?: StringIndexed<any>
+    ): Bluebird<any>;
+
+    remove(
+      type: typeof Model,
+      id: number,
+      relationshipTitle: string,
+      childId: number
+    ): Bluebird<any>;
+
+    modifyRelationship(
+      type: typeof Model,
+      id: number,
+      relationship: string,
+      childId: number,
+      extras?: StringIndexed<any>
+    ): Bluebird<any>;
+
+    query(q: { type: string, query: any }): Bluebird<any>;
+
+    onUpdate(observer: Rx.Observer<any>): Rx.Subscription;
+
+    notifyUpdate(
+      type: typeof Model,
+      id: number,
+      value: StringIndexed<any>,
+      opts?: string | symbol | (string | symbol)[]
+    ): Bluebird<any>;
+  }
+
+  namespace Storage {
+    interface BlockFilter {
+      [index: number]: string | BlockFilter,
+    }
+    function createFilter(blockFilter: BlockFilter): (elem: any) => boolean;
   }
 }

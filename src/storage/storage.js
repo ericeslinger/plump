@@ -125,9 +125,9 @@ export class Storage {
     return Bluebird.reject(new Error('Delete not implemented'));
   }
 
-  add(type, id, relationship, childId, valence = {}) {
+  add(type, id, relationshipTitle, childId, extras = {}) {
     // add to a hasMany relationship
-    // note that hasMany fields can have (impl-specific) valence data
+    // note that hasMany fields can have (impl-specific) valence data (now renamed extras)
     // example: membership between profile and community can have perm 1, 2, 3
     return Bluebird.reject(new Error('Add not implemented'));
   }
