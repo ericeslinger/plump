@@ -103,6 +103,10 @@ export class Model {
     this[$subject].next(this[$store]);
   }
 
+  $package(opts = {}) {
+    return Bluebird.resolve().then(() => opts);
+  }
+
   // TODO: don't fetch if we $get() something that we already have
 
   $get(opts) {

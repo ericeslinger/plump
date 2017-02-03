@@ -3,6 +3,7 @@
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 import Bluebird from 'bluebird';
+import fs from 'fs-sync';
 
 import { Plump, Model, MemoryStorage, $all } from '../index';
 import { TestType } from './testType';
@@ -82,6 +83,35 @@ describe('model', () => {
       return one.$save()
       .then(() => one.$set({ name: 'rutabaga' }))
       .then(() => expect(one.$get()).to.eventually.have.property('name', 'rutabaga'));
+    });
+
+    it('should package all related documents for read', () => {
+      const one = new TestType({
+        id: 1,
+        name: 'potato',
+      }, plump);
+      const two = new TestType({
+        id: 2,
+        name: 'frotato',
+        extended: { cohort: 2013 },
+      }, plump);
+      const three = new TestType({
+        id: 3,
+        name: 'rutabaga',
+      }, plump);
+
+      return Bluebird.all([
+        one.$save(),
+        two.$save(),
+        three.$save(),
+      ]).then(() => {
+        return Bluebird.all([
+          one.$add('children', two.$id),
+          two.$add('children', three.$id),
+        ]);
+      }).then(() => {
+        return expect(one.$package()).to.eventually.deep.equal(fs.readJSON('src/test/testType.json'));
+      });
     });
   });
 
