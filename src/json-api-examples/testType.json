@@ -1,0 +1,72 @@
+{
+  "links": {
+    "self": "https://example.com/api/tests/1"
+  },
+  "data": {
+    "type": "tests",
+    "id": "1",
+    "attributes": {
+      "name": "potato",
+      "extended": {},
+    },
+    "relationships": {
+      "children": {
+        "links": {
+          "related": "https://example.com/api/tests/1/children"
+        },
+        "data": [
+          { "type": "tests", "id": "2" },
+          { "type": "tests", "id": "3" }
+        ]
+      },
+      "valenceChildren": {
+        "links": {
+          *** With the current API, we have no way of getting
+          *** the Relationship objects themselves.
+          *** Should this be implemented?
+          "related": "https://example.com/api/tests/1/valenceChildren"
+        },
+        "data": [
+          { "type": "tests", "id": "4" }
+        ]
+      }
+    }
+  },
+  "included": [
+    {
+      "type": "tests",
+      "id": "2",
+      "attributes": {
+        "name": "frotato",
+        "extended": {
+          "cohort": "2013"
+        }
+      },
+      "links": {
+        "self": "https://example.com/api/tests/2"
+      }
+    },
+    {
+      "type": "tests",
+      "id": "3",
+      "attributes": {
+        "name": "rutabaga",
+        "extended": {}
+      },
+      "links": {
+        "self": "https://example.com/api/tests/3"
+      }
+    },
+    {
+      "type": "tests",
+      "id": "4",
+      "attributes": {
+        "name": "Gregtopher Fellow",
+        "extended": {}
+      },
+      "links": {
+        "self": "https://example.com/api/tests/4"
+      }
+    }
+  ],
+}
