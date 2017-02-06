@@ -50,6 +50,7 @@
     "knex": "^0.12.1",
     "localforage": "^1.4.2",
     "merge-options": "0.0.64",
+    "object.omit": "^2.0.1",
     "pg": "^6.1.0",
     "pg-native": "^1.10.0",
     "redis": "^2.6.2",

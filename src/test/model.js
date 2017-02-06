@@ -59,7 +59,7 @@ describe('model', () => {
       return one.$save()
       .then(() => expect(plump.find('tests', one.$id).$get()).to.eventually.have.property('name', 'p'))
       .then(() => {
-        return expect(plump.find('tests', one.$id).$get())
+        return expect(plump.find('tests', one.$id).$get($all))
         .to.eventually.deep.equal(TestType.assign({ name: 'p', id: one.$id }));
       });
     });
