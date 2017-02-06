@@ -176,6 +176,7 @@ QueryChildren.$name = 'valence_children';
 
 TestType.$name = 'tests';
 TestType.$id = 'id';
+TestType.$packageIncludes = ['children'];
 TestType.$fields = {
   id: {
     type: 'number',

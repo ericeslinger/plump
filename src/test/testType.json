@@ -4,7 +4,7 @@
   },
   "data": {
     "type": "tests",
-    "id": "1"
+    "id": 1
   },
   "attributes": {
     "name": "potato",
@@ -16,18 +16,18 @@
         "related": "https://example.com/api/tests/1/children"
       },
       "data": [
-        { "type": "tests", "id": "2" }
+        { "type": "tests", "id": 2 }
       ]
     }
   },
   "included": [
     {
       "type": "tests",
-      "id": "2",
+      "id": 2,
       "attributes": {
         "name": "frotato",
         "extended": {
-          "cohort": "2013"
+          "cohort": 2013
         }
       },
       "relationships": {
@@ -35,7 +35,7 @@
           "links": {
             "related": "https://example.com/api/tests/2/children"
           },
-          "data": { "type": "test", "id": "3" }
+          "data": { "type": "test", "id": 3 }
         }
       },
       "links": {
@@ -44,7 +44,7 @@
     },
     {
       "type": "tests",
-      "id": "3",
+      "id": 3,
       "attributes": {
         "name": "rutabaga",
         "extended": {}
