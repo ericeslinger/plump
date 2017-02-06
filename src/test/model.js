@@ -3,7 +3,7 @@
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 import Bluebird from 'bluebird';
-import fs from 'fs-sync';
+import fs from 'fs';
 
 import { Plump, Model, MemoryStorage, $all } from '../index';
 import { TestType } from './testType';
@@ -110,7 +110,7 @@ describe('model', () => {
           two.$add('children', three.$id),
         ]);
       }).then(() => {
-        return expect(one.$package()).to.eventually.deep.equal(fs.readJSON('src/test/testType.json'));
+        return expect(one.$package()).to.eventually.deep.equal(JSON.parse(fs.readFileSync('src/test/testType.json')));
       });
     });
   });

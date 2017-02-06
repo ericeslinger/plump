@@ -32,7 +32,6 @@
     "chai": "^3.5.0",
     "chai-as-promised": "^5.3.0",
     "del": "^2.2.2",
-    "fs-sync": "^1.0.3",
     "gulp": "gulpjs/gulp.git#4.0",
     "gulp-babel": "^6.1.2",
     "gulp-concat": "^2.6.0",
