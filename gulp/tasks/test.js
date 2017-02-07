@@ -7,6 +7,7 @@ gulp.task('test', () => {
   Bluebird.config({
     longStackTraces: true,
   });
-  return gulp.src(`${config.tests}/**/*.js`, { cwd: config.dest, read: false })
+  return gulp.src(`${config.tests}/model.js`, { cwd: config.dest, read: false })
+  // return gulp.src(`${config.tests}/**/*.js`, { cwd: config.dest, read: false })
   .pipe(mocha());
 });

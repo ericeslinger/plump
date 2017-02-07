@@ -46,6 +46,17 @@ export class Model {
     return this[$store][this.constructor.$id];
   }
 
+  get $path() {
+    return `/${this.$name}/${this.$id}`;
+  }
+
+  get $dataJSON() {
+    return {
+      type: this.$name,
+      id: this.$id,
+    };
+  }
+
   $$copyValuesFrom(opts = {}) {
     Object.keys(this.constructor.$fields).forEach((fieldName) => {
       if (opts[fieldName] !== undefined) {
@@ -114,22 +125,28 @@ export class Model {
     );
     const prefix = `${options.domain}${options.apiPath}`;
 
+    console.log('INCLUDE Inflating...');
     return this.$get(
       this.constructor.$packageIncludes.concat($self)
     ).then((inflated) => {
-      return Bluebird.resolve().then(() => {
-        return this.constructor.$packageIncludes.map((relationship) => {
+      console.log('INCLUDE Inflated.');
+      console.log(`INCLUDE ID: ${this.$id}`);
+      return Bluebird.all(
+        this.constructor.$packageIncludes.map((relationship) => {
+          console.log(`INCLUDE   Packaging ${relationship}`);
           return Bluebird.all(
             inflated[relationship].map((rel) => {
               const otherSide = this.constructor.$fields[relationship].relationship.$sides[relationship].other;
+              console.log(`INCLUDE     Packaging child ${this[$plump].find(otherSide.type, rel[otherSide.field]).$id}`);
               return this[$plump].find(
                 otherSide.type,
                 rel[otherSide.field]
               ).$$packageForInclusion();
             })
           );
-        });
-      }).then((childPkgs) => {
+        })
+      ).then((childPkgs) => {
+        console.log('INCLUDE Child Packages loaded');
         const attributes = {};
         Object.keys(inflated).filter(k => k !== 'id' && (this.constructor.$packageIncludes.indexOf(k) < 0))
         .forEach((attribute) => {
@@ -139,11 +156,13 @@ export class Model {
         // const included = [];
         const relationships = {};
         this.constructor.$packageIncludes.forEach((relationship, index) => {
+          console.log(`INCLUDE  Building ${relationship} relationship...`);
           relationships[relationship] = {
             links: {
               related: `${prefix}/${this.constructor.$name}/${this.$id}/${relationship}`,
             },
             data: childPkgs[index].map((childPkg) => {
+              console.log(`INCLUDE    Adding relationship data ${JSON.stringify(childPkg)}`);
               // const childPkgNoInclude = {};
               // Object.keys(childPkg).filter(k => k !== 'included').forEach((key) => {
               //   childPkgNoInclude[key] = childPkg[key];
@@ -157,6 +176,7 @@ export class Model {
           };
         });
 
+        console.log('INCLUDE Assembling package...');
         return {
           type: this.constructor.$name,
           id: this.$id,
@@ -181,67 +201,96 @@ export class Model {
     );
     const prefix = `${options.domain}${options.apiPath}`;
 
-    return this.$get(
-      this.constructor.$packageIncludes.concat($self)
-    )
-    .then((inflated) => {
-      return Bluebird.resolve().then(() => {
-        return this.constructor.$packageIncludes.map((relationship) => {
-          return Bluebird.all(
-            inflated[relationship].map((rel) => {
-              const otherSide = this.constructor.$fields[relationship].relationship.$sides[relationship].other;
-              return this[$plump].find(
-                otherSide.type,
-                rel[otherSide.field]
-              ).$$packageForInclusion();
-            })
-          );
-        });
-      }).then((childPkgs) => {
-        const attributes = {};
-        Object.keys(inflated).filter(k => k !== 'id' && (this.constructor.$packageIncludes.indexOf(k) < 0))
-        .forEach((attribute) => {
-          attributes[attribute] = inflated[attribute];
-        });
-
-        const included = [];
-        const relationships = {};
-        this.constructor.$packageIncludes.forEach((relationship, index) => {
-          relationships[relationship] = {
-            links: {
-              related: `${prefix}/${this.constructor.$name}/${this.$id}/${relationship}`,
-            },
-            data: childPkgs[index].map((childPkg) => {
-              const childPkgNoInclude = {};
-              Object.keys(childPkg).filter(k => k !== 'included').forEach((key) => {
-                childPkgNoInclude[key] = childPkg[key];
-              });
-              included.push(childPkgNoInclude);
-              // childPkg.included.forEach((item) => {
-              //   included.push(item);
-              // });
-              return { type: childPkg.type, id: childPkg.id };
-            }),
-          };
-        });
-
-        const pkg = {
-          links: {
-            self: `${prefix}/${this.constructor.$name}/${this.$id}`,
-          },
-          data: {
-            type: this.constructor.$name,
-            id: this.$id,
-          },
-          attributes: attributes,
-          relationships: relationships,
-          included: included,
-        };
-
-        return pkg;
+    return Bluebird.all([
+      this.$get($self),
+      this.$relationshipsJSON,
+      this.$includedJSON,
+    ]).then(([self, relationships, included]) => {
+      const attributes = {};
+      Object.keys(self).filter(key => key !== this.constructor.$id)
+      .forEach(key => {
+        attributes[key] = self[key];
       });
+
+      return {
+        links: { self: `${prefix}${this.$path}` },
+        data: this.$dataJSON,
+        attributes: attributes,
+        relationships: relationships,
+        included: included,
+      };
     });
   }
+
+  // console.log('Inflating...');
+  // return this.$get(
+  //   this.constructor.$packageIncludes.concat($self)
+  // )
+  // .then((inflated) => {
+  //   console.log('Inflated.');
+  //   console.log('Packaging children...');
+  //   return Bluebird.all(
+  //     this.constructor.$packageIncludes.map((relationship) => {
+  //       console.log(`  Packaging ${relationship}...`);
+  //       return Bluebird.all(
+  //         inflated[relationship].map((rel) => {
+  //           const otherSide = this.constructor.$fields[relationship].relationship.$sides[relationship].other;
+  //           console.log(`    Packaging child ${this[$plump].find(otherSide.type, rel[otherSide.field]).$id}...`);
+  //           return this[$plump].find(
+  //             otherSide.type,
+  //             rel[otherSide.field]
+  //           ).$$packageForInclusion();
+  //         })
+  //       );
+  //     })
+  //   ).then((childPkgs) => {
+  //     console.log('Children packaged...');
+  //     const attributes = {};
+  //     Object.keys(inflated).filter(k => k !== 'id' && (this.constructor.$packageIncludes.indexOf(k) < 0))
+  //     .forEach((attribute) => {
+  //       attributes[attribute] = inflated[attribute];
+  //     });
+  //
+  //     const included = [];
+  //     const relationships = {};
+  //     this.constructor.$packageIncludes.forEach((relationship, index) => {
+  //       console.log(`  Building ${relationship} relationship...`)
+  //       relationships[relationship] = {
+  //         links: {
+  //           related: `${prefix}/${this.constructor.$name}/${this.$id}/${relationship}`,
+  //         },
+  //         data: childPkgs[index].map((childPkg) => {
+  //           console.log(`   Adding relationship data ${childPkg}...`);
+  //           const childPkgNoInclude = {};
+  //           Object.keys(childPkg).filter(k => k !== 'included').forEach((key) => {
+  //             childPkgNoInclude[key] = childPkg[key];
+  //           });
+  //           included.push(childPkgNoInclude);
+  //           // childPkg.included.forEach((item) => {
+  //           //   included.push(item);
+  //           // });
+  //           return { type: childPkg.type, id: childPkg.id };
+  //         }),
+  //       };
+  //     });
+  //
+  //     console.log('Building package...');
+  //     const pkg = {
+  //       links: {
+  //         self: `${prefix}/${this.constructor.$name}/${this.$id}`,
+  //       },
+  //       data: {
+  //         type: this.constructor.$name,
+  //         id: this.$id,
+  //       },
+  //       attributes: attributes,
+  //       relationships: relationships,
+  //       included: included,
+  //     };
+  //
+  //     return pkg;
+  //   });
+  // });
 
   // TODO: don't fetch if we $get() something that we already have
 
@@ -250,13 +299,7 @@ export class Model {
     if (Array.isArray(opts)) {
       keys = opts;
     } else if (opts !== undefined) {
-      if (opts === $all) {
-        keys = Object.keys(this.constructor.$fields)
-        .filter((key) => this.constructor.$fields[key].type === 'hasMany')
-        .concat($self);
-      } else {
-        keys = [opts];
-      }
+      keys = [opts];
     }
     return Bluebird.all(keys.map((key) => this.$$singleGet(key)))
     .then((valueArray) => {
@@ -509,3 +552,4 @@ Model.$fields = {
     type: 'number',
   },
 };
+Model.$included = [];
