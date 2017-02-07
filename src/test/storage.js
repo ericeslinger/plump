@@ -141,7 +141,6 @@ chai.use(chaiAsPromised);
 const expect = chai.expect;
 
 storageTypes.forEach((store) => {
-  if (store.name !== 'redis') return;
   describe(store.name, () => {
     let actualStore;
     before(() => {
