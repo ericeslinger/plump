@@ -141,7 +141,7 @@ export class KeyValueStore extends Storage {
     const sideInfo = relationshipType.$sides[relationship];
     return Bluebird.resolve()
     .then(() => {
-      const resolves = [this._get(this.keyString(t.$name, id, relationshipType.$name))];
+      const resolves = [this._get(this.keyString(t.$name, id, relationship))];
       if (sideInfo.self.query && sideInfo.self.query.requireLoad) {
         resolves.push(this.readOne(t, id));
       } else {
@@ -198,15 +198,15 @@ export class KeyValueStore extends Storage {
       toSave = toSave.map((v) => Object.assign({}, v, restrictBlock));
     }
     // const sideInfo = relationshipBlock.$sides[field];
-    const thisKeyString = this.keyString(type.$name, id, relationshipBlock.$name);
+    const thisKeyString = this.keyString(type.$name, id, field);
     return this._set(thisKeyString, JSON.stringify(toSave));
   }
 
   add(type, id, relationshipTitle, childId, extras = {}) {
     const relationshipBlock = type.$fields[relationshipTitle].relationship;
     const sideInfo = relationshipBlock.$sides[relationshipTitle];
-    const thisKeyString = this.keyString(type.$name, id, relationshipBlock.$name);
-    const otherKeyString = this.keyString(sideInfo.other.type, childId, relationshipBlock.$name);
+    const thisKeyString = this.keyString(type.$name, id, relationshipTitle);
+    const otherKeyString = this.keyString(sideInfo.other.type, childId, sideInfo.other.title);
     return Bluebird.all([
       this._get(thisKeyString),
       this._get(otherKeyString),
@@ -242,8 +242,8 @@ export class KeyValueStore extends Storage {
   modifyRelationship(type, id, relationshipTitle, childId, extras) {
     const relationshipBlock = type.$fields[relationshipTitle].relationship;
     const sideInfo = relationshipBlock.$sides[relationshipTitle];
-    const thisKeyString = this.keyString(type.$name, id, relationshipBlock.$name);
-    const otherKeyString = this.keyString(sideInfo.other.type, childId, relationshipBlock.$name);
+    const thisKeyString = this.keyString(type.$name, id, relationshipTitle);
+    const otherKeyString = this.keyString(sideInfo.other.type, childId, sideInfo.other.title);
     return Bluebird.all([
       this._get(thisKeyString),
       this._get(otherKeyString),
@@ -268,8 +268,8 @@ export class KeyValueStore extends Storage {
   remove(type, id, relationshipTitle, childId) {
     const relationshipBlock = type.$fields[relationshipTitle].relationship;
     const sideInfo = relationshipBlock.$sides[relationshipTitle];
-    const thisKeyString = this.keyString(type.$name, id, relationshipBlock.$name);
-    const otherKeyString = this.keyString(sideInfo.other.type, childId, relationshipBlock.$name);
+    const thisKeyString = this.keyString(type.$name, id, relationshipTitle);
+    const otherKeyString = this.keyString(sideInfo.other.type, childId, sideInfo.other.title);
     return Bluebird.all([
       this._get(thisKeyString),
       this._get(otherKeyString),
