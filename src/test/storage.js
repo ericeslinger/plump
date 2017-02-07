@@ -100,8 +100,8 @@ const storageTypes = [
             name text,
             extended jsonb not null default '{}'::jsonb
           );
-          CREATE TABLE children (parent_id integer not null, child_id integer not null);
-          CREATE UNIQUE INDEX children_join on children (parent_id, child_id);
+          CREATE TABLE parent_child_relationship (parent_id integer not null, child_id integer not null);
+          CREATE UNIQUE INDEX children_join on parent_child_relationship (parent_id, child_id);
           CREATE TABLE reactions (parent_id integer not null, child_id integer not null, reaction text not null);
           CREATE UNIQUE INDEX reactions_join on reactions (parent_id, child_id, reaction);
           CREATE TABLE valence_children (parent_id integer not null, child_id integer not null, perm integer not null);
@@ -141,6 +141,7 @@ chai.use(chaiAsPromised);
 const expect = chai.expect;
 
 storageTypes.forEach((store) => {
+  if (store.name !== 'redis') return;
   describe(store.name, () => {
     let actualStore;
     before(() => {
@@ -278,6 +279,7 @@ storageTypes.forEach((store) => {
           .then(() => actualStore.add(TestType, createdObject.id, 'children', 101))
           .then(() => actualStore.add(TestType, createdObject.id, 'children', 102))
           .then(() => actualStore.add(TestType, createdObject.id, 'children', 103))
+          .then(() => actualStore.add(TestType, 500, 'children', createdObject.id))
           .then(() => {
             return expect(actualStore.read(TestType, createdObject.id, ['children']))
             .to.eventually.deep.equal({
