@@ -36,7 +36,7 @@
             "links": {
               "related": "https://example.com/api/tests/2/children"
             },
-            "data": [{ "type": "test", "id": 3 }]
+            "data": [{ "type": "tests", "id": 3 }]
           }
         },
         "links": {
