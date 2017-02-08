@@ -9,7 +9,7 @@ export class Likes extends Relationship {}
 export class Agrees extends Relationship {}
 export class QueryChildren extends Relationship {}
 
-Children.$name = 'children';
+Children.$name = 'parent_child_relationship';
 Children.$sides = {
   parents: {
     self: {

@@ -1,4 +1,5 @@
 import * as axios from 'axios';
+import mergeOptions from 'merge-options';
 import { Storage } from './storage';
 
 const $axios = Symbol('$axios');
@@ -22,6 +23,36 @@ export class RestStorage extends Storage {
     return this[$axios](options);
   }
 
+  parseJSONApi(json) {
+    const data = typeof json === 'string' ? JSON.parse(json) : json;
+    const type = this.type(data.data.type);
+
+    const relationships = Object.keys(data.relationships).map(relName => {
+      const relationship = type.$fields[relName].relationship;
+      return {
+        [relName]: data.relationships[relName].data.map(child => {
+          return {
+            [relationship.$sides[relName].self.field]: data.id,
+            [relationship.$sides[relName].other.field]: child.id,
+          };
+        }),
+      };
+    }).reduce((acc, curr) => mergeOptions(acc, curr), {});
+
+    const requested = Object.assign(
+      {
+        [type.$id]: data.id,
+      },
+      data.attributes,
+      relationships
+    );
+    this.save();
+
+    // data.included.
+
+    return requested;
+  }
+
   write(t, v) {
     return Promise.resolve()
     .then(() => {
@@ -33,15 +64,16 @@ export class RestStorage extends Storage {
         throw new Error('Cannot create new content in a non-terminal store');
       }
     })
-    .then((d) => d.data[t.$name][0])
+    .then((d) => this.parseJSONApi(d.data)) // formerly d.data[t.$name][0]
     .then((result) => this.notifyUpdate(t, result[t.$id], result).then(() => result));
   }
 
+  // TODO: NATE REWRITE HOW RESPONSE IS PARSED
   readOne(t, id) {
     return Promise.resolve()
     .then(() => this[$axios].get(`/${t.$name}/${id}`))
     .then((response) => {
-      return response.data[t.$name][0];
+      return this.parseJSONApi(response.data); // formerly response.data[t.$name][0];
     }).catch((err) => {
       if (err.response && err.response.status === 404) {
         return null;

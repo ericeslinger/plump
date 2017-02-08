@@ -1,8 +1,7 @@
 import { Model, $self } from './model';
 import { Subject, Observable } from 'rxjs/Rx';
 import Bluebird from 'bluebird';
-
-import { TestType } from './test/testType';
+import mergeOptions from 'merge-options';
 
 const $types = Symbol('$types');
 const $storage = Symbol('$storage');
@@ -92,6 +91,173 @@ export class Plump {
     return new Type(val, this);
   }
 
+  $$relatedPackage(type, id, opts) {
+    const model = this.forge(type, { [type.$id]: id });
+    const options = Object.assign(
+      {},
+      {
+        include: type.$include,
+        extended: {},
+        domain: 'https://example.com',
+        apiPath: '/api',
+      },
+      opts
+    );
+    const prefix = `${options.domain}${options.apiPath}`;
+    const fields = Object.keys(options.include).filter(rel => {
+      return model.constructor.$fields[rel];
+    });
+
+    return this.get(type, id, fields)
+    .then(root => {
+      const retVal = {};
+      fields.forEach(field => {
+        if (opts.extended[field] && root[field].length) {
+          const childIds = root[field].map(rel => {
+            return rel[type.$fields[field].relationship.$sides[field].other.field];
+          });
+          retVal[field] = {
+            links: {
+              related: `${prefix}/${type.$name}/${id}/${field}`,
+            },
+            data: opts.extended[field].filter(child => {
+              return childIds.indexOf(child.$id) >= 0;
+            }).map(child => child.$$dataJSON),
+          };
+        }
+      });
+
+      return retVal;
+    });
+  }
+
+  $$includedPackage(type, id, opts) {
+    const options = Object.assign(
+      {},
+      {
+        include: type.$include,
+        extended: {},
+        domain: 'https://example.com',
+        apiPath: '/api',
+      },
+      opts
+    );
+    return Bluebird.all(
+      Object.keys(options.extended).map(relationship => {
+        return Bluebird.all(
+          options.extended[relationship].map(child => {
+            return this.$$packageForInclusion(child.constructor, child.$id, options);
+          })
+        );
+      })
+    ).then(relationships => {
+      return relationships.reduce((acc, curr) => acc.concat(curr));
+    });
+  }
+
+  $$packageForInclusion(type, id, opts = {}) {
+    const options = Object.assign(
+      {},
+      {
+        domain: 'https://example.com',
+        apiPath: '/api',
+        include: type.$include,
+        extended: {},
+      },
+      opts
+    );
+    const prefix = `${options.domain}${opts.apiPath}`;
+
+    // Fields that are both in the include list and
+    // exist on the model we're currently packaging
+    const fields = Object.keys(options.include).filter(rel => {
+      return Object.keys(type.$include).indexOf(rel) >= 0;
+    });
+
+    return this.get(type, id, fields.concat($self))
+    .then(model => {
+      return this.$$relatedPackage(type, id, options)
+      .then(relationships => {
+        const attributes = {};
+        Object.keys(type.$fields).filter(field => {
+          return field !== type.$id && type.$fields[field].type !== 'hasMany';
+        }).forEach(field => {
+          if (model[field] !== 'undefined') {
+            attributes[field] = model[field];
+          }
+        });
+
+        const retVal = {
+          type: type.$name,
+          id: id,
+          attributes: attributes,
+          links: {
+            self: `${prefix}/${type.$name}/${id}`,
+          },
+        };
+
+        if (Object.keys(relationships).length > 0) {
+          retVal.relationships = relationships;
+        }
+
+        return retVal;
+      });
+    });
+  }
+
+  jsonAPIify(typeName, id, opts) {
+    const type = this.type(typeName);
+    const options = Object.assign(
+      {},
+      {
+        domain: 'https://example.com',
+        apiPath: '/api',
+      },
+      opts
+    );
+    const prefix = `${options.domain}${options.apiPath}`;
+
+    return Bluebird.all([
+      this.get(type, id, Object.keys(type.$include).concat($self)),
+      this.bulkGet(this.$$relatedFields),
+    ]).then(([self, extendedJSON]) => {
+      const extended = {};
+      for (const rel in extendedJSON) { // eslint-disable-line guard-for-in
+        const otherType = type.$fields[rel].relationship.$sides[rel].other.type;
+        extended[rel] = extendedJSON[rel].map(data => {
+          return this.forge(otherType, data);
+        });
+      }
+      const extendedOpts = mergeOptions({}, opts, { extended: extended });
+
+      return Bluebird.all([
+        self,
+        this.$$relatedPackage(type, id, extendedOpts),
+        this.$$includedPackage(type, id, extendedOpts),
+      ]);
+    }).then(([self, relationships, included]) => {
+      const attributes = {};
+      Object.keys(type.$fields).filter(field => {
+        return field !== type.$id && type.$fields[field].type !== 'hasMany';
+      }).forEach(key => {
+        attributes[key] = self[key];
+      });
+
+      const retVal = {
+        links: { self: `${prefix}/${typeName}/${id}` },
+        data: { type: typeName, id: id },
+        attributes: attributes,
+        included: included,
+      };
+
+      if (Object.keys(relationships).length > 0) {
+        retVal.relationships = relationships;
+      }
+
+      return retVal;
+    });
+  }
+
   // LOAD (type/id), SIDELOAD (type/id/side)? Or just LOADALL?
   // LOAD needs to scrub through hot caches first
 
@@ -179,8 +345,8 @@ export class Plump {
     });
   }
 
-  bulkGet(opts) {
-    return this[$terminal].bulkRead(opts);
+  bulkGet(root, opts) {
+    return this[$terminal].bulkRead(root, opts);
   }
 
   save(...args) {
