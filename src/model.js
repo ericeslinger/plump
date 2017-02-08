@@ -110,7 +110,13 @@ export class Model {
     if (Array.isArray(opts)) {
       keys = opts;
     } else if (opts !== undefined) {
-      keys = [opts];
+      if (opts === $all) {
+        keys = Object.keys(this.constructor.$fields)
+        .filter((key) => this.constructor.$fields[key].type === 'hasMany')
+        .concat($self);
+      } else {
+        keys = [opts];
+      }
     }
     return Bluebird.all(keys.map((key) => this.$$singleGet(key)))
     .then((valueArray) => {
@@ -152,7 +158,13 @@ export class Model {
     }).then((v) => {
       if (v === true) {
         if (key === $self) {
-          return Object.assign({}, this[$store]);
+          const retVal = {};
+          for (const k in this[$store]) {
+            if (this.constructor.$fields[k].type !== 'hasMany') {
+              retVal[k] = this[$store][k];
+            }
+          }
+          return retVal;
         } else {
           return Object.assign({}, { [key]: this[$store][key] });
         }
@@ -160,7 +172,13 @@ export class Model {
         this.$$copyValuesFrom(v);
         this[$loaded][key] = true;
         if (key === $self) {
-          return Object.assign({}, this[$store]);
+          const retVal = {};
+          for (const k in this[$store]) {
+            if (this.constructor.$fields[k].type !== 'hasMany') {
+              retVal[k] = this[$store][k];
+            }
+          }
+          return retVal;
         } else {
           return Object.assign({}, { [key]: this[$store][key] });
         }

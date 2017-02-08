@@ -59,8 +59,21 @@ describe('model', () => {
       return one.$save()
       .then(() => expect(plump.find('tests', one.$id).$get()).to.eventually.have.property('name', 'p'))
       .then(() => {
-        return expect(plump.find('tests', one.$id).$get())
+        return expect(plump.find('tests', one.$id).$get($all))
         .to.eventually.deep.equal(TestType.assign({ name: 'p', id: one.$id }));
+      });
+    });
+
+    it('should only load base fields on $get($self)', () => {
+      const one = new TestType({ name: 'potato' }, plump);
+      return one.$save()
+      .then(() => {
+        const baseFields = Object.keys(TestType.$fields).filter(field => TestType.$fields[field].type !== 'hasMany');
+        // const hasManys = Object.keys(TestType.$fields).filter(field => TestType.$fields[field].type === 'hasMany');
+
+        return expect(plump.find('tests', one.$id).$get()).to.eventually.have.all.keys(baseFields);
+        // NOTE: .have.all requires list length equality
+        // .and.not.keys(hasManys);
       });
     });
 
