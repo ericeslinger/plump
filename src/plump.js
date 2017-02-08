@@ -179,27 +179,8 @@ export class Plump {
     });
   }
 
-  bulkGet(opts) { // eslint-disable-line no-unused-vars
-    return {
-      children: [
-        {
-          id: 2,
-          name: 'frotato',
-          extended: { cohort: 2013 },
-          children: [
-            {
-              child_id: 3,
-              parent_id: 2,
-            },
-          ],
-        },
-        {
-          id: 3,
-          name: 'rutabaga',
-          extended: {},
-        },
-      ],
-    };
+  bulkGet(opts) {
+    return this[$terminal].bulkRead(opts);
   }
 
   save(...args) {

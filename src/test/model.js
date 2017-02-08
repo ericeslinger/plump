@@ -5,8 +5,18 @@ import chaiAsPromised from 'chai-as-promised';
 import Bluebird from 'bluebird';
 import fs from 'fs';
 
-import { Plump, Model, MemoryStorage, $all } from '../index';
+import { Plump, Model, Storage, MemoryStorage, $all } from '../index';
 import { TestType } from './testType';
+
+// For testing while actual bulkRead implementations are in development
+Storage.prototype.bulkRead = function bulkRead(opts) { // eslint-disable-line no-unused-vars
+  return Bluebird.all([
+    this.read(TestType, 2, $all),
+    this.read(TestType, 3, $all),
+  ]).then(children => {
+    return { children };
+  });
+};
 
 const memstore2 = new MemoryStorage({ terminal: true });
 
@@ -85,7 +95,7 @@ describe('model', () => {
       .then(() => expect(one.$get()).to.eventually.have.property('name', 'rutabaga'));
     });
 
-    it('should package all related documents for read', () => {
+    it('should package all related models for read', () => {
       const one = new TestType({
         id: 1,
         name: 'potato',
