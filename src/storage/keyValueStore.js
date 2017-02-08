@@ -147,6 +147,7 @@ export class KeyValueStore extends Storage {
       } else {
         resolves.push(Bluebird.resolve({ id }));
       }
+      // TODO: if there's a query, KVS loads a *lot* into memory and filters
       return Bluebird.all(resolves);
     })
     .then(([arrayString, context]) => {
