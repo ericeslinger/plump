@@ -2,6 +2,8 @@ import { Model, $self } from './model';
 import { Subject, Observable } from 'rxjs/Rx';
 import Bluebird from 'bluebird';
 
+import { TestType } from './test/testType';
+
 const $types = Symbol('$types');
 const $storage = Symbol('$storage');
 const $terminal = Symbol('$terminal');
@@ -175,6 +177,29 @@ export class Plump {
         return v;
       });
     });
+  }
+
+  bulkGet(opts) { // eslint-disable-line no-unused-vars
+    return {
+      children: [
+        {
+          id: 2,
+          name: 'frotato',
+          extended: { cohort: 2013 },
+          children: [
+            {
+              child_id: 3,
+              parent_id: 2,
+            },
+          ],
+        },
+        {
+          id: 3,
+          name: 'rutabaga',
+          extended: {},
+        },
+      ],
+    };
   }
 
   save(...args) {

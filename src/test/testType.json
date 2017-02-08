@@ -20,38 +20,39 @@
       ]
     }
   },
-  "included": [
-    {
-      "type": "tests",
-      "id": 2,
-      "attributes": {
-        "name": "frotato",
-        "extended": {
-          "cohort": 2013
+  "included":
+    [
+      {
+        "type": "tests",
+        "id": 2,
+        "attributes": {
+          "name": "frotato",
+          "extended": {
+            "cohort": 2013
+          }
+        },
+        "relationships": {
+          "children": {
+            "links": {
+              "related": "https://example.com/api/tests/2/children"
+            },
+            "data": [{ "type": "test", "id": 3 }]
+          }
+        },
+        "links": {
+          "self": "https://example.com/api/tests/2"
         }
       },
-      "relationships": {
-        "children": {
-          "links": {
-            "related": "https://example.com/api/tests/2/children"
-          },
-          "data": { "type": "test", "id": 3 }
+      {
+        "type": "tests",
+        "id": 3,
+        "attributes": {
+          "name": "rutabaga",
+          "extended": {}
+        },
+        "links": {
+          "self": "https://example.com/api/tests/3"
         }
-      },
-      "links": {
-        "self": "https://example.com/api/tests/2"
       }
-    },
-    {
-      "type": "tests",
-      "id": 3,
-      "attributes": {
-        "name": "rutabaga",
-        "extended": {}
-      },
-      "links": {
-        "self": "https://example.com/api/tests/3"
-      }
-    }
   ]
 }

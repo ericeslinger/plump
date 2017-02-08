@@ -9,7 +9,7 @@ export class Likes extends Relationship {}
 export class Agrees extends Relationship {}
 export class QueryChildren extends Relationship {}
 
-Children.$name = 'parent_child_relationship';
+Children.$name = 'children';
 Children.$sides = {
   parents: {
     self: {
@@ -229,5 +229,12 @@ TestType.$fields = {
   agreees: {
     type: 'hasMany',
     relationship: Agrees,
+  },
+};
+TestType.$include = {
+  children: {
+    attributes: ['name', 'extended'],
+    relationships: ['children'],
+    depth: Infinity,
   },
 };

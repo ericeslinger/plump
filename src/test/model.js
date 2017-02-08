@@ -110,7 +110,9 @@ describe('model', () => {
           two.$add('children', three.$id),
         ]);
       }).then(() => {
-        return expect(one.$package()).to.eventually.deep.equal(JSON.parse(fs.readFileSync('src/test/testType.json')));
+        return expect(one.$package()).to.eventually.deep.equal(
+          JSON.parse(fs.readFileSync('src/test/testType.json'))
+        );
       });
     });
   });
