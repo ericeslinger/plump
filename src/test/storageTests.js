@@ -32,7 +32,7 @@ export function testSuite(mocha, storeOpts) {
     mocha.before(() => {
       return (store.before || (() => Bluebird.resolve()))(actualStore)
       .then(() => {
-        actualStore = new store.constructor(store.opts);
+        actualStore = new store.ctor(store.opts); // eslint-disable-line new-cap
       });
     });
 

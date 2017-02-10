@@ -6,7 +6,7 @@ const Bluebird = require('bluebird');
 const tests = [
   'model',
   'plump',
-  'storage',
+  'memory',
 ];
 
 tests.forEach(test => {
@@ -14,7 +14,7 @@ tests.forEach(test => {
     Bluebird.config({
       longStackTraces: true,
     });
-    return gulp.src(`${config.tests}/${test}.js`, { cwd: config.dest, read: false })
+    return gulp.src(`${config.tests}/${test}.spec.js`, { cwd: config.dest, read: false })
     .pipe(mocha());
   });
 });
@@ -23,6 +23,6 @@ gulp.task('test', () => {
   Bluebird.config({
     longStackTraces: true,
   });
-  return gulp.src(`${config.tests}/**/*.js`, { cwd: config.dest, read: false })
+  return gulp.src(`${config.tests}/**/*.spec.js`, { cwd: config.dest, read: false })
   .pipe(mocha());
 });
