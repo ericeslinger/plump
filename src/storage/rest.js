@@ -1,6 +1,7 @@
 import * as axios from 'axios';
 import mergeOptions from 'merge-options';
 import { Storage } from './storage';
+import { $self } from '../model';
 
 const $axios = Symbol('$axios');
 import Promise from 'bluebird';
@@ -23,11 +24,11 @@ export class RestStorage extends Storage {
     return this[$axios](options);
   }
 
-  parseJSONApi(json) {
+  parseJSONApiRelationships(json) {
     const data = typeof json === 'string' ? JSON.parse(json) : json;
     const type = this.type(data.data.type);
 
-    const relationships = Object.keys(data.relationships).map(relName => {
+    return Object.keys(data.relationships).map(relName => {
       const relationship = type.$fields[relName].relationship;
       return {
         [relName]: data.relationships[relName].data.map(child => {
@@ -38,6 +39,12 @@ export class RestStorage extends Storage {
         }),
       };
     }).reduce((acc, curr) => mergeOptions(acc, curr), {});
+  }
+
+  parseJSONApi(json) {
+    const data = typeof json === 'string' ? JSON.parse(json) : json;
+    const type = this.type(data.data.type);
+    const relationships = this.parseJSONApiRelationships(data.relationships);
 
     const requested = Object.assign(
       {
@@ -48,7 +55,18 @@ export class RestStorage extends Storage {
     );
     this.save();
 
-    // data.included.
+    data.included.forEach(inclusion => {
+      const childType = this.type(inclusion.type);
+      const childId = inclusion.id;
+      const childData = Object.assign(
+        {},
+        inclusion.attributes,
+        this.parseJSONApiRelationships(inclusion.relationships)
+      );
+      const updatedFields = [$self].concat(Object.keys(inclusion.relationships));
+
+      this.notifyUpdate(childType, childId, childData, updatedFields);
+    });
 
     return requested;
   }
