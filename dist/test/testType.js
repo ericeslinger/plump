@@ -87,7 +87,7 @@ var QueryChildren = exports.QueryChildren = function (_Relationship5) {
   return QueryChildren;
 }(_relationship.Relationship);
 
-Children.$name = 'children';
+Children.$name = 'parent_child_relationship';
 Children.$sides = {
   parents: {
     self: {
