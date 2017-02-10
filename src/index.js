@@ -7,6 +7,7 @@ import { RestStorage } from './storage/rest';
 import { LocalForageStorage } from './storage/localforage';
 import { MemoryStorage } from './storage/memory';
 import { Relationship } from './relationship';
+import { testSuite } from './test/storage';
 
 export {
   Plump,
@@ -18,6 +19,7 @@ export {
   LocalForageStorage,
   MemoryStorage,
   Relationship,
+  testSuite,
   $self,
   $all,
 };
