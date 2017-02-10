@@ -81,6 +81,7 @@ declare abstract class Storage {
 declare namespace Storage {
   interface BlockFilter {
     [index: number]: string | BlockFilter,
+    0: 'where',
   }
   function createFilter(blockFilter: BlockFilter): (elem: any) => boolean;
 }

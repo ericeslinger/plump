@@ -5,12 +5,14 @@ import * as Axios from 'axios';
 import { StringIndexed, NumericIDed} from './util';
 import { Plump } from './plump.d';
 import { Relationship } from './relationship.d'
+import { Storage } from './storage/storage.d';
 
 declare abstract class Model {
   static $id: string;
   static $name: string;
   static $self: symbol;
   static $fields: Model.Fields;
+  static $included: Storage.BlockFilter;
 
   static fromJSON(json: Model): void;
   static toJSON(): Model;

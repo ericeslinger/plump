@@ -1,21 +1,21 @@
 import { Plump } from './plump';
 import { Model, $self, $all } from './model';
-import { SQLStorage } from './storage/sql';
-import { RedisStorage } from './storage/redis';
-import { RestStorage } from './storage/rest';
-import { LocalForageStorage } from './storage/localforage';
-import { MemoryStorage } from './storage/memory';
+import { Storage } from './storage/storage';
+import { MemoryStore } from './storage/memory';
+import { KeyValueStore } from './storage/keyValueStore';
 import { Relationship } from './relationship';
+import { testSuite } from './test/storageTests';
+import { TestType } from './test/testType';
 
 export {
   Plump,
   Model,
-  SQLStorage,
-  RedisStorage,
-  RestStorage,
-  LocalForageStorage,
-  MemoryStorage,
+  Storage,
+  MemoryStore,
+  KeyValueStore,
   Relationship,
+  testSuite,
+  TestType,
   $self,
   $all,
 };

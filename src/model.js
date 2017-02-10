@@ -46,6 +46,38 @@ export class Model {
     return this[$store][this.constructor.$id];
   }
 
+  get $$attributeFields() {
+    return Object.keys(this.constructor.$fields)
+    .filter(key => {
+      return key !== this.constructor.$id && this.constructor.$fields[key].type !== 'hasMany';
+    });
+  }
+
+  get $$relatedFields() {
+    return Object.keys(this.constructor.$include);
+  }
+
+  get $$path() {
+    return `/${this.$name}/${this.$id}`;
+  }
+
+  get $$dataJSON() {
+    return {
+      type: this.$name,
+      id: this.$id,
+    };
+  }
+
+  $$isLoaded(key) {
+    if (key === $all) {
+      return Object.keys(this[$loaded])
+        .map(k => this[$loaded][k])
+        .reduce((acc, curr) => acc && curr, true);
+    } else {
+      return this[$loaded][key];
+    }
+  }
+
   $$copyValuesFrom(opts = {}) {
     Object.keys(this.constructor.$fields).forEach((fieldName) => {
       if (opts[fieldName] !== undefined) {
@@ -103,20 +135,168 @@ export class Model {
     this[$subject].next(this[$store]);
   }
 
+  $package(opts) {
+    const options = Object.assign(
+      {},
+      {
+        domain: 'https://example.com',
+        apiPath: '/api',
+      },
+      opts
+    );
+    const prefix = `${options.domain}${options.apiPath}`;
+
+    return Bluebird.all([
+      this.$get(this.$$relatedFields.concat($self)),
+      this[$plump].bulkGet(this.$$relatedFields),
+    ]).then(([self, extendedJSON]) => {
+      const extended = {};
+      for (const rel in extendedJSON) { // eslint-disable-line guard-for-in
+        const type = this.$relationships[rel].constructor.$sides[rel].other.type;
+        extended[rel] = extendedJSON[rel].map(data => {
+          return this[$plump].forge(type, data);
+        });
+      }
+
+      return Bluebird.all([
+        self,
+        this.$$relatedPackage(extended, options),
+        this.$$includedPackage(extended, options),
+      ]);
+    }).then(([self, relationships, included]) => {
+      const attributes = {};
+      this.$$attributeFields.forEach(key => {
+        attributes[key] = self[key];
+      });
+
+      const retVal = {
+        links: { self: `${prefix}${this.$$path}` },
+        data: this.$$dataJSON,
+        attributes: attributes,
+        included: included,
+      };
+
+      if (Object.keys(relationships).length > 0) {
+        retVal.relationships = relationships;
+      }
+
+      return retVal;
+    });
+  }
+
+  $$relatedPackage(extended, opts) {
+    const options = Object.assign(
+      {},
+      {
+        include: this.constructor.$include,
+        domain: 'https://example.com',
+        apiPath: '/api',
+      },
+      opts
+    );
+    const prefix = `${options.domain}${opts.apiPath}`;
+    const fields = Object.keys(options.include).filter(rel => {
+      return this[$store][rel] !== undefined;
+    });
+
+    return this.$get(fields)
+    .then(self => {
+      const retVal = {};
+      fields.forEach(field => {
+        if (extended[field] && self[field].length) {
+          const childIds = self[field].map(rel => {
+            return rel[this.$relationships[field].constructor.$sides[field].other.field];
+          });
+          retVal[field] = {
+            links: {
+              related: `${prefix}${this.$$path}/${field}`,
+            },
+            data: extended[field].filter(child => {
+              return childIds.indexOf(child.$id) >= 0;
+            }).map(child => child.$$dataJSON),
+          };
+        }
+      });
+
+      return retVal;
+    });
+  }
+
+  $$includedPackage(extended, opts) {
+    return Bluebird.all(
+      Object.keys(extended).map(relationship => {
+        return Bluebird.all(
+          extended[relationship].map(child => {
+            const childOpts = Object.assign(
+              {},
+              opts,
+              { include: this.constructor.$include }
+            );
+            return child.$$packageForInclusion(extended, childOpts);
+          })
+        );
+      })
+    ).then(relationships => {
+      return relationships.reduce((acc, curr) => acc.concat(curr));
+    });
+  }
+
+  $$packageForInclusion(extended, opts = {}) {
+    const options = Object.assign(
+      {},
+      {
+        domain: 'https://example.com',
+        apiPath: '/api',
+        include: this.constructor.$include,
+      },
+      opts
+    );
+    const prefix = `${options.domain}${options.apiPath}`;
+
+    return this.$get(this.$$relatedFields.concat($self))
+    .then(self => {
+      const related = {};
+      this.$$relatedFields.forEach(field => {
+        const childIds = self[field].map(rel => {
+          return rel[this.$relationships[field].constructor.$sides[field].other.field];
+        });
+        related[field] = extended[field].filter(model => {
+          return childIds.indexOf(model.$id) >= 0;
+        });
+      });
+      return this.$$relatedPackage(related, opts)
+      .then(relationships => {
+        const attributes = {};
+        this.$$attributeFields.forEach(field => {
+          attributes[field] = self[field];
+        });
+
+        const retVal = {
+          type: this.$name,
+          id: this.$id,
+          attributes: attributes,
+          links: {
+            self: `${prefix}${this.$$path}`,
+          },
+        };
+
+        if (Object.keys(relationships).length > 0) {
+          retVal.relationships = relationships;
+        }
+
+        return retVal;
+      });
+    });
+  }
+
   // TODO: don't fetch if we $get() something that we already have
 
-  $get(opts) {
-    let keys = [$self];
+  $get(opts = $self) {
+    let keys;
     if (Array.isArray(opts)) {
       keys = opts;
-    } else if (opts !== undefined) {
-      if (opts === $all) {
-        keys = Object.keys(this.constructor.$fields)
-        .filter((key) => this.constructor.$fields[key].type === 'hasMany')
-        .concat($self);
-      } else {
-        keys = [opts];
-      }
+    } else {
+      keys = [opts];
     }
     return Bluebird.all(keys.map((key) => this.$$singleGet(key)))
     .then((valueArray) => {
@@ -130,30 +310,27 @@ export class Model {
   }
 
   $$singleGet(opt = $self) {
-    // three cases.
-    // key === undefined - fetch all, unless $loaded, but return all.
-    // fields[key] === 'hasMany' - fetch children (perhaps move this decision to store)
-    // otherwise - fetch all, unless $store[key], return $store[key].
+    // X cases.
+    // key === $all - fetch all fields unless loaded, return all fields
+    // $fields[key].type === 'hasMany', - fetch children (perhaps move this decision to store)
+    // otherwise - fetch non-hasMany fields unless already loaded, return all non-hasMany fields
     let key;
-    if ((opt !== $self) && (this.constructor.$fields[opt].type !== 'hasMany')) {
+    if ((opt !== $self) && (opt !== $all) && (this.constructor.$fields[opt].type !== 'hasMany')) {
       key = $self;
     } else {
       key = opt;
     }
+
     return Bluebird.resolve()
     .then(() => {
-      if (key === $self) {
-        if (this[$loaded][$self] === false && this[$plump]) {
+      if (!this.$$isLoaded(key) && this[$plump]) {
+        if (typeof key === 'symbol') { // key === $self or $all
           return this[$plump].get(this.constructor, this.$id, key);
         } else {
-          return true;
+          return this.$relationships[key].$list();
         }
       } else {
-        if ((this[$loaded][key] === false) && this[$plump]) { // eslint-disable-line no-lonely-if
-          return this.$relationships[key].$list();
-        } else {
-          return true;
-        }
+        return true;
       }
     }).then((v) => {
       if (v === true) {
@@ -170,7 +347,13 @@ export class Model {
         }
       } else if (v && (v[$self] !== null)) {
         this.$$copyValuesFrom(v);
-        this[$loaded][key] = true;
+        if (key === $all) {
+          for (const k in this[$loaded]) { // eslint-disable-line guard-for-in
+            this[$loaded][k] = true;
+          }
+        } else {
+          this[$loaded][key] = true;
+        }
         if (key === $self) {
           const retVal = {};
           for (const k in this[$store]) {
@@ -179,6 +362,8 @@ export class Model {
             }
           }
           return retVal;
+        } else if (key === $all) {
+          return Object.assign({}, this[$store]);
         } else {
           return Object.assign({}, { [key]: this[$store][key] });
         }
@@ -369,3 +554,4 @@ Model.$fields = {
     type: 'number',
   },
 };
+Model.$included = [];

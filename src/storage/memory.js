@@ -3,7 +3,7 @@ import { KeyValueStore } from './keyValueStore';
 
 const $store = Symbol('$store');
 
-export class MemoryStorage extends KeyValueStore {
+export class MemoryStore extends KeyValueStore {
 
   constructor(...args) {
     super(...args);

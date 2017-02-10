@@ -2,7 +2,7 @@
 
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
-import { Plump, MemoryStorage, $self } from '../index';
+import { Plump, MemoryStore, $self } from '../index';
 import { TestType } from './testType';
 import Bluebird from 'bluebird';
 
@@ -29,10 +29,10 @@ describe('Plump', () => {
         }
       },
     };
-    const terminalStore = new MemoryStorage({ terminal: true });
+    const terminalStore = new MemoryStore({ terminal: true });
     const delayedMemstore = new Proxy(terminalStore, DelayProxy);
-    const coldMemstore = new MemoryStorage();
-    const hotMemstore = new MemoryStorage();
+    const coldMemstore = new MemoryStore();
+    const hotMemstore = new MemoryStore();
     hotMemstore.hot = () => true;
     const otherPlump = new Plump({
       storage: [hotMemstore, coldMemstore, delayedMemstore],
