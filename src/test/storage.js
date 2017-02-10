@@ -18,7 +18,15 @@ const sampleObject = {
   },
 };
 
-export function testSuite(mocha, store) {
+export function testSuite(mocha, storeOpts) {
+  const store = Object.assign(
+    {},
+    {
+      before: () => Bluebird.resolve(),
+      after: () => Bluebird.resolve(),
+    },
+    storeOpts
+  );
   mocha.describe(store.name, () => {
     let actualStore;
     mocha.before(() => {
