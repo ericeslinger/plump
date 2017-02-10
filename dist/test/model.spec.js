@@ -36,7 +36,7 @@ _index.Storage.prototype.bulkRead = function bulkRead(opts) {
   });
 };
 
-var memstore2 = new _index.MemoryStorage({ terminal: true });
+var memstore2 = new _index.MemoryStore({ terminal: true });
 
 var plump = new _index.Plump({
   storage: [memstore2],
@@ -331,8 +331,8 @@ describe('model', function () {
           }
         }
       };
-      var delayedMemstore = new Proxy(new _index.MemoryStorage({ terminal: true }), DelayProxy);
-      var coldMemstore = new _index.MemoryStorage();
+      var delayedMemstore = new Proxy(new _index.MemoryStore({ terminal: true }), DelayProxy);
+      var coldMemstore = new _index.MemoryStore();
       var otherPlump = new _index.Plump({
         storage: [coldMemstore, delayedMemstore],
         types: [_testType.TestType]

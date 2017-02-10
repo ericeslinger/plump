@@ -1,7 +1,7 @@
 /* eslint-env node */
 /* eslint no-shadow: 0 */
 
-import { MemoryStorage, Plump, $self } from '../index';
+import { MemoryStore, Plump, $self } from '../index';
 import { TestType } from './testType';
 import Bluebird from 'bluebird';
 import chai from 'chai';
@@ -294,7 +294,7 @@ export function testSuite(mocha, storeOpts) {
 
     mocha.describe('events', () => {
       mocha.it('should pass basic cacheable-write events to other datastores', () => {
-        const memstore = new MemoryStorage();
+        const memstore = new MemoryStore();
         const testPlump = new Plump({
           storage: [memstore, actualStore],
           types: [TestType],
@@ -318,7 +318,7 @@ export function testSuite(mocha, storeOpts) {
           testItem = createdObject;
           return expect(actualStore.read(TestType, testItem.id)).to.eventually.have.property('name', 'potato');
         }).then(() => {
-          memstore = new MemoryStorage();
+          memstore = new MemoryStore();
           testPlump = new Plump({
             storage: [memstore, actualStore],
             types: [TestType],
@@ -333,7 +333,7 @@ export function testSuite(mocha, storeOpts) {
 
       mocha.it('should pass cacheable-write events on hasMany relationships to other datastores', () => {
         let testItem;
-        const memstore = new MemoryStorage();
+        const memstore = new MemoryStore();
         const testPlump = new Plump({
           storage: [memstore, actualStore],
           types: [TestType],
@@ -366,7 +366,7 @@ export function testSuite(mocha, storeOpts) {
           return expect(actualStore.read(TestType, testItem.id)).to.eventually.have.property('name', 'potato');
         }).then(() => actualStore.add(TestType, testItem.id, 'likers', 100))
         .then(() => {
-          memstore = new MemoryStorage();
+          memstore = new MemoryStore();
           testPlump = new Plump({
             storage: [memstore, actualStore],
             types: [TestType],

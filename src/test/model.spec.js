@@ -5,7 +5,7 @@ import chaiAsPromised from 'chai-as-promised';
 import Bluebird from 'bluebird';
 import fs from 'fs';
 
-import { Plump, Model, Storage, MemoryStorage, $all } from '../index';
+import { Plump, Model, Storage, MemoryStore, $all } from '../index';
 import { TestType } from './testType';
 
 // For testing while actual bulkRead implementations are in development
@@ -18,7 +18,7 @@ Storage.prototype.bulkRead = function bulkRead(opts) { // eslint-disable-line no
   });
 };
 
-const memstore2 = new MemoryStorage({ terminal: true });
+const memstore2 = new MemoryStore({ terminal: true });
 
 const plump = new Plump({
   storage: [memstore2],
@@ -299,8 +299,8 @@ describe('model', () => {
           }
         },
       };
-      const delayedMemstore = new Proxy(new MemoryStorage({ terminal: true }), DelayProxy);
-      const coldMemstore = new MemoryStorage();
+      const delayedMemstore = new Proxy(new MemoryStore({ terminal: true }), DelayProxy);
+      const coldMemstore = new MemoryStore();
       const otherPlump = new Plump({
         storage: [coldMemstore, delayedMemstore],
         types: [TestType],

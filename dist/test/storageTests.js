@@ -268,7 +268,7 @@ function testSuite(mocha, storeOpts) {
 
     mocha.describe('events', function () {
       mocha.it('should pass basic cacheable-write events to other datastores', function () {
-        var memstore = new _index.MemoryStorage();
+        var memstore = new _index.MemoryStore();
         var testPlump = new _index.Plump({
           storage: [memstore, actualStore],
           types: [_testType.TestType]
@@ -292,7 +292,7 @@ function testSuite(mocha, storeOpts) {
           testItem = createdObject;
           return expect(actualStore.read(_testType.TestType, testItem.id)).to.eventually.have.property('name', 'potato');
         }).then(function () {
-          memstore = new _index.MemoryStorage();
+          memstore = new _index.MemoryStore();
           testPlump = new _index.Plump({
             storage: [memstore, actualStore],
             types: [_testType.TestType]
@@ -309,7 +309,7 @@ function testSuite(mocha, storeOpts) {
 
       mocha.it('should pass cacheable-write events on hasMany relationships to other datastores', function () {
         var testItem = void 0;
-        var memstore = new _index.MemoryStorage();
+        var memstore = new _index.MemoryStore();
         var testPlump = new _index.Plump({
           storage: [memstore, actualStore],
           types: [_testType.TestType]
@@ -343,7 +343,7 @@ function testSuite(mocha, storeOpts) {
         }).then(function () {
           return actualStore.add(_testType.TestType, testItem.id, 'likers', 100);
         }).then(function () {
-          memstore = new _index.MemoryStorage();
+          memstore = new _index.MemoryStore();
           testPlump = new _index.Plump({
             storage: [memstore, actualStore],
             types: [_testType.TestType]

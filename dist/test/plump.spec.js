@@ -47,10 +47,10 @@ describe('Plump', function () {
         }
       }
     };
-    var terminalStore = new _index.MemoryStorage({ terminal: true });
+    var terminalStore = new _index.MemoryStore({ terminal: true });
     var delayedMemstore = new Proxy(terminalStore, DelayProxy);
-    var coldMemstore = new _index.MemoryStorage();
-    var hotMemstore = new _index.MemoryStorage();
+    var coldMemstore = new _index.MemoryStore();
+    var hotMemstore = new _index.MemoryStore();
     hotMemstore.hot = function () {
       return true;
     };

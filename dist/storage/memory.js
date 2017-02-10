@@ -3,7 +3,7 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.MemoryStorage = undefined;
+exports.MemoryStore = undefined;
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
@@ -23,25 +23,25 @@ function _inherits(subClass, superClass) { if (typeof superClass !== "function" 
 
 var $store = Symbol('$store');
 
-var MemoryStorage = exports.MemoryStorage = function (_KeyValueStore) {
-  _inherits(MemoryStorage, _KeyValueStore);
+var MemoryStore = exports.MemoryStore = function (_KeyValueStore) {
+  _inherits(MemoryStore, _KeyValueStore);
 
-  function MemoryStorage() {
+  function MemoryStore() {
     var _ref;
 
-    _classCallCheck(this, MemoryStorage);
+    _classCallCheck(this, MemoryStore);
 
     for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
       args[_key] = arguments[_key];
     }
 
-    var _this = _possibleConstructorReturn(this, (_ref = MemoryStorage.__proto__ || Object.getPrototypeOf(MemoryStorage)).call.apply(_ref, [this].concat(args)));
+    var _this = _possibleConstructorReturn(this, (_ref = MemoryStore.__proto__ || Object.getPrototypeOf(MemoryStore)).call.apply(_ref, [this].concat(args)));
 
     _this[$store] = {};
     return _this;
   }
 
-  _createClass(MemoryStorage, [{
+  _createClass(MemoryStore, [{
     key: 'logStore',
     value: function logStore() {
       console.log(JSON.stringify(this[$store], null, 2));
@@ -80,5 +80,5 @@ var MemoryStorage = exports.MemoryStorage = function (_KeyValueStore) {
     }
   }]);
 
-  return MemoryStorage;
+  return MemoryStore;
 }(_keyValueStore.KeyValueStore);

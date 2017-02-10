@@ -3,7 +3,7 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.$all = exports.$self = exports.testSuite = exports.Relationship = exports.MemoryStorage = exports.Storage = exports.Model = exports.Plump = undefined;
+exports.$all = exports.$self = exports.testSuite = exports.Relationship = exports.KeyValueStore = exports.MemoryStore = exports.Storage = exports.Model = exports.Plump = undefined;
 
 var _plump = require('./plump');
 
@@ -13,6 +13,8 @@ var _storage = require('./storage/storage');
 
 var _memory = require('./storage/memory');
 
+var _keyValueStore = require('./storage/keyValueStore');
+
 var _relationship = require('./relationship');
 
 var _storageTests = require('./test/storageTests');
@@ -20,7 +22,8 @@ var _storageTests = require('./test/storageTests');
 exports.Plump = _plump.Plump;
 exports.Model = _model.Model;
 exports.Storage = _storage.Storage;
-exports.MemoryStorage = _memory.MemoryStorage;
+exports.MemoryStore = _memory.MemoryStore;
+exports.KeyValueStore = _keyValueStore.KeyValueStore;
 exports.Relationship = _relationship.Relationship;
 exports.testSuite = _storageTests.testSuite;
 exports.$self = _model.$self;

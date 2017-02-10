@@ -8,7 +8,7 @@ var _index = require('../index');
 (0, _index.testSuite)({
   describe: describe, it: it, before: before, after: after
 }, {
-  ctor: _index.MemoryStorage,
+  ctor: _index.MemoryStore,
   name: 'Plump Memory Storage',
   opts: { terminal: true }
 });
