@@ -320,6 +320,7 @@ export class Model {
 Model.fromJSON = function fromJSON(json) {
   this.$id = json.$id || 'id';
   this.$name = json.$name;
+  this.$include = json.$include;
   this.$fields = {};
   Object.keys(json.$fields).forEach((k) => {
     const field = json.$fields[k];
@@ -340,6 +341,7 @@ Model.toJSON = function toJSON() {
   const retVal = {
     $id: this.$id,
     $name: this.$name,
+    $include: this.$include,
     $fields: {},
   };
   const fieldNames = Object.keys(this.$fields);

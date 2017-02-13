@@ -1,9 +1,8 @@
 /* eslint-env node, mocha*/
 
-import fs from 'fs';
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
-import { Plump, MemoryStorage, $self, $all } from '../index';
+import { Plump, MemoryStorage, $self } from '../index';
 import { TestType } from './testType';
 import Bluebird from 'bluebird';
 
@@ -87,54 +86,5 @@ describe('Plump', () => {
       return otherPlump.invalidate(TestType, invalidated.$id, $self);
     })
     .catch((err) => done(err));
-  });
-
-  it('should package all related models on read', () => {
-    // For testing while actual bulkRead implementations are in development
-    MemoryStorage.prototype.bulkRead = function bulkRead(root, opts) { // eslint-disable-line no-unused-vars
-      return Bluebird.all([
-        this.read(TestType, 2, $all),
-        this.read(TestType, 3, $all),
-      ]).then(children => {
-        return { children };
-      });
-    };
-
-    const memstore2 = new MemoryStorage({ terminal: true });
-
-    const plump = new Plump({
-      storage: [memstore2],
-      types: [TestType],
-    });
-
-    const one = new TestType({
-      id: 1,
-      name: 'potato',
-    }, plump);
-    const two = new TestType({
-      id: 2,
-      name: 'frotato',
-      extended: { cohort: 2013 },
-    }, plump);
-    const three = new TestType({
-      id: 3,
-      name: 'rutabaga',
-    }, plump);
-
-    return Bluebird.all([
-      one.$save(),
-      two.$save(),
-      three.$save(),
-    ]).then(() => {
-      return Bluebird.all([
-        one.$add('children', two.$id),
-        two.$add('children', three.$id),
-      ]);
-    }).then(() => {
-      return expect(plump.jsonAPIify(TestType.$name, one.$id))
-      .to.eventually.deep.equal(
-        JSON.parse(fs.readFileSync('src/test/testType.json'))
-      );
-    });
   });
 });

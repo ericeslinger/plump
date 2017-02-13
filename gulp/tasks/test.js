@@ -7,6 +7,7 @@ const tests = [
   'model',
   'plump',
   'storage',
+  'jsonApi',
 ];
 
 tests.forEach(test => {
