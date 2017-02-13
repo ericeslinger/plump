@@ -171,7 +171,7 @@ QueryChildren.$extras = {
   },
 };
 
-QueryChildren.$name = 'valence_children';
+QueryChildren.$name = 'query_children';
 
 
 TestType.$name = 'tests';

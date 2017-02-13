@@ -166,21 +166,24 @@ export class Storage {
         if (this.terminal) {
           if (field !== $self) {
             if (value !== null) {
-              return this[$emitter].next({
+              this[$emitter].next({
                 type, id, field, value: value[field],
               });
+              return null;
             } else {
               return this.readMany(type, id, field)
               .then((list) => {
-                return this[$emitter].next({
+                this[$emitter].next({
                   type, id, field, value: list[field],
                 });
+                return null;
               });
             }
           } else {
-            return this[$emitter].next({
+            this[$emitter].next({
               type, id, value,
             });
+            return null;
           }
         } else {
           return null;

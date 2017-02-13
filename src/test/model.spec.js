@@ -5,10 +5,20 @@ import chaiAsPromised from 'chai-as-promised';
 import Bluebird from 'bluebird';
 import fs from 'fs';
 
-import { Plump, Model, MemoryStorage, $all } from '../index';
+import { Plump, Model, Storage, MemoryStore, $all } from '../index';
 import { TestType } from './testType';
 
-const memstore2 = new MemoryStorage({ terminal: true });
+// For testing while actual bulkRead implementations are in development
+Storage.prototype.bulkRead = function bulkRead(opts) { // eslint-disable-line no-unused-vars
+  return Bluebird.all([
+    this.read(TestType, 2, $all),
+    this.read(TestType, 3, $all),
+  ]).then(children => {
+    return { children };
+  });
+};
+
+const memstore2 = new MemoryStore({ terminal: true });
 
 const plump = new Plump({
   storage: [memstore2],
@@ -83,6 +93,37 @@ describe('model', () => {
       return one.$save()
       .then(() => one.$set({ name: 'rutabaga' }))
       .then(() => expect(one.$get()).to.eventually.have.property('name', 'rutabaga'));
+    });
+
+    it('should package all related models for read', () => {
+      const one = new TestType({
+        id: 1,
+        name: 'potato',
+      }, plump);
+      const two = new TestType({
+        id: 2,
+        name: 'frotato',
+        extended: { cohort: 2013 },
+      }, plump);
+      const three = new TestType({
+        id: 3,
+        name: 'rutabaga',
+      }, plump);
+
+      return Bluebird.all([
+        one.$save(),
+        two.$save(),
+        three.$save(),
+      ]).then(() => {
+        return Bluebird.all([
+          one.$add('children', two.$id),
+          two.$add('children', three.$id),
+        ]);
+      }).then(() => {
+        return expect(one.$package()).to.eventually.deep.equal(
+          JSON.parse(fs.readFileSync('src/test/testType.json'))
+        );
+      });
     });
   });
 
@@ -258,8 +299,8 @@ describe('model', () => {
           }
         },
       };
-      const delayedMemstore = new Proxy(new MemoryStorage({ terminal: true }), DelayProxy);
-      const coldMemstore = new MemoryStorage();
+      const delayedMemstore = new Proxy(new MemoryStore({ terminal: true }), DelayProxy);
+      const coldMemstore = new MemoryStore();
       const otherPlump = new Plump({
         storage: [coldMemstore, delayedMemstore],
         types: [TestType],
