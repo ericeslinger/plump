@@ -5,8 +5,6 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.Plump = undefined;
 
-var _slicedToArray = function () { function sliceIterator(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"]) _i["return"](); } finally { if (_d) throw _e; } } return _arr; } return function (arr, i) { if (Array.isArray(arr)) { return arr; } else if (Symbol.iterator in Object(arr)) { return sliceIterator(arr, i); } else { throw new TypeError("Invalid attempt to destructure non-iterable instance"); } }; }();
-
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
 var _model = require('./model');
@@ -16,10 +14,6 @@ var _Rx = require('rxjs/Rx');
 var _bluebird = require('bluebird');
 
 var _bluebird2 = _interopRequireDefault(_bluebird);
-
-var _mergeOptions = require('merge-options');
-
-var _mergeOptions2 = _interopRequireDefault(_mergeOptions);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -158,176 +152,6 @@ var Plump = exports.Plump = function () {
       }
       return new Type(val, this);
     }
-  }, {
-    key: '$$relatedPackage',
-    value: function $$relatedPackage(type, id, opts) {
-      var model = this.forge(type, _defineProperty({}, type.$id, id));
-      var options = Object.assign({}, {
-        include: type.$include,
-        extended: {},
-        domain: 'https://example.com',
-        apiPath: '/api'
-      }, opts);
-      var prefix = '' + options.domain + options.apiPath;
-      var fields = Object.keys(options.include).filter(function (rel) {
-        return model.constructor.$fields[rel];
-      });
-
-      return this.get(type, id, fields).then(function (root) {
-        var retVal = {};
-        fields.forEach(function (field) {
-          if (opts.extended[field] && root[field].length) {
-            (function () {
-              var childIds = root[field].map(function (rel) {
-                return rel[type.$fields[field].relationship.$sides[field].other.field];
-              });
-              retVal[field] = {
-                links: {
-                  related: prefix + '/' + type.$name + '/' + id + '/' + field
-                },
-                data: opts.extended[field].filter(function (child) {
-                  return childIds.indexOf(child.$id) >= 0;
-                }).map(function (child) {
-                  return child.$$dataJSON;
-                })
-              };
-            })();
-          }
-        });
-
-        return retVal;
-      });
-    }
-  }, {
-    key: '$$includedPackage',
-    value: function $$includedPackage(type, id, opts) {
-      var _this5 = this;
-
-      var options = Object.assign({}, {
-        include: type.$include,
-        extended: {},
-        domain: 'https://example.com',
-        apiPath: '/api'
-      }, opts);
-      return _bluebird2.default.all(Object.keys(options.extended).map(function (relationship) {
-        return _bluebird2.default.all(options.extended[relationship].map(function (child) {
-          return _this5.$$packageForInclusion(child.constructor, child.$id, options);
-        }));
-      })).then(function (relationships) {
-        return relationships.reduce(function (acc, curr) {
-          return acc.concat(curr);
-        });
-      });
-    }
-  }, {
-    key: '$$packageForInclusion',
-    value: function $$packageForInclusion(type, id) {
-      var _this6 = this;
-
-      var opts = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
-
-      var options = Object.assign({}, {
-        domain: 'https://example.com',
-        apiPath: '/api',
-        include: type.$include,
-        extended: {}
-      }, opts);
-      var prefix = '' + options.domain + opts.apiPath;
-
-      // Fields that are both in the include list and
-      // exist on the model we're currently packaging
-      var fields = Object.keys(options.include).filter(function (rel) {
-        return Object.keys(type.$include).indexOf(rel) >= 0;
-      });
-
-      return this.get(type, id, fields.concat(_model.$self)).then(function (model) {
-        return _this6.$$relatedPackage(type, id, options).then(function (relationships) {
-          var attributes = {};
-          Object.keys(type.$fields).filter(function (field) {
-            return field !== type.$id && type.$fields[field].type !== 'hasMany';
-          }).forEach(function (field) {
-            if (model[field] !== 'undefined') {
-              attributes[field] = model[field];
-            }
-          });
-
-          var retVal = {
-            type: type.$name,
-            id: id,
-            attributes: attributes,
-            links: {
-              self: prefix + '/' + type.$name + '/' + id
-            }
-          };
-
-          if (Object.keys(relationships).length > 0) {
-            retVal.relationships = relationships;
-          }
-
-          return retVal;
-        });
-      });
-    }
-  }, {
-    key: 'jsonAPIify',
-    value: function jsonAPIify(typeName, id, opts) {
-      var _this7 = this;
-
-      var type = this.type(typeName);
-      var options = Object.assign({}, {
-        domain: 'https://example.com',
-        apiPath: '/api'
-      }, opts);
-      var prefix = '' + options.domain + options.apiPath;
-
-      return _bluebird2.default.all([this.get(type, id, Object.keys(type.$include).concat(_model.$self)), this.bulkGet(this.$$relatedFields)]).then(function (_ref3) {
-        var _ref4 = _slicedToArray(_ref3, 2),
-            self = _ref4[0],
-            extendedJSON = _ref4[1];
-
-        var extended = {};
-
-        var _loop = function _loop(rel) {
-          // eslint-disable-line guard-for-in
-          var otherType = type.$fields[rel].relationship.$sides[rel].other.type;
-          extended[rel] = extendedJSON[rel].map(function (data) {
-            return _this7.forge(otherType, data);
-          });
-        };
-
-        for (var rel in extendedJSON) {
-          _loop(rel);
-        }
-        var extendedOpts = (0, _mergeOptions2.default)({}, opts, { extended: extended });
-
-        return _bluebird2.default.all([self, _this7.$$relatedPackage(type, id, extendedOpts), _this7.$$includedPackage(type, id, extendedOpts)]);
-      }).then(function (_ref5) {
-        var _ref6 = _slicedToArray(_ref5, 3),
-            self = _ref6[0],
-            relationships = _ref6[1],
-            included = _ref6[2];
-
-        var attributes = {};
-        Object.keys(type.$fields).filter(function (field) {
-          return field !== type.$id && type.$fields[field].type !== 'hasMany';
-        }).forEach(function (key) {
-          attributes[key] = self[key];
-        });
-
-        var retVal = {
-          links: { self: prefix + '/' + typeName + '/' + id },
-          data: { type: typeName, id: id },
-          attributes: attributes,
-          included: included
-        };
-
-        if (Object.keys(relationships).length > 0) {
-          retVal.relationships = relationships;
-        }
-
-        return retVal;
-      });
-    }
 
     // LOAD (type/id), SIDELOAD (type/id/side)? Or just LOADALL?
     // LOAD needs to scrub through hot caches first
@@ -355,7 +179,7 @@ var Plump = exports.Plump = function () {
   }, {
     key: 'get',
     value: function get(type, id, keyOpts) {
-      var _this8 = this;
+      var _this5 = this;
 
       var keys = keyOpts;
       if (!keys) {
@@ -375,8 +199,8 @@ var Plump = exports.Plump = function () {
           }
         });
       }, Promise.resolve(null)).then(function (v) {
-        if ((v === null || v[_model.$self] === null) && _this8[$terminal]) {
-          return _this8[$terminal].read(type, id, keys);
+        if ((v === null || v[_model.$self] === null) && _this5[$terminal]) {
+          return _this5[$terminal].read(type, id, keys);
         } else {
           return v;
         }
@@ -387,7 +211,7 @@ var Plump = exports.Plump = function () {
   }, {
     key: 'streamGet',
     value: function streamGet(type, id, keyOpts) {
-      var _this9 = this;
+      var _this6 = this;
 
       var keys = keyOpts;
       if (!keys) {
@@ -397,7 +221,7 @@ var Plump = exports.Plump = function () {
         keys = [keys];
       }
       return _Rx.Observable.create(function (observer) {
-        return _bluebird2.default.all(_this9[$storage].map(function (store) {
+        return _bluebird2.default.all(_this6[$storage].map(function (store) {
           return store.read(type, id, keys).then(function (v) {
             observer.next(v);
             if (store.hot(type, id)) {
@@ -410,8 +234,8 @@ var Plump = exports.Plump = function () {
           var possiVal = valArray.filter(function (v) {
             return v !== null;
           });
-          if (possiVal.length === 0 && _this9[$terminal]) {
-            return _this9[$terminal].read(type, id, keys).then(function (val) {
+          if (possiVal.length === 0 && _this6[$terminal]) {
+            return _this6[$terminal].read(type, id, keys).then(function (val) {
               observer.next(val);
               return val;
             });
@@ -443,7 +267,7 @@ var Plump = exports.Plump = function () {
   }, {
     key: 'delete',
     value: function _delete() {
-      var _this10 = this;
+      var _this7 = this;
 
       for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
         args[_key] = arguments[_key];
@@ -453,7 +277,7 @@ var Plump = exports.Plump = function () {
         var _$terminal2;
 
         return (_$terminal2 = this[$terminal]).delete.apply(_$terminal2, args).then(function () {
-          return _bluebird2.default.all(_this10[$storage].map(function (store) {
+          return _bluebird2.default.all(_this7[$storage].map(function (store) {
             return store.delete.apply(store, args);
           }));
         });
@@ -506,7 +330,7 @@ var Plump = exports.Plump = function () {
   }, {
     key: 'invalidate',
     value: function invalidate(type, id, field) {
-      var _this11 = this;
+      var _this8 = this;
 
       var hots = this[$storage].filter(function (store) {
         return store.hot(type, id);
@@ -517,8 +341,8 @@ var Plump = exports.Plump = function () {
       return _bluebird2.default.all(hots.map(function (store) {
         return store.wipe(type, id, field);
       })).then(function () {
-        if (_this11[$subscriptions][type.$name] && _this11[$subscriptions][type.$name][id]) {
-          return _this11[$terminal].read(type, id, field);
+        if (_this8[$subscriptions][type.$name] && _this8[$subscriptions][type.$name][id]) {
+          return _this8[$terminal].read(type, id, field);
         } else {
           return null;
         }

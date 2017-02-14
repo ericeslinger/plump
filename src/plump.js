@@ -1,7 +1,6 @@
 import { Model, $self } from './model';
 import { Subject, Observable } from 'rxjs/Rx';
 import Bluebird from 'bluebird';
-import mergeOptions from 'merge-options';
 
 const $types = Symbol('$types');
 const $storage = Symbol('$storage');
