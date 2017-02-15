@@ -2,8 +2,6 @@ import { Model, $self } from './model';
 import { Subject, Observable } from 'rxjs/Rx';
 import Bluebird from 'bluebird';
 
-import { TestType } from './test/testType';
-
 const $types = Symbol('$types');
 const $storage = Symbol('$storage');
 const $terminal = Symbol('$terminal');
@@ -179,8 +177,8 @@ export class Plump {
     });
   }
 
-  bulkGet(opts) {
-    return this[$terminal].bulkRead(opts);
+  bulkGet(root, opts) {
+    return this[$terminal].bulkRead(root, opts);
   }
 
   save(...args) {

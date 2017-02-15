@@ -210,20 +210,23 @@ var Storage = exports.Storage = function () {
           if (_this2.terminal) {
             if (field !== _model.$self) {
               if (value !== null) {
-                return _this2[$emitter].next({
+                _this2[$emitter].next({
                   type: type, id: id, field: field, value: value[field]
                 });
+                return null;
               } else {
                 return _this2.readMany(type, id, field).then(function (list) {
-                  return _this2[$emitter].next({
+                  _this2[$emitter].next({
                     type: type, id: id, field: field, value: list[field]
                   });
+                  return null;
                 });
               }
             } else {
-              return _this2[$emitter].next({
+              _this2[$emitter].next({
                 type: type, id: id, value: value
               });
+              return null;
             }
           } else {
             return null;

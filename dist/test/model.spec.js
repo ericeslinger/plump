@@ -12,10 +12,6 @@ var _bluebird = require('bluebird');
 
 var _bluebird2 = _interopRequireDefault(_bluebird);
 
-var _fs = require('fs');
-
-var _fs2 = _interopRequireDefault(_fs);
-
 var _index = require('../index');
 
 var _testType = require('./testType');
@@ -127,28 +123,6 @@ describe('model', function () {
         return one.$set({ name: 'rutabaga' });
       }).then(function () {
         return expect(one.$get()).to.eventually.have.property('name', 'rutabaga');
-      });
-    });
-
-    it('should package all related models for read', function () {
-      var one = new _testType.TestType({
-        id: 1,
-        name: 'potato'
-      }, plump);
-      var two = new _testType.TestType({
-        id: 2,
-        name: 'frotato',
-        extended: { cohort: 2013 }
-      }, plump);
-      var three = new _testType.TestType({
-        id: 3,
-        name: 'rutabaga'
-      }, plump);
-
-      return _bluebird2.default.all([one.$save(), two.$save(), three.$save()]).then(function () {
-        return _bluebird2.default.all([one.$add('children', two.$id), two.$add('children', three.$id)]);
-      }).then(function () {
-        return expect(one.$package()).to.eventually.deep.equal(JSON.parse(_fs2.default.readFileSync('src/test/testType.json')));
       });
     });
   });
