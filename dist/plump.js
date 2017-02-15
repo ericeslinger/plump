@@ -15,8 +15,6 @@ var _bluebird = require('bluebird');
 
 var _bluebird2 = _interopRequireDefault(_bluebird);
 
-var _testType = require('./test/testType');
-
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
@@ -252,8 +250,8 @@ var Plump = exports.Plump = function () {
     }
   }, {
     key: 'bulkGet',
-    value: function bulkGet(opts) {
-      return this[$terminal].bulkRead(opts);
+    value: function bulkGet(root, opts) {
+      return this[$terminal].bulkRead(root, opts);
     }
   }, {
     key: 'save',
