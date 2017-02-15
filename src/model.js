@@ -22,14 +22,14 @@ export class Model {
     this[$loaded] = {
       [$self]: false,
     };
-    Object.keys(this.constructor.$fields).forEach((key) => {
-      if (this.constructor.$fields[key].type === 'hasMany') {
-        const Rel = this.constructor.$fields[key].relationship;
-        this.$relationships[key] = new Rel(this, key, plump);
-        this[$store][key] = [];
-        this[$loaded][key] = false;
+    Object.keys(this.constructor.$fields).forEach((fieldName) => {
+      if (this.constructor.$fields[fieldName].type === 'hasMany') {
+        const Rel = this.constructor.$fields[fieldName].relationship;
+        this.$relationships[fieldName] = new Rel(this, fieldName, plump);
+        this[$store][fieldName] = [];
+        this[$loaded][fieldName] = false;
       } else {
-        this[$store][key] = this.constructor.$fields[key].default || null;
+        this[$store][fieldName] = this.constructor.$fields[fieldName].default || null;
       }
     });
     this.$$copyValuesFrom(opts || {});
@@ -73,15 +73,27 @@ export class Model {
 
   $$copyValuesFrom(opts = {}) {
     Object.keys(this.constructor.$fields).forEach((fieldName) => {
+      const field = this.constructor.$fields[fieldName];
       if (opts[fieldName] !== undefined) {
         // copy from opts to the best of our ability
-        if (
-          (this.constructor.$fields[fieldName].type === 'array') ||
-          (this.constructor.$fields[fieldName].type === 'hasMany')
-        ) {
+        if (field.type === 'array') {
           this[$store][fieldName] = (opts[fieldName] || []).concat();
           this[$loaded][fieldName] = true;
-        } else if (this.constructor.$fields[fieldName].type === 'object') {
+        } else if (field.type === 'hasMany') {
+          const side = field.relationship.$sides[fieldName];
+          this[$store][fieldName] = opts[fieldName].map((v) => {
+            const retVal = {
+              id: v[side.other.field],
+            };
+            if (field.relationship.$extras) {
+              Object.keys(field.relationship.$extras).forEach((extra) => {
+                retVal[extra] = v[extra];
+              });
+            }
+            return retVal;
+          });
+          this[$loaded][fieldName] = true;
+        } else if (field.type === 'object') {
           this[$store][fieldName] = Object.assign({}, opts[fieldName]);
         } else {
           this[$store][fieldName] = opts[fieldName];
@@ -127,6 +139,12 @@ export class Model {
   $$fireUpdate() {
     this[$subject].next(this[$store]);
   }
+
+  // Model.$get, when asking for a hasMany field will
+  // ALWAYS resolve to an object with that field as a property.
+  // The value of that property will ALWAYS be an array (possibly empty).
+  // The elements of the array will ALWAYS be objects, with at least an 'id' field.
+  // Array elements MAY have other fields (if the hasMany has valence).
 
   $get(opts = $self) {
     let keys;
