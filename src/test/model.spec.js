@@ -158,6 +158,40 @@ describe('model', () => {
   });
 
   describe('events', () => {
+    it('should pass model hasMany changes to other models', () => {
+      const one = new TestType({ name: 'potato' }, plump);
+      return one.$save()
+      .then(() => {
+        const onePrime = plump.find(TestType.$name, one.$id);
+        return one.$get('children')
+        .then((res) => expect(res).to.deep.equal({ children: [] }))
+        .then(() => onePrime.$get('children'))
+        .then((res) => expect(res).to.deep.equal({ children: [] }))
+        .then(() => one.$add('children', 100))
+        .then(() => one.$get('children'))
+        .then((res) => expect(res).to.deep.equal({ children: [{ id: 100 }] }))
+        .then(() => onePrime.$get('children'))
+        .then((res) => expect(res).to.deep.equal({ children: [{ id: 100 }] }));
+      });
+    });
+
+    it('should pass model changes to other models', () => {
+      const one = new TestType({ name: 'potato' }, plump);
+      return one.$save()
+      .then(() => {
+        const onePrime = plump.find(TestType.$name, one.$id);
+        return one.$get()
+        .then((res) => expect(res).have.property('name', 'potato'))
+        .then(() => onePrime.$get())
+        .then((res) => expect(res).have.property('name', 'potato'))
+        .then(() => one.$set('name', 'grotato'))
+        .then(() => one.$get())
+        .then((res) => expect(res).have.property('name', 'grotato'))
+        .then(() => onePrime.$get())
+        .then((res) => expect(res).have.property('name', 'grotato'));
+      });
+    });
+
     it('should allow subscription to model data', (done) => {
       const one = new TestType({ name: 'potato' }, plump);
       let phase = 0;
