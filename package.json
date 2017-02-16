@@ -1,11 +1,11 @@
 {
   "name": "plump",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "Pluggable Datastore",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "test": "gulp test"
+    "test": "gulp clean && gulp build && gulp test"
   },
   "repository": {
     "type": "git",

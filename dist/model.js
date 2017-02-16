@@ -53,14 +53,14 @@ var Model = exports.Model = function () {
     this[$subject] = new _Rx.BehaviorSubject();
     this[$subject].next({});
     this[$loaded] = _defineProperty({}, $self, false);
-    Object.keys(this.constructor.$fields).forEach(function (key) {
-      if (_this.constructor.$fields[key].type === 'hasMany') {
-        var Rel = _this.constructor.$fields[key].relationship;
-        _this.$relationships[key] = new Rel(_this, key, plump);
-        _this[$store][key] = [];
-        _this[$loaded][key] = false;
+    Object.keys(this.constructor.$fields).forEach(function (fieldName) {
+      if (_this.constructor.$fields[fieldName].type === 'hasMany') {
+        var Rel = _this.constructor.$fields[fieldName].relationship;
+        _this.$relationships[fieldName] = new Rel(_this, fieldName, plump);
+        _this[$store][fieldName] = [];
+        _this[$loaded][fieldName] = false;
       } else {
-        _this[$store][key] = _this.constructor.$fields[key].default || null;
+        _this[$store][fieldName] = _this.constructor.$fields[fieldName].default || null;
       }
     });
     this.$$copyValuesFrom(opts || {});
@@ -92,12 +92,29 @@ var Model = exports.Model = function () {
       var opts = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
 
       Object.keys(this.constructor.$fields).forEach(function (fieldName) {
+        var field = _this3.constructor.$fields[fieldName];
         if (opts[fieldName] !== undefined) {
           // copy from opts to the best of our ability
-          if (_this3.constructor.$fields[fieldName].type === 'array' || _this3.constructor.$fields[fieldName].type === 'hasMany') {
+          if (field.type === 'array') {
             _this3[$store][fieldName] = (opts[fieldName] || []).concat();
             _this3[$loaded][fieldName] = true;
-          } else if (_this3.constructor.$fields[fieldName].type === 'object') {
+          } else if (field.type === 'hasMany') {
+            (function () {
+              var side = field.relationship.$sides[fieldName];
+              _this3[$store][fieldName] = opts[fieldName].map(function (v) {
+                var retVal = {
+                  id: v[side.other.field]
+                };
+                if (field.relationship.$extras) {
+                  Object.keys(field.relationship.$extras).forEach(function (extra) {
+                    retVal[extra] = v[extra];
+                  });
+                }
+                return retVal;
+              });
+              _this3[$loaded][fieldName] = true;
+            })();
+          } else if (field.type === 'object') {
             _this3[$store][fieldName] = Object.assign({}, opts[fieldName]);
           } else {
             _this3[$store][fieldName] = opts[fieldName];
@@ -154,6 +171,13 @@ var Model = exports.Model = function () {
     value: function $$fireUpdate() {
       this[$subject].next(this[$store]);
     }
+
+    // Model.$get, when asking for a hasMany field will
+    // ALWAYS resolve to an object with that field as a property.
+    // The value of that property will ALWAYS be an array (possibly empty).
+    // The elements of the array will ALWAYS be objects, with at least an 'id' field.
+    // Array elements MAY have other fields (if the hasMany has valence).
+
   }, {
     key: '$get',
     value: function $get() {

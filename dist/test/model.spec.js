@@ -140,22 +140,16 @@ describe('model', function () {
       return one.$save().then(function () {
         return one.$add('children', 100);
       }).then(function () {
-        return expect(one.$get('children')).to.eventually.deep.equal({ children: [{
-            child_id: 100,
-            parent_id: one.$id
-          }] });
+        return expect(one.$get('children')).to.eventually.deep.equal({ children: [{ id: 100 }] });
       });
     });
 
     it('should add hasMany elements by child field', function () {
       var one = new _testType.TestType({ name: 'frotato' }, plump);
       return one.$save().then(function () {
-        return one.$add('children', { child_id: 100 });
+        return one.$add('children', 100);
       }).then(function () {
-        return expect(one.$get('children')).to.eventually.deep.equal({ children: [{
-            child_id: 100,
-            parent_id: one.$id
-          }] });
+        return expect(one.$get('children')).to.eventually.deep.equal({ children: [{ id: 100 }] });
       });
     });
 
@@ -164,10 +158,7 @@ describe('model', function () {
       return one.$save().then(function () {
         return one.$add('children', 100);
       }).then(function () {
-        return expect(one.$get('children')).to.eventually.deep.equal({ children: [{
-            child_id: 100,
-            parent_id: one.$id
-          }] });
+        return expect(one.$get('children')).to.eventually.deep.equal({ children: [{ id: 100 }] });
       }).then(function () {
         return one.$remove('children', 100);
       }).then(function () {
@@ -183,16 +174,14 @@ describe('model', function () {
         return one.$get('valenceChildren');
       }).then(function () {
         return expect(one.$get('valenceChildren')).to.eventually.deep.equal({ valenceChildren: [{
-            child_id: 100,
-            parent_id: one.$id,
+            id: 100,
             perm: 1
           }] });
       }).then(function () {
         return one.$modifyRelationship('valenceChildren', 100, { perm: 2 });
       }).then(function () {
         return expect(one.$get('valenceChildren')).to.eventually.deep.equal({ valenceChildren: [{
-            child_id: 100,
-            parent_id: one.$id,
+            id: 100,
             perm: 2
           }] });
       });
@@ -200,6 +189,54 @@ describe('model', function () {
   });
 
   describe('events', function () {
+    it('should pass model hasMany changes to other models', function () {
+      var one = new _testType.TestType({ name: 'potato' }, plump);
+      return one.$save().then(function () {
+        var onePrime = plump.find(_testType.TestType.$name, one.$id);
+        return one.$get('children').then(function (res) {
+          return expect(res).to.deep.equal({ children: [] });
+        }).then(function () {
+          return onePrime.$get('children');
+        }).then(function (res) {
+          return expect(res).to.deep.equal({ children: [] });
+        }).then(function () {
+          return one.$add('children', 100);
+        }).then(function () {
+          return one.$get('children');
+        }).then(function (res) {
+          return expect(res).to.deep.equal({ children: [{ id: 100 }] });
+        }).then(function () {
+          return onePrime.$get('children');
+        }).then(function (res) {
+          return expect(res).to.deep.equal({ children: [{ id: 100 }] });
+        });
+      });
+    });
+
+    it('should pass model changes to other models', function () {
+      var one = new _testType.TestType({ name: 'potato' }, plump);
+      return one.$save().then(function () {
+        var onePrime = plump.find(_testType.TestType.$name, one.$id);
+        return one.$get().then(function (res) {
+          return expect(res).have.property('name', 'potato');
+        }).then(function () {
+          return onePrime.$get();
+        }).then(function (res) {
+          return expect(res).have.property('name', 'potato');
+        }).then(function () {
+          return one.$set('name', 'grotato');
+        }).then(function () {
+          return one.$get();
+        }).then(function (res) {
+          return expect(res).have.property('name', 'grotato');
+        }).then(function () {
+          return onePrime.$get();
+        }).then(function (res) {
+          return expect(res).have.property('name', 'grotato');
+        });
+      });
+    });
+
     it('should allow subscription to model data', function (done) {
       var one = new _testType.TestType({ name: 'potato' }, plump);
       var phase = 0;
@@ -226,8 +263,7 @@ describe('model', function () {
             if (phase === 3) {
               if (v.children && v.children.length > 0) {
                 expect(v.children).to.deep.equal([{
-                  child_id: 100,
-                  parent_id: one.$id
+                  id: 100
                 }]);
                 subscription.unsubscribe();
                 done();
@@ -240,7 +276,7 @@ describe('model', function () {
       }).then(function () {
         return one.$set({ name: 'grotato' });
       }).then(function () {
-        return one.$add('children', { child_id: 100 });
+        return one.$add('children', 100);
       });
     });
 
@@ -248,7 +284,7 @@ describe('model', function () {
       var one = new _testType.TestType({ name: 'potato' }, plump);
       var phase = 0;
       one.$save().then(function () {
-        return one.$add('children', { child_id: 100 });
+        return one.$add('children', 100);
       }).then(function () {
         var subscription = one.$subscribe([_index.$all], function (v) {
           try {
@@ -260,19 +296,16 @@ describe('model', function () {
             if (phase === 1) {
               expect(v).to.have.property('name', 'potato');
               expect(v.children).to.deep.equal([{
-                child_id: 100,
-                parent_id: one.$id
+                id: 100
               }]);
               phase = 2;
             }
             if (phase === 2) {
               if (v.children && v.children.length > 1) {
                 expect(v.children).to.deep.equal([{
-                  child_id: 100,
-                  parent_id: one.$id
+                  id: 100
                 }, {
-                  child_id: 101,
-                  parent_id: one.$id
+                  id: 101
                 }]);
                 subscription.unsubscribe();
                 done();
@@ -283,7 +316,7 @@ describe('model', function () {
           }
         });
       }).then(function () {
-        return one.$add('children', { child_id: 101 });
+        return one.$add('children', 101);
       });
     });
 
