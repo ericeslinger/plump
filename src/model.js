@@ -2,7 +2,7 @@ import Bluebird from 'bluebird';
 import { Relationship } from './relationship';
 import mergeOptions from 'merge-options';
 import { BehaviorSubject } from 'rxjs/Rx';
-const $store = Symbol('$store');
+const $dirty = Symbol('$dirty');
 const $plump = Symbol('$plump');
 const $loaded = Symbol('$loaded');
 const $unsubscribe = Symbol('$unsubscribe');
@@ -15,22 +15,15 @@ export const $all = Symbol('$all');
 
 export class Model {
   constructor(opts, plump) {
+    this[$dirty] = { id: undefined, attributes: {}, relationships: {} };
     this.$relationships = {};
     this[$subject] = new BehaviorSubject();
     this[$subject].next({});
-    for (const relName in this.constructor.$fields.relationships) {
+    for (const relName in this.constructor.$fields.relationships) { // eslint-disable-line guard-for-in
       const Rel = this.constructor.$fields.relationships[relName];
       this.$relationships[relName] = new Rel(this, relName, plump);
-      this[relName]
     }
-    Object.keys(this.constructor.$fields).forEach((key) => {
-      if (this.constructor.$fields.$relationships[key]) {
-        const Rel = this.constructor.$fields[key].relationship;
-        this.$relationships[key] = new Rel(this, key, plump);
-
-      }
-    });
-    this.$$copyValuesFrom(opts || {});
+    this.$$copyValuesFrom(opts);
     if (plump) {
       this[$plump] = plump;
     }
@@ -41,38 +34,21 @@ export class Model {
   }
 
   get $id() {
-    return this[$store][this.constructor.$id];
+    return this.$get(this.constructor.$id);
   }
 
   $$copyValuesFrom(opts = {}) {
-    Object.keys(this.constructor.$fields).forEach((fieldName) => {
-      const field = this.constructor.$fields[fieldName];
-      if (opts[fieldName] !== undefined) {
-        // copy from opts to the best of our ability
-        if (field.type === 'array') {
-          this[$store][fieldName] = (opts[fieldName] || []).concat();
-          this[$loaded][fieldName] = true;
-        } else if (field.type === 'hasMany') {
-          const side = field.relationship.$sides[fieldName];
-          this[$store][fieldName] = opts[fieldName].map((v) => {
-            const retVal = {
-              id: v[side.other.field],
-            };
-            if (field.relationship.$extras) {
-              Object.keys(field.relationship.$extras).forEach((extra) => {
-                retVal[extra] = v[extra];
-              });
-            }
-            return retVal;
-          });
-          this[$loaded][fieldName] = true;
-        } else if (field.type === 'object') {
-          this[$store][fieldName] = Object.assign({}, opts[fieldName]);
-        } else {
-          this[$store][fieldName] = opts[fieldName];
-        }
+    for (const key in opts) { // eslint-disable-line guard-for-in
+      // Deep copy arrays and objects
+      const val = typeof opts[key] === 'object' ? mergeOptions({}, opts[key]) : opts[key];
+      if (key === this.constructor.$id) {
+        this[this.constructor.$id] = val;
+      } else if (this.constructor.$fields.attributes[key]) {
+        this[$dirty].attributes[key] = val;
+      } else if (this.constructor.$fields.relationships[key]) {
+        this[$dirty].relationships[key] = val;
       }
-    });
+    }
     this.$$fireUpdate();
   }
 
@@ -109,8 +85,13 @@ export class Model {
     return this[$subject].subscribe(cb);
   }
 
+  $$resetDirty() {
+    this[$dirty] = { attributes: {}, relationships: {} };
+  }
+
   $$fireUpdate() {
-    this[$subject].next(this[$store]);
+    this[$subject].next(this[$dirty]);
+    this.$$resetDirty();
   }
 
   $get(opts) {
@@ -128,13 +109,8 @@ export class Model {
     return this.$set();
   }
 
-  $set(u = this[$store]) {
-    const update = mergeOptions({}, this[$store], u);
-    Object.keys(this.constructor.$fields).forEach((key) => {
-      if (this.constructor.$fields[key].type === 'hasMany') {
-        delete update[key];
-      }
-    });
+  $set(u = {}) {
+    const update = mergeOptions({}, this[$dirty].attributes, u);
     // this.$$copyValuesFrom(update); // this is the optimistic update;
     return this[$plump].save(this.constructor, update)
     .then((updated) => {
@@ -302,8 +278,8 @@ Model.assign = function assign(opts) {
 Model.$id = 'id';
 Model.$name = 'Base';
 Model.$self = $self;
-Model.$fields = {
-  id: 'number',
+Model.$fields = [Model.$id];
+Model.$schema = {
   attributes: {},
   relationships: {},
 };
