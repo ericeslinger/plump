@@ -15,21 +15,19 @@ export const $all = Symbol('$all');
 
 export class Model {
   constructor(opts, plump) {
-    this[$store] = {};
     this.$relationships = {};
     this[$subject] = new BehaviorSubject();
     this[$subject].next({});
-    this[$loaded] = {
-      [$self]: false,
-    };
-    Object.keys(this.constructor.$fields).forEach((fieldName) => {
-      if (this.constructor.$fields[fieldName].type === 'hasMany') {
-        const Rel = this.constructor.$fields[fieldName].relationship;
-        this.$relationships[fieldName] = new Rel(this, fieldName, plump);
-        this[$store][fieldName] = [];
-        this[$loaded][fieldName] = false;
-      } else {
-        this[$store][fieldName] = this.constructor.$fields[fieldName].default || null;
+    for (const relName in this.constructor.$fields.relationships) {
+      const Rel = this.constructor.$fields.relationships[relName];
+      this.$relationships[relName] = new Rel(this, relName, plump);
+      this[relName]
+    }
+    Object.keys(this.constructor.$fields).forEach((key) => {
+      if (this.constructor.$fields.$relationships[key]) {
+        const Rel = this.constructor.$fields[key].relationship;
+        this.$relationships[key] = new Rel(this, key, plump);
+
       }
     });
     this.$$copyValuesFrom(opts || {});
@@ -44,31 +42,6 @@ export class Model {
 
   get $id() {
     return this[$store][this.constructor.$id];
-  }
-
-  get $$relatedFields() {
-    return Object.keys(this.constructor.$include);
-  }
-
-  get $$path() {
-    return `/${this.$name}/${this.$id}`;
-  }
-
-  get $$dataJSON() {
-    return {
-      type: this.$name,
-      id: this.$id,
-    };
-  }
-
-  $$isLoaded(key) {
-    if (key === $all) {
-      return Object.keys(this[$loaded])
-        .map(k => this[$loaded][k])
-        .reduce((acc, curr) => acc && curr, true);
-    } else {
-      return this[$loaded][key];
-    }
   }
 
   $$copyValuesFrom(opts = {}) {
@@ -140,92 +113,15 @@ export class Model {
     this[$subject].next(this[$store]);
   }
 
-  // Model.$get, when asking for a hasMany field will
-  // ALWAYS resolve to an object with that field as a property.
-  // The value of that property will ALWAYS be an array (possibly empty).
-  // The elements of the array will ALWAYS be objects, with at least an 'id' field.
-  // Array elements MAY have other fields (if the hasMany has valence).
-
-  $get(opts = $self) {
-    let keys;
-    if (Array.isArray(opts)) {
-      keys = opts;
+  $get(opts) {
+    if (opts) {
+      // just get the stuff that was requested
+      const keys = Array.isArray(opts) ? opts : [opts];
+      return this[$plump].get(this.constructor, this.$id, keys);
     } else {
-      keys = [opts];
+      // get everything
+      return this[$plump].get(this.constructor, this.$id);
     }
-    return Bluebird.all(keys.map((key) => this.$$singleGet(key)))
-    .then((valueArray) => {
-      const selfIdx = keys.indexOf($self);
-      if ((selfIdx >= 0) && (valueArray[selfIdx] === null)) {
-        return null;
-      } else {
-        return valueArray.reduce((accum, curr) => Object.assign(accum, curr), {});
-      }
-    });
-  }
-
-  $$singleGet(opt = $self) {
-    // X cases.
-    // key === $all - fetch all fields unless loaded, return all fields
-    // $fields[key].type === 'hasMany', - fetch children (perhaps move this decision to store)
-    // otherwise - fetch non-hasMany fields unless already loaded, return all non-hasMany fields
-    let key;
-    if ((opt !== $self) && (opt !== $all) && (this.constructor.$fields[opt].type !== 'hasMany')) {
-      key = $self;
-    } else {
-      key = opt;
-    }
-
-    return Bluebird.resolve()
-    .then(() => {
-      if (!this.$$isLoaded(key) && this[$plump]) {
-        if (typeof key === 'symbol') { // key === $self or $all
-          return this[$plump].get(this.constructor, this.$id, key);
-        } else {
-          return this.$relationships[key].$list();
-        }
-      } else {
-        return true;
-      }
-    }).then((v) => {
-      if (v === true) {
-        if (key === $self) {
-          const retVal = {};
-          for (const k in this[$store]) {
-            if (this.constructor.$fields[k].type !== 'hasMany') {
-              retVal[k] = this[$store][k];
-            }
-          }
-          return retVal;
-        } else {
-          return Object.assign({}, { [key]: this[$store][key] });
-        }
-      } else if (v && (v[$self] !== null)) {
-        this.$$copyValuesFrom(v);
-        if (key === $all) {
-          for (const k in this[$loaded]) { // eslint-disable-line guard-for-in
-            this[$loaded][k] = true;
-          }
-        } else {
-          this[$loaded][key] = true;
-        }
-        if (key === $self) {
-          const retVal = {};
-          for (const k in this[$store]) {
-            if (this.constructor.$fields[k].type !== 'hasMany') {
-              retVal[k] = this[$store][k]; // TODO: deep copy of object
-            }
-          }
-          return retVal;
-        } else if (key === $all) {
-          return mergeOptions({}, this[$store]);
-        } else {
-          return mergeOptions({}, { [key]: this[$store][key] });
-        }
-      } else {
-        return null;
-      }
-    });
   }
 
   $save() {
@@ -407,8 +303,8 @@ Model.$id = 'id';
 Model.$name = 'Base';
 Model.$self = $self;
 Model.$fields = {
-  id: {
-    type: 'number',
-  },
+  id: 'number',
+  attributes: {},
+  relationships: {},
 };
 Model.$included = [];
