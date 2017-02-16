@@ -158,6 +158,23 @@ describe('model', () => {
   });
 
   describe('events', () => {
+    it('should pass model hasMany changes to other models', () => {
+      const one = new TestType({ name: 'potato' }, plump);
+      return one.$save()
+      .then(() => {
+        const onePrime = plump.find(TestType.$name, one.$id);
+        return one.$get('children')
+        .then((res) => expect(res).to.deep.equal({ children: [] }))
+        .then(() => onePrime.$get('children'))
+        .then((res) => expect(res).to.deep.equal({ children: [] }))
+        .then(() => one.$add('children', 100))
+        .then(() => one.$get('children'))
+        .then((res) => expect(res).to.deep.equal({ children: [{ id: 100 }] }))
+        .then(() => onePrime.$get('children'))
+        .then((res) => expect(res).to.deep.equal({ children: [{ id: 100 }] }));
+      });
+    });
+
     it('should allow subscription to model data', (done) => {
       const one = new TestType({ name: 'potato' }, plump);
       let phase = 0;
