@@ -213,6 +213,30 @@ describe('model', function () {
       });
     });
 
+    it('should pass model changes to other models', function () {
+      var one = new _testType.TestType({ name: 'potato' }, plump);
+      return one.$save().then(function () {
+        var onePrime = plump.find(_testType.TestType.$name, one.$id);
+        return one.$get().then(function (res) {
+          return expect(res).have.property('name', 'potato');
+        }).then(function () {
+          return onePrime.$get();
+        }).then(function (res) {
+          return expect(res).have.property('name', 'potato');
+        }).then(function () {
+          return one.$set('name', 'grotato');
+        }).then(function () {
+          return one.$get();
+        }).then(function (res) {
+          return expect(res).have.property('name', 'grotato');
+        }).then(function () {
+          return onePrime.$get();
+        }).then(function (res) {
+          return expect(res).have.property('name', 'grotato');
+        });
+      });
+    });
+
     it('should allow subscription to model data', function (done) {
       var one = new _testType.TestType({ name: 'potato' }, plump);
       var phase = 0;

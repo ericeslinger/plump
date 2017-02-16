@@ -175,6 +175,23 @@ describe('model', () => {
       });
     });
 
+    it('should pass model changes to other models', () => {
+      const one = new TestType({ name: 'potato' }, plump);
+      return one.$save()
+      .then(() => {
+        const onePrime = plump.find(TestType.$name, one.$id);
+        return one.$get()
+        .then((res) => expect(res).have.property('name', 'potato'))
+        .then(() => onePrime.$get())
+        .then((res) => expect(res).have.property('name', 'potato'))
+        .then(() => one.$set('name', 'grotato'))
+        .then(() => one.$get())
+        .then((res) => expect(res).have.property('name', 'grotato'))
+        .then(() => onePrime.$get())
+        .then((res) => expect(res).have.property('name', 'grotato'));
+      });
+    });
+
     it('should allow subscription to model data', (done) => {
       const one = new TestType({ name: 'potato' }, plump);
       let phase = 0;
