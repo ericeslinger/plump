@@ -5,8 +5,10 @@ import { MemoryStore, Plump, $self } from '../index';
 import { TestType } from './testType';
 import Bluebird from 'bluebird';
 import chai from 'chai';
+import chaiSubset from 'chai-subset';
 import chaiAsPromised from 'chai-as-promised';
 
+chai.use(chaiSubset);
 chai.use(chaiAsPromised);
 const expect = chai.expect;
 
@@ -41,7 +43,7 @@ export function testSuite(mocha, storeOpts) {
         return actualStore.write(TestType, sampleObject)
         .then((createdObject) => {
           return expect(actualStore.read(TestType, createdObject.id))
-          .to.eventually.deep.equal(Object.assign({}, sampleObject, { [TestType.$id]: createdObject.id }));
+          .to.eventually.containSubset(Object.assign({}, sampleObject, { [TestType.$id]: createdObject.id }));
         });
       });
 
@@ -52,7 +54,7 @@ export function testSuite(mocha, storeOpts) {
           return actualStore.write(TestType, modObject)
           .then((updatedObject) => {
             return expect(actualStore.read(TestType, updatedObject.id))
-            .to.eventually.deep.equal(Object.assign(
+            .to.eventually.containSubset(Object.assign(
               {},
               sampleObject,
               { [TestType.$id]: createdObject.id, name: 'carrot' }
@@ -65,7 +67,7 @@ export function testSuite(mocha, storeOpts) {
         return actualStore.write(TestType, sampleObject)
         .then((createdObject) => {
           return expect(actualStore.read(TestType, createdObject.id))
-          .to.eventually.deep.equal(Object.assign({}, sampleObject, { [TestType.$id]: createdObject.id }))
+          .to.eventually.containSubset(Object.assign({}, sampleObject, { [TestType.$id]: createdObject.id }))
           .then(() => actualStore.delete(TestType, createdObject.id))
           .then(() => expect(actualStore.read(TestType, createdObject.id)).to.eventually.deep.equal(null));
         });
@@ -127,7 +129,7 @@ export function testSuite(mocha, storeOpts) {
           .then(() => actualStore.add(TestType, createdObject.id, 'children', 203))
           .then(() => {
             return expect(actualStore.read(TestType, createdObject.id, ['children', $self]))
-            .to.eventually.deep.equal(
+            .to.eventually.containSubset(
               Object.assign(
                 {},
                 createdObject,

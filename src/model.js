@@ -2,10 +2,11 @@ import Bluebird from 'bluebird';
 import { Relationship } from './relationship';
 import mergeOptions from 'merge-options';
 import { BehaviorSubject } from 'rxjs/Rx';
+const $store = Symbol('$store');
 const $plump = Symbol('$plump');
+const $loaded = Symbol('$loaded');
 const $unsubscribe = Symbol('$unsubscribe');
 const $subject = Symbol('$subject');
-const $updates = Symbol('$updates');
 export const $self = Symbol('$self');
 export const $all = Symbol('$all');
 
@@ -14,27 +15,35 @@ export const $all = Symbol('$all');
 
 export class Model {
   constructor(opts, plump) {
+    this[$store] = {};
     this.$relationships = {};
     this[$subject] = new BehaviorSubject();
     this[$subject].next({});
+    this[$loaded] = {
+      [$self]: false,
+    };
     Object.keys(this.constructor.$fields).forEach((fieldName) => {
       if (this.constructor.$fields[fieldName].type === 'hasMany') {
         const Rel = this.constructor.$fields[fieldName].relationship;
         this.$relationships[fieldName] = new Rel(this, fieldName, plump);
+        this[$store][fieldName] = [];
+        this[$loaded][fieldName] = false;
+      } else {
+        this[$store][fieldName] = this.constructor.$fields[fieldName].default || null;
       }
     });
+    this.$$copyValuesFrom(opts || {});
     if (plump) {
       this[$plump] = plump;
     }
-    this.$set(opts || {});
-    if (opts[this.constructor.$id]) {
-      this.$id = opts[this.constructor.$id];
-    }
-    // this.$$copyValuesFrom(opts || {});
   }
 
   get $name() {
     return this.constructor.$name;
+  }
+
+  get $id() {
+    return this[$store][this.constructor.$id];
   }
 
   get $$relatedFields() {
@@ -52,14 +61,27 @@ export class Model {
     };
   }
 
-  $$unmarshal(val) {
-    if (val) {
-      function unmarshalOne(field, fieldName, values) {
+  $$isLoaded(key) {
+    if (key === $all) {
+      return Object.keys(this[$loaded])
+        .map(k => this[$loaded][k])
+        .reduce((acc, curr) => acc && curr, true);
+    } else {
+      return this[$loaded][key];
+    }
+  }
+
+  $$copyValuesFrom(opts = {}) {
+    Object.keys(this.constructor.$fields).forEach((fieldName) => {
+      const field = this.constructor.$fields[fieldName];
+      if (opts[fieldName] !== undefined) {
+        // copy from opts to the best of our ability
         if (field.type === 'array') {
-          return (values[fieldName] || []).concat();
+          this[$store][fieldName] = (opts[fieldName] || []).concat();
+          this[$loaded][fieldName] = true;
         } else if (field.type === 'hasMany') {
           const side = field.relationship.$sides[fieldName];
-          return (values[fieldName] || []).map((v) => {
+          this[$store][fieldName] = opts[fieldName].map((v) => {
             const retVal = {
               id: v[side.other.field],
             };
@@ -70,66 +92,26 @@ export class Model {
             }
             return retVal;
           });
+          this[$loaded][fieldName] = true;
         } else if (field.type === 'object') {
-          return mergeOptions({}, values[fieldName]);
+          this[$store][fieldName] = Object.assign({}, opts[fieldName]);
         } else {
-          return values[fieldName];
+          this[$store][fieldName] = opts[fieldName];
         }
       }
-
-      if (val && val[this.constructor.$id]) {
-        this.$id = val[this.constructor.$id];
-      }
-
-      return Object.keys(this.constructor.$fields)
-    .reduce((obj, fieldName) => {
-      return Object.assign({}, obj, { [fieldName]: unmarshalOne(fieldName, this.constructor.$fields[fieldName], val) });
-    }, {});
-    } else {
-      return null;
-    }
+    });
+    this.$$fireUpdate();
   }
-
-  // $$copyValuesFrom(opts = {}) {
-  //   Object.keys(this.constructor.$fields).forEach((fieldName) => {
-  //     if (opts[fieldName] !== undefined) {
-  //       // copy from opts to the best of our ability
-  //       if (field.type === 'array') {
-  //         this[$store][fieldName] = (opts[fieldName] || []).concat();
-  //         this[$loaded][fieldName] = true;
-  //       } else if (field.type === 'hasMany') {
-  //         const side = field.relationship.$sides[fieldName];
-  //         this[$store][fieldName] = opts[fieldName].map((v) => {
-  //           const retVal = {
-  //             id: v[side.other.field],
-  //           };
-  //           if (field.relationship.$extras) {
-  //             Object.keys(field.relationship.$extras).forEach((extra) => {
-  //               retVal[extra] = v[extra];
-  //             });
-  //           }
-  //           return retVal;
-  //         });
-  //         this[$loaded][fieldName] = true;
-  //       } else if (field.type === 'object') {
-  //         this[$store][fieldName] = Object.assign({}, opts[fieldName]);
-  //       } else {
-  //         this[$store][fieldName] = opts[fieldName];
-  //       }
-  //     }
-  //   });
-  //   this.$$fireUpdate();
-  // }
 
   $$hookToPlump() {
     if (this[$unsubscribe] === undefined) {
       this[$unsubscribe] = this[$plump].subscribe(this.constructor.$name, this.$id, ({ field, value }) => {
-        // if (field !== undefined) {
-        //   // this.$$copyValuesFrom(value);
-        //   // this.$$copyValuesFrom({ [field]: value });
-        // } else {
-        //   // this.$$copyValuesFrom(value);
-        // }
+        if (field !== undefined) {
+          // this.$$copyValuesFrom(value);
+          this.$$copyValuesFrom({ [field]: value });
+        } else {
+          this.$$copyValuesFrom(value);
+        }
       });
     }
   }
@@ -147,15 +129,17 @@ export class Model {
       cb = args[0];
     }
     this.$$hookToPlump();
-    this[$plump].streamGet(this.constructor, this.$id, fields);
-    // .subscribe((v) => this.$$copyValuesFrom(v));
+    if (this[$loaded][$self] === false) {
+      this[$plump].streamGet(this.constructor, this.$id, fields)
+      .subscribe((v) => this.$$copyValuesFrom(v));
+    }
     return this[$subject].subscribe(cb);
   }
 
-  // $$fireUpdate() {
-  //   this[$subject].next(this[$store]);
-  // }
-  //
+  $$fireUpdate() {
+    this[$subject].next(this[$store]);
+  }
+
   // Model.$get, when asking for a hasMany field will
   // ALWAYS resolve to an object with that field as a property.
   // The value of that property will ALWAYS be an array (possibly empty).
@@ -177,8 +161,6 @@ export class Model {
       } else {
         return valueArray.reduce((accum, curr) => Object.assign(accum, curr), {});
       }
-    }).then((values) => {
-      return Object.assign({}, values, this[$updates]);
     });
   }
 
@@ -196,24 +178,73 @@ export class Model {
 
     return Bluebird.resolve()
     .then(() => {
-      if (typeof key === 'symbol') { // key === $self or $all
-        return this[$plump].get(this.constructor, this.$id, key);
+      if (!this.$$isLoaded(key) && this[$plump]) {
+        if (typeof key === 'symbol') { // key === $self or $all
+          return this[$plump].get(this.constructor, this.$id, key);
+        } else {
+          return this.$relationships[key].$list();
+        }
       } else {
-        return this.$relationships[key].$list();
+        return true;
       }
-    }).then((v) => this.$$unmarshal(v));
-  }
-
-  $save(opts = {}) {
-    this[$updates] = Object.assign({}, this[$updates], opts);
-    return this[$plump].save(this.constructor, this[$updates])
-    .then(() => {
-      this[$updates] = {};
+    }).then((v) => {
+      if (v === true) {
+        if (key === $self) {
+          const retVal = {};
+          for (const k in this[$store]) {
+            if (this.constructor.$fields[k].type !== 'hasMany') {
+              retVal[k] = this[$store][k];
+            }
+          }
+          return retVal;
+        } else {
+          return Object.assign({}, { [key]: this[$store][key] });
+        }
+      } else if (v && (v[$self] !== null)) {
+        this.$$copyValuesFrom(v);
+        if (key === $all) {
+          for (const k in this[$loaded]) { // eslint-disable-line guard-for-in
+            this[$loaded][k] = true;
+          }
+        } else {
+          this[$loaded][key] = true;
+        }
+        if (key === $self) {
+          const retVal = {};
+          for (const k in this[$store]) {
+            if (this.constructor.$fields[k].type !== 'hasMany') {
+              retVal[k] = this[$store][k]; // TODO: deep copy of object
+            }
+          }
+          return retVal;
+        } else if (key === $all) {
+          return mergeOptions({}, this[$store]);
+        } else {
+          return mergeOptions({}, { [key]: this[$store][key] });
+        }
+      } else {
+        return null;
+      }
     });
   }
 
-  $set(opts = {}) {
-    this[$updates] = Object.assign({}, this[$updates], opts);
+  $save() {
+    return this.$set();
+  }
+
+  $set(u = this[$store]) {
+    const update = mergeOptions({}, this[$store], u);
+    Object.keys(this.constructor.$fields).forEach((key) => {
+      if (this.constructor.$fields[key].type === 'hasMany') {
+        delete update[key];
+      }
+    });
+    // this.$$copyValuesFrom(update); // this is the optimistic update;
+    return this[$plump].save(this.constructor, update)
+    .then((updated) => {
+      this.$$copyValuesFrom(updated);
+      return this;
+    });
   }
 
   $delete() {
@@ -252,7 +283,7 @@ export class Model {
         return Bluebird.reject(new Error('Cannot $add except to hasMany field'));
       }
     }).then((l) => {
-      // this.$$copyValuesFrom({ [key]: l });
+      this.$$copyValuesFrom({ [key]: l });
       return l;
     });
   }
@@ -266,6 +297,8 @@ export class Model {
         id = item.$id;
       }
       if ((typeof id === 'number') && (id >= 1)) {
+        this[$store][key] = [];
+        this[$loaded][key] = false;
         return this[$plump].modifyRelationship(this.constructor, this.$id, key, id, extras);
       } else {
         return Bluebird.reject(new Error('Invalid item added to hasMany'));
@@ -284,6 +317,8 @@ export class Model {
         id = item.$id;
       }
       if ((typeof id === 'number') && (id >= 1)) {
+        this[$store][key] = [];
+        this[$loaded][key] = false;
         return this[$plump].remove(this.constructor, this.$id, key, id);
       } else {
         return Bluebird.reject(new Error('Invalid item $removed from hasMany'));
