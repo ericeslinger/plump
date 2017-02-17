@@ -23,7 +23,7 @@ var $emitter = Symbol('$emitter');
 
 // type: an object that defines the type. typically this will be
 // part of the Model class hierarchy, but Storage objects call no methods
-// on the type object. We only are interested in Type.$name, Type.$id and Type.$fields.
+// on the type object. We only are interested in Type.$name, Type.$id and Type.$schema.
 // Note that Type.$id is the *name of the id field* on instances
 //    and NOT the actual id field (e.g., in most cases, Type.$id === 'id').
 // id: unique id. Often an integer, but not necessary (could be an oid)
@@ -87,9 +87,7 @@ var Storage = exports.Storage = function () {
         keys = [key];
       }
       if (keys.indexOf(_model.$all) >= 0) {
-        keys = Object.keys(type.$fields).filter(function (k) {
-          return type.$fields[k].type === 'hasMany';
-        });
+        keys = Object.keys(type.$schema.relationships);
         keys.push(_model.$self);
       }
       // if (keys.indexOf($self) < 0) {
@@ -97,7 +95,7 @@ var Storage = exports.Storage = function () {
       // }
       return Bluebird.resolve().then(function () {
         return Bluebird.all(keys.map(function (k) {
-          if (k !== _model.$self && type.$fields[k].type === 'hasMany') {
+          if (k !== _model.$self && type.$schema.relationships[k]) {
             return _this.readMany(type, id, k);
           } else {
             return _this.readOne(type, id);

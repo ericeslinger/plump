@@ -253,64 +253,28 @@ QueryChildren.$name = 'query_children';
 TestType.$name = 'tests';
 TestType.$id = 'id';
 TestType.$packageIncludes = ['children'];
-TestType.$fields = {
-  id: {
-    type: 'number'
+TestType.$schema = {
+  $id: 'id',
+  attributes: {
+    name: { type: 'string' },
+    extended: { type: 'object', default: {} }
   },
-  name: {
-    type: 'string'
-  },
-  extended: {
-    type: 'object',
-    default: {}
-  },
-  children: {
-    type: 'hasMany',
-    relationship: Children
-  },
-  valenceChildren: {
-    type: 'hasMany',
-    relationship: ValenceChildren
-  },
-  parents: {
-    type: 'hasMany',
-    relationship: Children
-  },
-  queryChildren: {
-    type: 'hasMany',
-    readonly: true,
-    relationship: QueryChildren
-  },
-  queryParents: {
-    type: 'hasMany',
-    readonly: true,
-    relationship: QueryChildren
-  },
-  valenceParents: {
-    type: 'hasMany',
-    relationship: ValenceChildren
-  },
-  likers: {
-    type: 'hasMany',
-    relationship: Likes
-  },
-  likees: {
-    type: 'hasMany',
-    relationship: Likes
-  },
-  agreers: {
-    type: 'hasMany',
-    relationship: Agrees
-  },
-  agreees: {
-    type: 'hasMany',
-    relationship: Agrees
+  relationships: {
+    children: { type: Children },
+    parents: { type: Children },
+    valenceChildren: { type: ValenceChildren },
+    valenceParents: { type: ValenceChildren },
+    queryChildren: { type: QueryChildren, readonly: true },
+    queryParents: { type: QueryChildren, readonly: true },
+    likers: { type: Likes },
+    likees: { type: Likes },
+    agreers: { type: Agrees },
+    agreees: { type: Agrees }
   }
 };
 TestType.$include = {
   children: {
     attributes: ['name', 'extended'],
-    relationships: ['children'],
-    depth: Infinity
+    relationships: ['children']
   }
 };
