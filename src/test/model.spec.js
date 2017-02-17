@@ -31,7 +31,7 @@ const expect = chai.expect;
 describe('model', () => {
   describe('basic functionality', () => {
     it('should return promises to existing data', () => {
-      const one = new TestType({ id: 1, name: 'potato' });
+      const one = new TestType({ id: 1, name: 'potato' }, plump);
       return expect(one.$get()).to.eventually.have.property('name', 'potato');
     });
 
