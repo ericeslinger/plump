@@ -291,8 +291,6 @@ describe('model', () => {
       .then(() => one.$add('children', 100))
       .then(() => {
         const subscription = one.$subscribe([$all], (v) => {
-          console.log(`PHASE: ${phase}`);
-          console.log(`V: ${JSON.stringify(v, null, 2)}`);
           try {
             if (phase === 0) {
               if (v.attributes.name) {
@@ -363,8 +361,8 @@ describe('model', () => {
             console.log(`V: ${JSON.stringify(v, null, 2)}`);
             try {
               if (phase === 0) {
-                if (v.attributes.name) {
-                  expect(v).to.have.property('attributes').with.property('name', 'potato');
+                if (v.attributes) {
+                  expect(v).to.have.property('attributes').that.is.empty; // eslint-disable-line no-unused-expressions
                   phase = 1;
                 }
               }
@@ -380,6 +378,7 @@ describe('model', () => {
               done(err);
             }
           });
+          return two.$get();
         });
       });
     });

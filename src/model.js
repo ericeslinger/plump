@@ -104,6 +104,7 @@ export class Model {
   }
 
   $$fireUpdate() {
+    console.trace();
     const update = mergeOptions(this[$dirty]);
     if (this.$id) {
       update.id = this.$id;
@@ -277,7 +278,7 @@ export class Model {
         return Bluebird.reject(new Error('Cannot $add except to hasMany field'));
       }
     }).then((l) => {
-      console.log(JSON.stringify(l));
+      // console.log(JSON.stringify(l));
       this.$$copyValuesFrom({ [key]: l });
       return l;
     });

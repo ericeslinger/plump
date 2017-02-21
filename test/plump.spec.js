@@ -17,7 +17,7 @@ describe('Plump', () => {
   });
 
   it('should refresh contents on an invalidation event', (done) => {
-    console.log('** BEGINNING');
+    // console.log('** BEGINNING');
     const DelayProxy = {
       get: (target, name) => {
         if (['read', 'write', 'add', 'remove'].indexOf(name) >= 0) {
@@ -42,12 +42,12 @@ describe('Plump', () => {
     const invalidated = new TestType({ name: 'foo' }, otherPlump);
     invalidated.$save()
     .then(() => {
-      console.log('** THEN 1');
+      // console.log('** THEN 1');
       let phase = 0;
       const subscription = invalidated.$subscribe((v) => {
-        console.log(`PHASE: ${phase}`);
-        console.log('CURRENT V:');
-        console.log(JSON.stringify(v, null, 2));
+        // console.log(`PHASE: ${phase}`);
+        // console.log('CURRENT V:');
+        // console.log(JSON.stringify(v, null, 2));
         try {
           if (phase === 0) {
             if (v.attributes.name) {
@@ -81,14 +81,14 @@ describe('Plump', () => {
       );
     })
     .then(() => {
-      console.log('** THEN 2');
+      // console.log('** THEN 2');
       return terminalStore._set(
         terminalStore.keyString(TestType.$name, invalidated.$id),
         JSON.stringify({ id: invalidated.$id, name: 'grotato' })
       );
     })
     .then(() => {
-      console.log('** THEN 3');
+      // console.log('** THEN 3');
       // debugger;
       return otherPlump.invalidate(TestType, invalidated.$id, $self);
     })
