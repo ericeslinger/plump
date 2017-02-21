@@ -2,7 +2,7 @@
 /* eslint no-shadow: 0 */
 
 import { MemoryStore } from '../index';
-import { testSuite } from '../index';
+import { testSuite } from './storageTests';
 
 testSuite({
   describe, it, before, after,
