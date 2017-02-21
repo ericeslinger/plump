@@ -2,7 +2,7 @@
 
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
-import { Plump, MemoryStore, $self } from '../index';
+import { Plump, MemoryStore, $self } from '../src/index';
 import { TestType } from './testType';
 import Bluebird from 'bluebird';
 

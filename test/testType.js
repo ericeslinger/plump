@@ -1,5 +1,5 @@
-import { Model } from '../model';
-import { Relationship } from '../relationship';
+import { Model } from '../src/model';
+import { Relationship } from '../src/relationship';
 
 export class TestType extends Model {}
 

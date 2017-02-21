@@ -1,7 +1,7 @@
 /* eslint-env node */
 /* eslint no-shadow: 0 */
 
-import { MemoryStore, Plump, $self } from '../index';
+import { MemoryStore, Plump, $self } from '../src/index';
 import { TestType } from './testType';
 import Bluebird from 'bluebird';
 import chai from 'chai';

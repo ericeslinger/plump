@@ -1,4 +1,5 @@
 {
   "presets": ["es2015", "stage-0"],
+  "ignore": false,
   "plugins": ["transform-es2015-modules-commonjs", "add-module-exports"],
 }
