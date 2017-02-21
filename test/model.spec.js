@@ -241,124 +241,61 @@ describe('model', () => {
       });
     });
 
-    it('should allow subscription to model data', (done) => {
-      const one = new TestType({ name: 'potato' }, plump);
-      let phase = 0;
-      one.$save()
-      .then(() => {
-        const subscription = one.$subscribe((v) => {
-          try {
-            if (phase === 0) {
-              if (v.attributes.name) {
-                phase = 1;
-              }
-            }
-            if (phase === 1) {
-              expect(v).to.have.property('attributes').with.property('name', 'potato');
-              if (v.id !== undefined) {
-                phase = 2;
-              }
-            }
-            if (phase === 2) {
-              if (v.attributes.name !== 'potato') {
-                expect(v).to.have.property('attributes').with.property('name', 'grotato');
-                phase = 3;
-              }
-            }
-            if (phase === 3) {
-              if ((v.relationships.children) && (v.relationships.children.length > 0)) {
-                expect(v.relationships.children).to.deep.equal([{
-                  op: 'add',
-                  data: { child_id: 100, parent_id: one.$id },
-                }]);
-                subscription.unsubscribe();
-                done();
-              }
-            }
-          } catch (err) {
-            done(err);
-          }
-        });
-      })
-      .then(() => one.$set({ name: 'grotato' }))
-      .then(() => one.$add('children', 100));
-    });
-
-    it('should allow subscription to model sideloads', (done) => {
-      const one = new TestType({ name: 'potato' }, plump);
-      let phase = 0;
-      one.$save()
-      .then(() => one.$add('children', 100))
-      .then(() => {
-        const subscription = one.$subscribe([$all], (v) => {
-          try {
-            if (phase === 0) {
-              if (v.attributes.name) {
-                expect(v).to.have.property('attributes').with.property('name', 'potato');
-                phase = 1;
-              }
-            }
-            if (phase === 1) {
-              expect(v.relationships.children).to.deep.equal([{
-                op: 'add',
-                data: { child_id: 100, parent_id: one.$id },
-              }]);
-              phase = 2;
-            }
-            if (phase === 2) {
-              if ((v.relationships.children) && (v.relationships.children.length > 1)) {
-                expect(v.relationships.children).to.deep.equal([{
-                  op: 'add',
-                  data: { child_id: 100, parent_id: one.$id },
-                }, {
-                  op: 'add',
-                  data: { child_id: 101, parent_id: one.$id },
-                }]);
-                subscription.unsubscribe();
-                done();
-              }
-            }
-          } catch (err) {
-            done(err);
-          }
-        });
-      })
-      .then(() => one.$add('children', 101));
-    });
-
-    it('should update on cacheable read events', (done) => {
-      const DelayProxy = {
-        get: (target, name) => {
-          if (['read', 'write', 'add', 'remove'].indexOf(name) >= 0) {
-            return (...args) => {
-              return Bluebird.delay(200)
-              .then(() => target[name](...args));
-            };
-          } else {
-            return target[name];
-          }
-        },
-      };
-      const delayedMemstore = new Proxy(new MemoryStore({ terminal: true }), DelayProxy);
-      const coldMemstore = new MemoryStore();
-      const otherPlump = new Plump({
-        storage: [coldMemstore, delayedMemstore],
-        types: [TestType],
-      });
-      const one = new TestType({ name: 'slowtato' }, otherPlump);
-      one.$save()
-      .then(() => one.$get())
-      .then((val) => {
-        return coldMemstore.write(TestType, {
-          name: 'potato',
-          id: val.id,
-        })
+    it('should allow subscription to model data', () => {
+      return new Bluebird((resolve, reject) => {
+        const one = new TestType({ name: 'potato' }, plump);
+        let phase = 0;
+        one.$save()
         .then(() => {
-          let phase = 0;
-          const two = otherPlump.find('tests', val.id);
-          const subscription = two.$subscribe((v) => {
-            console.log(`PHASE: ${phase}`);
-            console.log(`V: ${JSON.stringify(v, null, 2)}`);
+          const subscription = one.$subscribe((v) => {
+            try {
+              if (phase === 0) {
+                if (v.attributes.name) {
+                  phase = 1;
+                }
+              }
+              if (phase === 1) {
+                expect(v).to.have.property('attributes').with.property('name', 'potato');
+                if (v.id !== undefined) {
+                  phase = 2;
+                }
+              }
+              if (phase === 2) {
+                if (v.attributes.name !== 'potato') {
+                  expect(v).to.have.property('attributes').with.property('name', 'grotato');
+                  phase = 3;
+                }
+              }
+              if (phase === 3) {
+                if ((v.relationships.children) && (v.relationships.children.length > 0)) {
+                  expect(v.relationships.children).to.deep.equal([{
+                    op: 'add',
+                    data: { child_id: 100, parent_id: one.$id },
+                  }]);
+                  subscription.unsubscribe();
+                  resolve();
+                }
+              }
+            } catch (err) {
+              reject(err);
+            }
+          });
+        })
+        .then(() => one.$set({ name: 'grotato' }))
+        .then(() => one.$add('children', 100));
+      });
+    });
+    console.log('******what');
+    it('should allow subscription to model sideloads', () => {
+      return new Bluebird((resolve, reject) => {
+        const one = new TestType({ name: 'potato' }, plump);
+        let phase = 0;
+        one.$save()
+        .then(() => one.$add('children', 100))
+        .then(() => {
+          const subscription = one.$subscribe([$all], (v) => {
+            console.log(`PHASE-sideload: ${phase}`);
+            console.log(`V-sideload: ${JSON.stringify(v, null, 2)}`);
             try {
               if (phase === 0) {
                 if (v.attributes) {
@@ -367,18 +304,88 @@ describe('model', () => {
                 }
               }
               if (phase === 1) {
-                if (v.attributes.name !== 'potato') {
-                  expect(v).to.have.property('attributes').with.property('name', 'slowtato');
+                expect(v.relationships.children).to.deep.equal([{
+                  op: 'add',
+                  data: { child_id: 100, parent_id: one.$id },
+                }]);
+                phase = 2;
+              }
+              if (phase === 2) {
+                if ((v.relationships.children) && (v.relationships.children.length > 1)) {
+                  expect(v.relationships.children).to.deep.equal([{
+                    op: 'add',
+                    data: { child_id: 100, parent_id: one.$id },
+                  }, {
+                    op: 'add',
+                    data: { child_id: 101, parent_id: one.$id },
+                  }]);
                   subscription.unsubscribe();
-                  done();
+                  resolve();
                 }
               }
             } catch (err) {
-              subscription.unsubscribe();
-              done(err);
+              reject(err);
             }
           });
-          return two.$get();
+        })
+        .then(() => one.$add('children', 101));
+      });
+    });
+
+    it('should update on cacheable read events', () => {
+      return new Bluebird((resolve, reject) => {
+        const DelayProxy = {
+          get: (target, name) => {
+            if (['read', 'write', 'add', 'remove'].indexOf(name) >= 0) {
+              return (...args) => {
+                return Bluebird.delay(200)
+              .then(() => target[name](...args));
+              };
+            } else {
+              return target[name];
+            }
+          },
+        };
+        const delayedMemstore = new Proxy(new MemoryStore({ terminal: true }), DelayProxy);
+        const coldMemstore = new MemoryStore();
+        const otherPlump = new Plump({
+          storage: [coldMemstore, delayedMemstore],
+          types: [TestType],
+        });
+        const one = new TestType({ name: 'slowtato' }, otherPlump);
+        one.$save()
+        .then(() => one.$get())
+        .then((val) => {
+          return coldMemstore.write(TestType, {
+            name: 'potato',
+            id: val.id,
+          })
+          .then(() => {
+            let phase = 0;
+            const two = otherPlump.find('tests', val.id);
+            const subscription = two.$subscribe((v) => {
+              console.log(`PHASE: ${phase}`);
+              console.log(`V: ${JSON.stringify(v, null, 2)}`);
+              try {
+                if (phase === 0) {
+                  if (v.attributes.name) {
+                    expect(v).to.have.property('attributes').with.property('name', 'potato');
+                    phase = 1;
+                  }
+                }
+                if (phase === 1) {
+                  if (v.attributes.name !== 'potato') {
+                    expect(v).to.have.property('attributes').with.property('name', 'slowtato');
+                    subscription.unsubscribe();
+                    resolve();
+                  }
+                }
+              } catch (err) {
+                subscription.unsubscribe();
+                reject(err);
+              }
+            });
+          });
         });
       });
     });
