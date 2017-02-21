@@ -291,14 +291,16 @@ describe('model', () => {
       .then(() => one.$add('children', 100))
       .then(() => {
         const subscription = one.$subscribe([$all], (v) => {
+          console.log(`PHASE: ${phase}`);
+          console.log(`V: ${JSON.stringify(v, null, 2)}`);
           try {
             if (phase === 0) {
               if (v.attributes.name) {
+                expect(v).to.have.property('attributes').with.property('name', 'potato');
                 phase = 1;
               }
             }
             if (phase === 1) {
-              expect(v).to.have.property('attributes').with.property('name', 'potato');
               expect(v.relationships.children).to.deep.equal([{
                 op: 'add',
                 data: { child_id: 100, parent_id: one.$id },
@@ -357,6 +359,8 @@ describe('model', () => {
           let phase = 0;
           const two = otherPlump.find('tests', val.id);
           const subscription = two.$subscribe((v) => {
+            console.log(`PHASE: ${phase}`);
+            console.log(`V: ${JSON.stringify(v, null, 2)}`);
             try {
               if (phase === 0) {
                 if (v.attributes.name) {

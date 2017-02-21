@@ -104,7 +104,11 @@ export class Model {
   }
 
   $$fireUpdate() {
-    this[$subject].next(this[$dirty]);
+    const update = mergeOptions(this[$dirty]);
+    if (this.$id) {
+      update.id = this.$id;
+    }
+    this[$subject].next(update);
   }
 
   $get(opts) {
@@ -214,9 +218,7 @@ export class Model {
     });
     return this[$plump].save(this.constructor, update)
     .then((updated) => {
-      if (updated[this.$schema.$id]) {
-        this[this.$schema.$id] = updated[this.$schema.$id];
-      }
+      this.$$copyValuesFrom(updated);
       return this;
     });
   }
@@ -275,6 +277,7 @@ export class Model {
         return Bluebird.reject(new Error('Cannot $add except to hasMany field'));
       }
     }).then((l) => {
+      console.log(JSON.stringify(l));
       this.$$copyValuesFrom({ [key]: l });
       return l;
     });

@@ -135,7 +135,11 @@ var Model = exports.Model = function () {
   }, {
     key: '$$fireUpdate',
     value: function $$fireUpdate() {
-      this[$subject].next(this[$dirty]);
+      var update = (0, _mergeOptions2.default)(this[$dirty]);
+      if (this.$id) {
+        update.id = this.$id;
+      }
+      this[$subject].next(update);
     }
   }, {
     key: '$get',
@@ -264,9 +268,7 @@ var Model = exports.Model = function () {
         }
       });
       return this[$plump].save(this.constructor, update).then(function (updated) {
-        if (updated[_this5.$schema.$id]) {
-          _this5[_this5.$schema.$id] = updated[_this5.$schema.$id];
-        }
+        _this5.$$copyValuesFrom(updated);
         return _this5;
       });
     }
@@ -326,6 +328,7 @@ var Model = exports.Model = function () {
           return _bluebird2.default.reject(new Error('Cannot $add except to hasMany field'));
         }
       }).then(function (l) {
+        console.log(JSON.stringify(l));
         _this6.$$copyValuesFrom(_defineProperty({}, key, l));
         return l;
       });
