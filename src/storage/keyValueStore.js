@@ -87,28 +87,25 @@ export class KeyValueStore extends Storage {
   }
 
   write(t, v) {
-    const id = v[t.$id];
+    const id = v[t.$schema.$id];
     const updateObject = {};
-    Object.keys(t.$fields).forEach((fieldName) => {
-      if (v[fieldName] !== undefined) {
-        // copy from v to the best of our ability
-        if (
-          (t.$fields[fieldName].type === 'array') ||
-          (t.$fields[fieldName].type === 'hasMany')
-        ) {
-          updateObject[fieldName] = v[fieldName].concat();
-        } else if (t.$fields[fieldName].type === 'object') {
-          updateObject[fieldName] = Object.assign({}, v[fieldName]);
-        } else {
-          updateObject[fieldName] = v[fieldName];
-        }
+    for (const rel in t.$schema.relationships) {
+      if (v[rel] !== undefined) {
+        updateObject[rel] = v[rel].concat();
       }
-    });
+    }
+    for (const attr in t.$schema.attributes) {
+      if (t.$schema.attributes[attr].type === 'object') {
+        updateObject[attr] = Object.assign({}, v[attr]);
+      } else {
+        updateObject[attr] = v[attr];
+      }
+    }
     if ((id === undefined) || (id === null)) {
       if (this.terminal) {
         return this.$$maxKey(t.$name)
         .then((n) => {
-          const toSave = Object.assign({}, updateObject, { [t.$id]: n + 1 });
+          const toSave = Object.assign({}, updateObject, { [t.$schema.$id]: n + 1 });
           return this._set(this.keyString(t.$name, n + 1), JSON.stringify(toSave))
           .then(() => {
             return this.notifyUpdate(t, toSave[t.$id], toSave);
@@ -137,7 +134,7 @@ export class KeyValueStore extends Storage {
   }
 
   readMany(t, id, relationship) {
-    const relationshipType = t.$fields[relationship].relationship;
+    const relationshipType = t.$schema.relationships[relationship].type;
     const sideInfo = relationshipType.$sides[relationship];
     return Bluebird.resolve()
     .then(() => {
@@ -190,7 +187,7 @@ export class KeyValueStore extends Storage {
 
   writeHasMany(type, id, field, value) {
     let toSave = value;
-    const relationshipBlock = type.$fields[field].relationship;
+    const relationshipBlock = type.$schema.relationships[field].type;
     if (relationshipBlock.$restrict) {
       const restrictBlock = {};
       Object.keys(relationshipBlock.$restrict).forEach((k) => {
@@ -204,7 +201,7 @@ export class KeyValueStore extends Storage {
   }
 
   add(type, id, relationshipTitle, childId, extras = {}) {
-    const relationshipBlock = type.$fields[relationshipTitle].relationship;
+    const relationshipBlock = type.$schema.relationships[relationshipTitle].type;
     const sideInfo = relationshipBlock.$sides[relationshipTitle];
     const thisKeyString = this.keyString(type.$name, id, relationshipTitle);
     const otherKeyString = this.keyString(sideInfo.other.type, childId, sideInfo.other.title);
@@ -241,7 +238,7 @@ export class KeyValueStore extends Storage {
   }
 
   modifyRelationship(type, id, relationshipTitle, childId, extras) {
-    const relationshipBlock = type.$fields[relationshipTitle].relationship;
+    const relationshipBlock = type.$schema.relationships[relationshipTitle].type;
     const sideInfo = relationshipBlock.$sides[relationshipTitle];
     const thisKeyString = this.keyString(type.$name, id, relationshipTitle);
     const otherKeyString = this.keyString(sideInfo.other.type, childId, sideInfo.other.title);
@@ -267,7 +264,7 @@ export class KeyValueStore extends Storage {
   }
 
   remove(type, id, relationshipTitle, childId) {
-    const relationshipBlock = type.$fields[relationshipTitle].relationship;
+    const relationshipBlock = type.$schema.relationships[relationshipTitle].type;
     const sideInfo = relationshipBlock.$sides[relationshipTitle];
     const thisKeyString = this.keyString(type.$name, id, relationshipTitle);
     const otherKeyString = this.keyString(sideInfo.other.type, childId, sideInfo.other.title);

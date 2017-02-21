@@ -32,16 +32,28 @@ declare abstract class Model {
   $subscribe(callback: () => void): Rx.Subscription;
   $subscribe(fields: string | string[], callback: () => void): Rx.Subscription;
 
+  // Fetches from DB and then applies $dirty deltas on top before returning
   $get(opts?: (string | symbol)[]): StringIndexed<any>;
 
-  $save(): Model;
+  // Return a Promise that resolves to same thing as $get
+  // Flushes $dirty to plump
+  // Should take an argument list that defaults to $all
+  // so that user can specify particular deltas if desired
+  $save(): Bluebird<Model>;
 
-  $set(u?: StringIndexed<any>): Model;
+  // No longer async
+  // Returns this so you can .then(self => self.$save())
+  // a few error states for setting something you can't set
+  // JUST pushes data into $dirty
+  $set(u?: StringIndexed<any>): Bluebird<Model>;
 
   $delete(): Bluebird<Model>;
 
   // TODO: Figure out Plump.restRequest to resolve this
   $rest(opts?: StringIndexed<any>): any;
+
+  /* $add, $remove, $modifyRelationship should generate
+     deltas that get applied at $save */
 
   $add(
     key: PropertyKey,
