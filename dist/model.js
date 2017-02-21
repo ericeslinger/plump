@@ -5,8 +5,6 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.Model = exports.$all = exports.$self = undefined;
 
-var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
-
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
 var _bluebird = require('bluebird');
@@ -33,7 +31,6 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
 var $dirty = Symbol('$dirty');
 var $plump = Symbol('$plump');
-var $loaded = Symbol('$loaded');
 var $unsubscribe = Symbol('$unsubscribe');
 var $subject = Symbol('$subject');
 var $self = exports.$self = Symbol('$self');
@@ -63,26 +60,39 @@ var Model = exports.Model = function () {
   _createClass(Model, [{
     key: '$$copyValuesFrom',
     value: function $$copyValuesFrom() {
+      var _this = this;
+
       var opts = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
 
-      for (var key in opts) {
+      var _loop = function _loop(key) {
         // eslint-disable-line guard-for-in
         // Deep copy arrays and objects
-        var val = _typeof(opts[key]) === 'object' ? (0, _mergeOptions2.default)({}, opts[key]) : opts[key];
-        if (key === this.constructor.$id) {
-          this[this.constructor.$id] = val;
-        } else if (this.$schema.attributes[key]) {
-          this[$dirty].attributes[key] = val;
-        } else if (this.$schema.relationships[key]) {
-          this[$dirty].relationships[key] = val;
+        if (key === _this.constructor.$id) {
+          _this[_this.constructor.$id] = opts[key];
+        } else if (_this.$schema.attributes[key]) {
+          _this[$dirty].attributes[key] = opts[key];
+        } else if (_this.$schema.relationships[key]) {
+          if (!_this[$dirty].relationships[key]) {
+            _this[$dirty].relationships[key] = [];
+          }
+          opts[key].forEach(function (rel) {
+            _this[$dirty].relationships[key].push({
+              op: 'add',
+              data: rel
+            });
+          });
         }
+      };
+
+      for (var key in opts) {
+        _loop(key);
       }
       this.$$fireUpdate();
     }
   }, {
     key: '$$hookToPlump',
     value: function $$hookToPlump() {
-      var _this = this;
+      var _this2 = this;
 
       if (this[$unsubscribe] === undefined) {
         this[$unsubscribe] = this[$plump].subscribe(this.constructor.$name, this.$id, function (_ref) {
@@ -91,19 +101,14 @@ var Model = exports.Model = function () {
 
           if (field !== undefined) {
             // this.$$copyValuesFrom(value);
-            _this.$$copyValuesFrom(_defineProperty({}, field, value));
+            _this2.$$copyValuesFrom(_defineProperty({}, field, value));
           }
         });
       }
     }
-
-    // TODO: update for new $dirty interface
-
   }, {
     key: '$subscribe',
     value: function $subscribe() {
-      var _this2 = this;
-
       var fields = [$self];
       var cb = void 0;
       if (arguments.length === 2) {
@@ -116,11 +121,10 @@ var Model = exports.Model = function () {
         cb = arguments.length <= 0 ? undefined : arguments[0];
       }
       this.$$hookToPlump();
-      if (this[$loaded][$self] === false) {
-        this[$plump].streamGet(this.constructor, this.$id, fields).subscribe(function (v) {
-          return _this2.$$copyValuesFrom(v);
-        });
-      }
+      // if (this[$loaded][$self] === false) {
+      //   this[$plump].streamGet(this.constructor, this.$id, fields)
+      //   .subscribe((v) => this.$$copyValuesFrom(v));
+      // }
       return this[$subject].subscribe(cb);
     }
   }, {
@@ -162,63 +166,128 @@ var Model = exports.Model = function () {
             attributes: {},
             relationships: {}
           };
+          // copy from DB data
           for (var key in self) {
             if (_this3.$schema.attributes[key]) {
-              retVal.attributes[key] = self[key] || _this3[$dirty].attributes[key];
+              retVal.attributes[key] = self[key];
             } else if (_this3.$schema.relationships[key]) {
-              retVal.relationships[key] = self[key] || _this3[$dirty].relationships[key];
+              retVal.relationships[key] = self[key];
             }
+          }
+          // override from dirty cache
+          for (var attr in _this3[$dirty].attributes) {
+            // eslint-disable-line guard-for-in
+            retVal.attributes[attr] = _this3[$dirty].attributes[attr];
+          }
+          for (var rel in _this3[$dirty].relationships) {
+            // eslint-disable-line guard-for-in
+            retVal[rel] = _this3.$$resolveRelDeltas(retVal[rel], rel);
           }
           return retVal;
         }
       });
     }
-
-    // TODO: Unstub this
-
+  }, {
+    key: '$$applyDelta',
+    value: function $$applyDelta(current, delta) {
+      if (delta.op === 'add' || delta.op === 'modify') {
+        return (0, _mergeOptions2.default)({}, current, delta.data);
+      } else if (delta.op === 'remove') {
+        return undefined;
+      } else {
+        return current;
+      }
+    }
   }, {
     key: '$$resolveRelDeltas',
-    value: function $$resolveRelDeltas(key) {
-      return this[$dirty].relationships[key];
+    value: function $$resolveRelDeltas(current, opts) {
+      var _this4 = this;
+
+      var key = opts || this.$dirtyFields;
+      var keys = Array.isArray(key) ? key : [key];
+      var updates = {};
+      for (var relName in current) {
+        if (current in this.$schema.relationships) {
+          updates[relName] = current[relName].map(function (rel) {
+            return _defineProperty({}, rel.id, rel);
+          }).reduce(function (acc, curr) {
+            return (0, _mergeOptions2.default)(acc, curr);
+          }, {});
+        }
+      }
+
+      var _loop2 = function _loop2(_relName) {
+        // Apply any deltas in dirty cache on top of updates
+        if (_relName in _this4[$dirty].relationships) {
+          _this4[$dirty].relationships.forEach(function (delta) {
+            if (!updates[_relName]) {
+              updates[_relName] = {};
+            }
+            updates[_relName][delta.data.id] = _this4.$$applyDelta(updates[_relName][delta.data.id], delta);
+          });
+        }
+      };
+
+      for (var _relName in keys) {
+        _loop2(_relName);
+      }
+
+      // Collapse updates back into list, omitting undefineds
+      return Object.keys(updates).map(function (relName) {
+        return _defineProperty({}, relName, Object.keys(updates[relName]).map(function (id) {
+          return updates[relName][id];
+        }).filter(function (rel) {
+          return rel !== undefined;
+        }).reduce(function (acc, curr) {
+          return acc.concat(curr);
+        }, []));
+      });
     }
   }, {
     key: '$save',
     value: function $save(opts) {
-      var _this4 = this;
+      var _this5 = this;
 
-      var key = opts || Object.keys(this[$dirty].attributes).concat(Object.keys(this[$dirty].relationships));
+      var key = opts || this.$dirtyFields;
       var keys = Array.isArray(key) ? key : [key];
       var update = {};
+      if (this.$id) {
+        update[this.constructor.$id] = this.$id;
+      }
       keys.forEach(function (k) {
-        if (_this4[$dirty].attributes[k]) {
-          update[k] = _this4[$dirty].attributes[k];
-          delete _this4[$dirty].attributes[k];
-        } else if (_this4[$dirty].relationships[k]) {
-          update[k] = _this4.$$resolveRelDeltas(k);
-          delete _this4[$dirty].relationships[k];
+        if (_this5[$dirty].attributes[k]) {
+          update[k] = _this5[$dirty].attributes[k];
+          delete _this5[$dirty].attributes[k];
+        } else if (_this5[$dirty].relationships[k]) {
+          update[k] = _this5.$$resolveRelDeltas(null, k);
+          delete _this5[$dirty].relationships[k];
         }
       });
       return this[$plump].save(this.constructor, update).then(function (updated) {
-        if (updated[_this4.$schema.$id]) {
-          _this4[_this4.$schema.$id] = updated[_this4.$schema.$id];
+        if (updated[_this5.$schema.$id]) {
+          _this5[_this5.$schema.$id] = updated[_this5.$schema.$id];
         }
-        return _this4;
+        return _this5;
       });
     }
   }, {
     key: '$set',
-    value: function $set() {
-      var _this5 = this;
+    value: function $set(update) {
+      for (var key in update) {
+        if (key in this.$schema.attributes) {
+          this[$dirty].attributes[key] = update[key];
+        } else if (key in this.$schema.relationships) {
+          if (!(key in this[$dirty].relationships)) {
+            this[$dirty].relationships[key] = [];
+          }
+          this[$dirty].relationships[key].push({
+            op: 'modify',
+            data: update[key]
+          });
+        }
+      }
 
-      var u = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
-
-      var update = (0, _mergeOptions2.default)({}, this[$dirty].attributes, u);
-      // this.$$copyValuesFrom(update); // this is the optimistic update;
-      return this[$plump].save(this.constructor, update).then(function (updated) {
-        _this5.$$copyValuesFrom(updated);
-        _this5.$$resetDirty();
-        return _this5;
-      });
+      return this;
     }
   }, {
     key: '$delete',
@@ -321,6 +390,17 @@ var Model = exports.Model = function () {
     get: function get() {
       return this.constructor.$schema;
     }
+  }, {
+    key: '$dirtyFields',
+    get: function get() {
+      var _this7 = this;
+
+      return Object.keys(this[$dirty]).map(function (k) {
+        return Object.keys(_this7[$dirty][k]);
+      }).reduce(function (acc, curr) {
+        return acc.concat(curr);
+      }, []);
+    }
   }]);
 
   return Model;
@@ -377,7 +457,7 @@ Model.$rest = function $rest(plump, opts) {
 };
 
 Model.assign = function assign(opts) {
-  var _this8 = this;
+  var _this9 = this;
 
   var start = {
     type: this.$name,
@@ -386,11 +466,11 @@ Model.assign = function assign(opts) {
     relationships: {}
   };
   ['attributes', 'relationships'].forEach(function (fieldType) {
-    for (var key in _this8.$schema[fieldType]) {
+    for (var key in _this9.$schema[fieldType]) {
       if (opts[key]) {
         start[fieldType][key] = opts[key];
-      } else if (_this8.$schema[fieldType][key].default) {
-        start[fieldType][key] = _this8.$schema[fieldType][key].default;
+      } else if (_this9.$schema[fieldType][key].default) {
+        start[fieldType][key] = _this9.$schema[fieldType][key].default;
       } else {
         start[fieldType][key] = fieldType === 'attributes' ? null : [];
       }

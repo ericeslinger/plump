@@ -17,6 +17,7 @@ describe('Plump', () => {
   });
 
   it('should refresh contents on an invalidation event', (done) => {
+    console.log('** BEGINNING');
     const DelayProxy = {
       get: (target, name) => {
         if (['read', 'write', 'add', 'remove'].indexOf(name) >= 0) {
@@ -41,26 +42,30 @@ describe('Plump', () => {
     const invalidated = new TestType({ name: 'foo' }, otherPlump);
     invalidated.$save()
     .then(() => {
+      console.log('** THEN 1');
       let phase = 0;
       const subscription = invalidated.$subscribe((v) => {
+        console.log(`PHASE: ${phase}`);
+        console.log('CURRENT V:');
+        console.log(JSON.stringify(v, null, 2));
         try {
           if (phase === 0) {
-            if (v.name) {
-              expect(v).to.have.property('name', 'foo');
+            if (v.attributes.name) {
+              expect(v).to.have.property('attributes').with.property('name', 'foo');
               phase = 1;
             }
           }
           if (phase === 1) {
-            if (v.name === 'slowtato') {
+            if (v.attributes.name === 'slowtato') {
               phase = 2;
-            } else if (v.name === 'grotato') {
+            } else if (v.attributes.name === 'grotato') {
               subscription.unsubscribe();
               done();
             }
           }
           if (phase === 2) {
-            if (v.name !== 'slowtato') {
-              expect(v).to.have.property('name', 'grotato');
+            if (v.attributes.name !== 'slowtato') {
+              expect(v).to.have.property('attributes').with.property('name', 'grotato');
               subscription.unsubscribe();
               done();
             }
@@ -76,12 +81,14 @@ describe('Plump', () => {
       );
     })
     .then(() => {
+      console.log('** THEN 2');
       return terminalStore._set(
         terminalStore.keyString(TestType.$name, invalidated.$id),
         JSON.stringify({ id: invalidated.$id, name: 'grotato' })
       );
     })
     .then(() => {
+      console.log('** THEN 3');
       // debugger;
       return otherPlump.invalidate(TestType, invalidated.$id, $self);
     })

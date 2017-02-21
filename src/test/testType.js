@@ -181,6 +181,7 @@ TestType.$schema = {
   $id: 'id',
   attributes: {
     name: { type: 'string' },
+    otherName: { type: 'string', default: '' },
     extended: { type: 'object', default: {} },
   },
   relationships: {

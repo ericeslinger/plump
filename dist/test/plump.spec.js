@@ -30,6 +30,7 @@ describe('Plump', function () {
   });
 
   it('should refresh contents on an invalidation event', function (done) {
+    console.log('** BEGINNING');
     var DelayProxy = {
       get: function get(target, name) {
         if (['read', 'write', 'add', 'remove'].indexOf(name) >= 0) {
@@ -60,26 +61,30 @@ describe('Plump', function () {
     });
     var invalidated = new _testType.TestType({ name: 'foo' }, otherPlump);
     invalidated.$save().then(function () {
+      console.log('** THEN 1');
       var phase = 0;
       var subscription = invalidated.$subscribe(function (v) {
+        console.log('PHASE: ' + phase);
+        console.log('CURRENT V:');
+        console.log(JSON.stringify(v, null, 2));
         try {
           if (phase === 0) {
-            if (v.name) {
-              expect(v).to.have.property('name', 'foo');
+            if (v.attributes.name) {
+              expect(v).to.have.property('attributes').with.property('name', 'foo');
               phase = 1;
             }
           }
           if (phase === 1) {
-            if (v.name === 'slowtato') {
+            if (v.attributes.name === 'slowtato') {
               phase = 2;
-            } else if (v.name === 'grotato') {
+            } else if (v.attributes.name === 'grotato') {
               subscription.unsubscribe();
               done();
             }
           }
           if (phase === 2) {
-            if (v.name !== 'slowtato') {
-              expect(v).to.have.property('name', 'grotato');
+            if (v.attributes.name !== 'slowtato') {
+              expect(v).to.have.property('attributes').with.property('name', 'grotato');
               subscription.unsubscribe();
               done();
             }
@@ -91,8 +96,10 @@ describe('Plump', function () {
       });
       return coldMemstore._set(coldMemstore.keyString(_testType.TestType.$name, invalidated.$id), JSON.stringify({ id: invalidated.$id, name: 'slowtato' }));
     }).then(function () {
+      console.log('** THEN 2');
       return terminalStore._set(terminalStore.keyString(_testType.TestType.$name, invalidated.$id), JSON.stringify({ id: invalidated.$id, name: 'grotato' }));
     }).then(function () {
+      console.log('** THEN 3');
       // debugger;
       return otherPlump.invalidate(_testType.TestType, invalidated.$id, _index.$self);
     }).catch(function (err) {

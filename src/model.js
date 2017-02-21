@@ -4,7 +4,6 @@ import mergeOptions from 'merge-options';
 import { BehaviorSubject } from 'rxjs/Rx';
 const $dirty = Symbol('$dirty');
 const $plump = Symbol('$plump');
-const $loaded = Symbol('$loaded');
 const $unsubscribe = Symbol('$unsubscribe');
 const $subject = Symbol('$subject');
 export const $self = Symbol('$self');
@@ -42,16 +41,28 @@ export class Model {
     return this.constructor.$schema;
   }
 
+  get $dirtyFields() {
+    return Object.keys(this[$dirty]).map(k => Object.keys(this[$dirty][k]))
+    .reduce((acc, curr) => acc.concat(curr), []);
+  }
+
   $$copyValuesFrom(opts = {}) {
     for (const key in opts) { // eslint-disable-line guard-for-in
       // Deep copy arrays and objects
-      const val = typeof opts[key] === 'object' ? mergeOptions({}, opts[key]) : opts[key];
       if (key === this.constructor.$id) {
-        this[this.constructor.$id] = val;
+        this[this.constructor.$id] = opts[key];
       } else if (this.$schema.attributes[key]) {
-        this[$dirty].attributes[key] = val;
+        this[$dirty].attributes[key] = opts[key];
       } else if (this.$schema.relationships[key]) {
-        this[$dirty].relationships[key] = val;
+        if (!this[$dirty].relationships[key]) {
+          this[$dirty].relationships[key] = [];
+        }
+        opts[key].forEach(rel => {
+          this[$dirty].relationships[key].push({
+            op: 'add',
+            data: rel,
+          });
+        });
       }
     }
     this.$$fireUpdate();
@@ -68,7 +79,6 @@ export class Model {
     }
   }
 
-  // TODO: update for new $dirty interface
   $subscribe(...args) {
     let fields = [$self];
     let cb;
@@ -82,10 +92,10 @@ export class Model {
       cb = args[0];
     }
     this.$$hookToPlump();
-    if (this[$loaded][$self] === false) {
-      this[$plump].streamGet(this.constructor, this.$id, fields)
-      .subscribe((v) => this.$$copyValuesFrom(v));
-    }
+    // if (this[$loaded][$self] === false) {
+    //   this[$plump].streamGet(this.constructor, this.$id, fields)
+    //   .subscribe((v) => this.$$copyValuesFrom(v));
+    // }
     return this[$subject].subscribe(cb);
   }
 
@@ -109,9 +119,9 @@ export class Model {
         return this[$plump].get(this.constructor, this.$id);
       }
     }).then(self => {
-      const isClean = Object.keys(this[$dirty]).map(k => {
-        return Object.keys(this[$dirty][k]).length;
-      }).reduce((acc, curr) => acc + curr, 0) === 0;
+      const isClean = Object.keys(this[$dirty])
+      .map(k => Object.keys(this[$dirty][k]).length)
+      .reduce((acc, curr) => acc + curr, 0) === 0;
       if (!self && isClean) {
         return null;
       } else {
@@ -121,33 +131,84 @@ export class Model {
           attributes: {},
           relationships: {},
         };
+        // copy from DB data
         for (const key in self) {
           if (this.$schema.attributes[key]) {
-            retVal.attributes[key] = self[key] || this[$dirty].attributes[key];
+            retVal.attributes[key] = self[key];
           } else if (this.$schema.relationships[key]) {
-            retVal.relationships[key] = self[key] || this[$dirty].relationships[key];
+            retVal.relationships[key] = self[key];
           }
+        }
+        // override from dirty cache
+        for (const attr in this[$dirty].attributes) { // eslint-disable-line guard-for-in
+          retVal.attributes[attr] = this[$dirty].attributes[attr];
+        }
+        for (const rel in this[$dirty].relationships) { // eslint-disable-line guard-for-in
+          retVal[rel] = this.$$resolveRelDeltas(retVal[rel], rel);
         }
         return retVal;
       }
     });
   }
 
-  // TODO: Unstub this
-  $$resolveRelDeltas(key) {
-    return this[$dirty].relationships[key];
+  $$applyDelta(current, delta) {
+    if (delta.op === 'add' || delta.op === 'modify') {
+      return mergeOptions({}, current, delta.data);
+    } else if (delta.op === 'remove') {
+      return undefined;
+    } else {
+      return current;
+    }
+  }
+
+  $$resolveRelDeltas(current, opts) {
+    const key = opts || this.$dirtyFields;
+    const keys = Array.isArray(key) ? key : [key];
+    const updates = {};
+    for (const relName in current) {
+      if (current in this.$schema.relationships) {
+        updates[relName] = current[relName].map(rel => {
+          return { [rel.id]: rel };
+        }).reduce((acc, curr) => mergeOptions(acc, curr), {});
+      }
+    }
+
+    for (const relName in keys) {
+      // Apply any deltas in dirty cache on top of updates
+      if (relName in this[$dirty].relationships) {
+        this[$dirty].relationships.forEach(delta => {
+          if (!updates[relName]) {
+            updates[relName] = {};
+          }
+          updates[relName][delta.data.id] = this.$$applyDelta(updates[relName][delta.data.id], delta);
+        });
+      }
+    }
+
+    // Collapse updates back into list, omitting undefineds
+    return Object.keys(updates).map(relName => {
+      return {
+        [relName]: Object.keys(updates[relName])
+        .map(id => updates[relName][id])
+        .filter(rel => rel !== undefined)
+        .reduce((acc, curr) => acc.concat(curr), []),
+      };
+    });
   }
 
   $save(opts) {
-    const key = opts || Object.keys(this[$dirty].attributes).concat(Object.keys(this[$dirty].relationships));
+    const key = opts || this.$dirtyFields;
     const keys = Array.isArray(key) ? key : [key];
     const update = {};
+    if (this.$id) {
+      update[this.constructor.$id] = this.$id;
+    }
     keys.forEach(k => {
       if (this[$dirty].attributes[k]) {
         update[k] = this[$dirty].attributes[k];
         delete this[$dirty].attributes[k];
       } else if (this[$dirty].relationships[k]) {
-        update[k] = this.$$resolveRelDeltas(k);
+        update[k] = this.$$resolveRelDeltas(null, k);
         delete this[$dirty].relationships[k];
       }
     });
@@ -160,15 +221,22 @@ export class Model {
     });
   }
 
-  $set(u = {}) {
-    const update = mergeOptions({}, this[$dirty].attributes, u);
-    // this.$$copyValuesFrom(update); // this is the optimistic update;
-    return this[$plump].save(this.constructor, update)
-    .then((updated) => {
-      this.$$copyValuesFrom(updated);
-      this.$$resetDirty();
-      return this;
-    });
+  $set(update) {
+    for (const key in update) {
+      if (key in this.$schema.attributes) {
+        this[$dirty].attributes[key] = update[key];
+      } else if (key in this.$schema.relationships) {
+        if (!(key in this[$dirty].relationships)) {
+          this[$dirty].relationships[key] = [];
+        }
+        this[$dirty].relationships[key].push({
+          op: 'modify',
+          data: update[key],
+        });
+      }
+    }
+
+    return this;
   }
 
   $delete() {
