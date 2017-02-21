@@ -4,7 +4,7 @@ import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 import Bluebird from 'bluebird';
 
-import { Plump, Model, Storage, MemoryStore, $all } from '../index';
+import { Plump, Model, Storage, MemoryStore, $all } from '../src/index';
 import { TestType } from './testType';
 
 // For testing while actual bulkRead implementations are in development
