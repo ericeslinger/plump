@@ -117,24 +117,24 @@ var KeyValueStore = exports.KeyValueStore = function (_Storage) {
     value: function write(t, v) {
       var _this2 = this;
 
-      var id = v[t.$id];
+      var id = v[t.$schema.$id];
       var updateObject = {};
-      Object.keys(t.$fields).forEach(function (fieldName) {
-        if (v[fieldName] !== undefined) {
-          // copy from v to the best of our ability
-          if (t.$fields[fieldName].type === 'array' || t.$fields[fieldName].type === 'hasMany') {
-            updateObject[fieldName] = v[fieldName].concat();
-          } else if (t.$fields[fieldName].type === 'object') {
-            updateObject[fieldName] = Object.assign({}, v[fieldName]);
-          } else {
-            updateObject[fieldName] = v[fieldName];
-          }
+      for (var rel in t.$schema.relationships) {
+        if (v[rel] !== undefined) {
+          updateObject[rel] = v[rel].concat();
         }
-      });
+      }
+      for (var attr in t.$schema.attributes) {
+        if (t.$schema.attributes[attr].type === 'object') {
+          updateObject[attr] = Object.assign({}, v[attr]);
+        } else {
+          updateObject[attr] = v[attr];
+        }
+      }
       if (id === undefined || id === null) {
         if (this.terminal) {
           return this.$$maxKey(t.$name).then(function (n) {
-            var toSave = Object.assign({}, updateObject, _defineProperty({}, t.$id, n + 1));
+            var toSave = Object.assign({}, updateObject, _defineProperty({}, t.$schema.$id, n + 1));
             return _this2._set(_this2.keyString(t.$name, n + 1), JSON.stringify(toSave)).then(function () {
               return _this2.notifyUpdate(t, toSave[t.$id], toSave);
             }).then(function () {
@@ -167,7 +167,7 @@ var KeyValueStore = exports.KeyValueStore = function (_Storage) {
     value: function readMany(t, id, relationship) {
       var _this3 = this;
 
-      var relationshipType = t.$fields[relationship].relationship;
+      var relationshipType = t.$schema.relationships[relationship].type;
       var sideInfo = relationshipType.$sides[relationship];
       return Bluebird.resolve().then(function () {
         var resolves = [_this3._get(_this3.keyString(t.$name, id, relationship))];
@@ -224,7 +224,7 @@ var KeyValueStore = exports.KeyValueStore = function (_Storage) {
     key: 'writeHasMany',
     value: function writeHasMany(type, id, field, value) {
       var toSave = value;
-      var relationshipBlock = type.$fields[field].relationship;
+      var relationshipBlock = type.$schema.relationships[field].type;
       if (relationshipBlock.$restrict) {
         (function () {
           var restrictBlock = {};
@@ -247,7 +247,7 @@ var KeyValueStore = exports.KeyValueStore = function (_Storage) {
 
       var extras = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : {};
 
-      var relationshipBlock = type.$fields[relationshipTitle].relationship;
+      var relationshipBlock = type.$schema.relationships[relationshipTitle].type;
       var sideInfo = relationshipBlock.$sides[relationshipTitle];
       var thisKeyString = this.keyString(type.$name, id, relationshipTitle);
       var otherKeyString = this.keyString(sideInfo.other.type, childId, sideInfo.other.title);
@@ -285,7 +285,7 @@ var KeyValueStore = exports.KeyValueStore = function (_Storage) {
     value: function modifyRelationship(type, id, relationshipTitle, childId, extras) {
       var _this5 = this;
 
-      var relationshipBlock = type.$fields[relationshipTitle].relationship;
+      var relationshipBlock = type.$schema.relationships[relationshipTitle].type;
       var sideInfo = relationshipBlock.$sides[relationshipTitle];
       var thisKeyString = this.keyString(type.$name, id, relationshipTitle);
       var otherKeyString = this.keyString(sideInfo.other.type, childId, sideInfo.other.title);
@@ -313,7 +313,7 @@ var KeyValueStore = exports.KeyValueStore = function (_Storage) {
     value: function remove(type, id, relationshipTitle, childId) {
       var _this6 = this;
 
-      var relationshipBlock = type.$fields[relationshipTitle].relationship;
+      var relationshipBlock = type.$schema.relationships[relationshipTitle].type;
       var sideInfo = relationshipBlock.$sides[relationshipTitle];
       var thisKeyString = this.keyString(type.$name, id, relationshipTitle);
       var otherKeyString = this.keyString(sideInfo.other.type, childId, sideInfo.other.title);

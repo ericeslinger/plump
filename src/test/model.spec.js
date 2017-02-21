@@ -31,8 +31,8 @@ const expect = chai.expect;
 describe('model', () => {
   describe('basic functionality', () => {
     it('should return promises to existing data', () => {
-      const one = new TestType({ id: 1, name: 'potato' });
-      return expect(one.$get()).to.eventually.have.property('name', 'potato');
+      const one = new TestType({ id: 1, name: 'potato' }, plump);
+      return expect(one.$get()).to.eventually.have.property('attributes').with.property('name', 'potato');
     });
 
     it('should properly serialize its schema', () => {
@@ -47,43 +47,79 @@ describe('model', () => {
         name: 'potato',
       }).then(() => {
         const two = plump.find('tests', 2);
-        return expect(two.$get()).to.eventually.have.property('name', 'potato');
+        return expect(two.$get()).to.eventually.have.property('attributes').with.property('name', 'potato');
       });
     });
 
     it('should create an id when one is unset', () => {
       const noID = new TestType({ name: 'potato' }, plump);
-      return expect(noID.$save().then((m) => m.$get())).to.eventually.contain.keys('name', 'id');
+      return noID.$save().then((m) => {
+        return expect(m.$get())
+        .to.eventually.have.property(TestType.$schema.$id)
+        .that.is.not.null;
+      });
     });
 
     it('should allow data to be deleted', () => {
       const one = new TestType({ name: 'potato' }, plump);
       return one.$save()
-      .then(() => expect(plump.find('tests', one.$id).$get()).to.eventually.have.property('name', 'potato'))
+      .then(() => {
+        return expect(plump.find('tests', one.$id).$get())
+        .to.eventually.have.property('attributes')
+        .with.property('name', 'potato');
+      })
       .then(() => one.$delete())
       .then(() => expect(plump.find('tests', one.$id).$get()).to.eventually.be.null);
     });
 
     it('should allow fields to be loaded', () => {
-      const one = new TestType({ name: 'p' }, plump);
+      const one = new TestType({ name: 'p', otherName: 'q' }, plump);
       return one.$save()
-      .then(() => expect(plump.find('tests', one.$id).$get()).to.eventually.have.property('name', 'p'))
+      .then(() => {
+        return expect(plump.find('tests', one.$id).$get())
+        .to.eventually.have.property('attributes')
+        .with.property('name', 'p');
+      })
       .then(() => {
         return expect(plump.find('tests', one.$id).$get($all))
-        .to.eventually.deep.equal(TestType.assign({ name: 'p', id: one.$id }));
+        .to.eventually.deep.equal(TestType.assign({ name: 'p', otherName: 'q', id: one.$id }));
       });
     });
 
-    it('should only load base fields on $get($self)', () => {
+    it('should dirty-cache updates that have not been saved', () => {
       const one = new TestType({ name: 'potato' }, plump);
       return one.$save()
       .then(() => {
-        const baseFields = Object.keys(TestType.$fields).filter(field => TestType.$fields[field].type !== 'hasMany');
+        one.$set({ name: 'rutabaga' });
+        return Bluebird.all([
+          expect(one.$get())
+          .to.eventually.have.property('attributes')
+          .with.property('name', 'rutabaga'),
+          expect(plump.get(TestType, one.$id))
+          .to.eventually.have.property('name', 'potato'),
+        ]);
+      }).then(() => {
+        return one.$save();
+      }).then(() => {
+        return expect(plump.get(TestType, one.$id))
+        .to.eventually.have.property('name', 'rutabaga');
+      });
+    });
+
+    it('should only load base fields on $get()', () => {
+      const one = new TestType({ name: 'potato', otherName: 'schmotato' }, plump);
+      return one.$save()
+      .then(() => {
         // const hasManys = Object.keys(TestType.$fields).filter(field => TestType.$fields[field].type === 'hasMany');
 
-        return expect(plump.find('tests', one.$id).$get()).to.eventually.have.all.keys(baseFields);
+        return plump.find('tests', one.$id).$get();
+      }).then(data => {
+        const baseFields = Object.keys(TestType.$schema.attributes);
+
         // NOTE: .have.all requires list length equality
-        // .and.not.keys(hasManys);
+        expect(data).to.have.property('attributes')
+        .with.all.keys(baseFields);
+        expect(data).to.have.property('relationships').that.is.empty; // eslint-disable-line no-unused-expressions
       });
     });
 
@@ -91,7 +127,7 @@ describe('model', () => {
       const one = new TestType({ name: 'potato' }, plump);
       return one.$save()
       .then(() => one.$set({ name: 'rutabaga' }))
-      .then(() => expect(one.$get()).to.eventually.have.property('name', 'rutabaga'));
+      .then(() => expect(one.$get()).to.eventually.have.property('attributes').with.property('name', 'rutabaga'));
     });
   });
 
@@ -99,7 +135,8 @@ describe('model', () => {
     it('should show empty hasMany lists as {key: []}', () => {
       const one = new TestType({ name: 'frotato' }, plump);
       return one.$save()
-      .then(() => expect(one.$get('children')).to.eventually.deep.equal({ children: [] }));
+      .then(() => expect(one.$get('children')).to.eventually.have.property('relationships')
+      .that.deep.equals({ children: [] }));
     });
 
     it('should add hasMany elements', () => {
@@ -108,7 +145,8 @@ describe('model', () => {
       .then(() => one.$add('children', 100))
       .then(() => {
         return expect(one.$get('children'))
-        .to.eventually.deep.equal({ children: [{ id: 100 }] });
+        .to.eventually.have.property('relationships')
+        .that.deep.equals({ children: [{ child_id: 100, parent_id: one.$id }] });
       });
     });
 
@@ -118,7 +156,8 @@ describe('model', () => {
       .then(() => one.$add('children', 100))
       .then(() => {
         return expect(one.$get('children'))
-        .to.eventually.deep.equal({ children: [{ id: 100 }] });
+        .to.eventually.have.property('relationships')
+        .that.deep.equals({ children: [{ child_id: 100, parent_id: one.$id }] });
       });
     });
 
@@ -128,10 +167,12 @@ describe('model', () => {
       .then(() => one.$add('children', 100))
       .then(() => {
         return expect(one.$get('children'))
-        .to.eventually.deep.equal({ children: [{ id: 100 }] });
+        .to.eventually.have.property('relationships')
+        .that.deep.equals({ children: [{ child_id: 100, parent_id: one.$id }] });
       })
       .then(() => one.$remove('children', 100))
-      .then(() => expect(one.$get('children')).to.eventually.deep.equal({ children: [] }));
+      .then(() => expect(one.$get('children')).to.eventually.have.property('relationships')
+      .that.deep.equals({ children: [] }));
     });
 
     it('should include valence in hasMany operations', () => {
@@ -141,16 +182,20 @@ describe('model', () => {
       .then(() => one.$get('valenceChildren'))
       .then(() => {
         return expect(one.$get('valenceChildren'))
-        .to.eventually.deep.equal({ valenceChildren: [{
-          id: 100,
+        .to.eventually.have.property('relationships')
+        .that.deep.equals({ valenceChildren: [{
+          child_id: 100,
+          parent_id: one.$id,
           perm: 1,
         }] });
       })
       .then(() => one.$modifyRelationship('valenceChildren', 100, { perm: 2 }))
       .then(() => {
         return expect(one.$get('valenceChildren'))
-        .to.eventually.deep.equal({ valenceChildren: [{
-          id: 100,
+        .to.eventually.have.property('relationships')
+        .that.deep.equals({ valenceChildren: [{
+          child_id: 100,
+          parent_id: one.$id,
           perm: 2,
         }] });
       });
@@ -164,14 +209,18 @@ describe('model', () => {
       .then(() => {
         const onePrime = plump.find(TestType.$name, one.$id);
         return one.$get('children')
-        .then((res) => expect(res).to.deep.equal({ children: [] }))
+        .then((res) => expect(res).to.have.property('relationships')
+        .that.deep.equals({ children: [] }))
         .then(() => onePrime.$get('children'))
-        .then((res) => expect(res).to.deep.equal({ children: [] }))
+        .then((res) => expect(res).to.have.property('relationships')
+        .that.deep.equals({ children: [] }))
         .then(() => one.$add('children', 100))
         .then(() => one.$get('children'))
-        .then((res) => expect(res).to.deep.equal({ children: [{ id: 100 }] }))
+        .then((res) => expect(res).to.have.property('relationships')
+        .that.deep.equals({ children: [{ child_id: 100, parent_id: one.$id }] }))
         .then(() => onePrime.$get('children'))
-        .then((res) => expect(res).to.deep.equal({ children: [{ id: 100 }] }));
+        .then((res) => expect(res).to.have.property('relationships')
+        .that.deep.equals({ children: [{ child_id: 100, parent_id: one.$id }] }));
       });
     });
 
@@ -181,14 +230,14 @@ describe('model', () => {
       .then(() => {
         const onePrime = plump.find(TestType.$name, one.$id);
         return one.$get()
-        .then((res) => expect(res).have.property('name', 'potato'))
+        .then((res) => expect(res).have.property('attributes').with.property('name', 'potato'))
         .then(() => onePrime.$get())
-        .then((res) => expect(res).have.property('name', 'potato'))
-        .then(() => one.$set('name', 'grotato'))
+        .then((res) => expect(res).have.property('attributes').with.property('name', 'potato'))
+        .then(() => one.$set({ name: 'grotato' }).$save())
         .then(() => one.$get())
-        .then((res) => expect(res).have.property('name', 'grotato'))
+        .then((res) => expect(res).have.property('attributes').with.property('name', 'grotato'))
         .then(() => onePrime.$get())
-        .then((res) => expect(res).have.property('name', 'grotato'));
+        .then((res) => expect(res).have.property('attributes').with.property('name', 'grotato'));
       });
     });
 
@@ -200,26 +249,27 @@ describe('model', () => {
         const subscription = one.$subscribe((v) => {
           try {
             if (phase === 0) {
-              if (v.name) {
+              if (v.attributes.name) {
                 phase = 1;
               }
             }
             if (phase === 1) {
-              expect(v).to.have.property('name', 'potato');
+              expect(v).to.have.property('attributes').with.property('name', 'potato');
               if (v.id !== undefined) {
                 phase = 2;
               }
             }
             if (phase === 2) {
-              if (v.name !== 'potato') {
-                expect(v).to.have.property('name', 'grotato');
+              if (v.attributes.name !== 'potato') {
+                expect(v).to.have.property('attributes').with.property('name', 'grotato');
                 phase = 3;
               }
             }
             if (phase === 3) {
-              if ((v.children) && (v.children.length > 0)) {
-                expect(v.children).to.deep.equal([{
-                  id: 100,
+              if ((v.relationships.children) && (v.relationships.children.length > 0)) {
+                expect(v.relationships.children).to.deep.equal([{
+                  op: 'add',
+                  data: { child_id: 100, parent_id: one.$id },
                 }]);
                 subscription.unsubscribe();
                 done();
@@ -241,25 +291,30 @@ describe('model', () => {
       .then(() => one.$add('children', 100))
       .then(() => {
         const subscription = one.$subscribe([$all], (v) => {
+          console.log(`PHASE: ${phase}`);
+          console.log(`V: ${JSON.stringify(v, null, 2)}`);
           try {
             if (phase === 0) {
-              if (v.name) {
+              if (v.attributes.name) {
+                expect(v).to.have.property('attributes').with.property('name', 'potato');
                 phase = 1;
               }
             }
             if (phase === 1) {
-              expect(v).to.have.property('name', 'potato');
-              expect(v.children).to.deep.equal([{
-                id: 100,
+              expect(v.relationships.children).to.deep.equal([{
+                op: 'add',
+                data: { child_id: 100, parent_id: one.$id },
               }]);
               phase = 2;
             }
             if (phase === 2) {
-              if ((v.children) && (v.children.length > 1)) {
-                expect(v.children).to.deep.equal([{
-                  id: 100,
+              if ((v.relationships.children) && (v.relationships.children.length > 1)) {
+                expect(v.relationships.children).to.deep.equal([{
+                  op: 'add',
+                  data: { child_id: 100, parent_id: one.$id },
                 }, {
-                  id: 101,
+                  op: 'add',
+                  data: { child_id: 101, parent_id: one.$id },
                 }]);
                 subscription.unsubscribe();
                 done();
@@ -304,16 +359,18 @@ describe('model', () => {
           let phase = 0;
           const two = otherPlump.find('tests', val.id);
           const subscription = two.$subscribe((v) => {
+            console.log(`PHASE: ${phase}`);
+            console.log(`V: ${JSON.stringify(v, null, 2)}`);
             try {
               if (phase === 0) {
-                if (v.name) {
-                  expect(v).to.have.property('name', 'potato');
+                if (v.attributes.name) {
+                  expect(v).to.have.property('attributes').with.property('name', 'potato');
                   phase = 1;
                 }
               }
               if (phase === 1) {
-                if (v.name !== 'potato') {
-                  expect(v).to.have.property('name', 'slowtato');
+                if (v.attributes.name !== 'potato') {
+                  expect(v).to.have.property('attributes').with.property('name', 'slowtato');
                   subscription.unsubscribe();
                   done();
                 }
