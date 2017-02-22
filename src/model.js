@@ -267,7 +267,7 @@ export class Model {
         } else if (item.$id) {
           id = item.$id;
         } else {
-          id = item[this.$schema.relationships[key].relationship.$sides[key].other.field];
+          id = item[this.$schema.relationships[key].type.$sides[key].other.field];
         }
         if ((typeof id === 'number') && (id >= 1)) {
           return this[$plump].add(this.constructor, this.$id, key, id, extras);
