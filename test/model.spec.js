@@ -268,10 +268,7 @@ describe('model', () => {
               }
               if (phase === 3) {
                 if ((v.relationships.children) && (v.relationships.children.length > 0)) {
-                  expect(v.relationships.children).to.deep.equal([{
-                    op: 'add',
-                    data: { child_id: 100, parent_id: one.$id },
-                  }]);
+                  expect(v.relationships.children).to.deep.equal([{ child_id: 100, parent_id: one.$id }]);
                   subscription.unsubscribe();
                   resolve();
                 }
@@ -285,7 +282,7 @@ describe('model', () => {
         .then(() => one.$add('children', 100));
       });
     });
-    console.log('******what');
+
     it('should allow subscription to model sideloads', () => {
       return new Bluebird((resolve, reject) => {
         const one = new TestType({ name: 'potato' }, plump);
@@ -294,31 +291,23 @@ describe('model', () => {
         .then(() => one.$add('children', 100))
         .then(() => {
           const subscription = one.$subscribe([$all], (v) => {
-            console.log(`PHASE-sideload: ${phase}`);
-            console.log(`V-sideload: ${JSON.stringify(v, null, 2)}`);
             try {
               if (phase === 0) {
-                if (v.attributes.name) {
-                  expect(v).to.have.property('attributes').with.property('name', 'potato');
+                if (v.attributes) {
+                  expect(v).to.have.property('attributes').that.is.empty; // eslint-disable-line no-unused-expressions
                   phase = 1;
                 }
               }
               if (phase === 1) {
-                expect(v.relationships.children).to.deep.equal([{
-                  op: 'add',
-                  data: { child_id: 100, parent_id: one.$id },
-                }]);
+                expect(v.relationships.children).to.deep.equal([{ child_id: 100, parent_id: one.$id }]);
                 phase = 2;
               }
               if (phase === 2) {
                 if ((v.relationships.children) && (v.relationships.children.length > 1)) {
-                  expect(v.relationships.children).to.deep.equal([{
-                    op: 'add',
-                    data: { child_id: 100, parent_id: one.$id },
-                  }, {
-                    op: 'add',
-                    data: { child_id: 101, parent_id: one.$id },
-                  }]);
+                  expect(v.relationships.children).to.deep.equal([
+                    { child_id: 100, parent_id: one.$id },
+                    { child_id: 101, parent_id: one.$id },
+                  ]);
                   subscription.unsubscribe();
                   resolve();
                 }
@@ -364,8 +353,6 @@ describe('model', () => {
             let phase = 0;
             const two = otherPlump.find('tests', val.id);
             const subscription = two.$subscribe((v) => {
-              console.log(`PHASE: ${phase}`);
-              console.log(`V: ${JSON.stringify(v, null, 2)}`);
               try {
                 if (phase === 0) {
                   if (v.attributes.name) {
