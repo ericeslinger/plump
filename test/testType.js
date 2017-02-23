@@ -180,6 +180,7 @@ TestType.$packageIncludes = ['children'];
 TestType.$schema = {
   $id: 'id',
   attributes: {
+    id: { type: 'number' },
     name: { type: 'string' },
     otherName: { type: 'string', default: '' },
     extended: { type: 'object', default: {} },
