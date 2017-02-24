@@ -37,6 +37,11 @@ export class Model {
     return this[this.constructor.$id];
   }
 
+  get $fields() {
+    return Object.keys(this.$schema.attributes)
+    .concat(Object.keys(this.$schema.relationships));
+  }
+
   get $schema() {
     return this.constructor.$schema;
   }
@@ -49,10 +54,21 @@ export class Model {
   $$schematize(v) {
     const retVal = { attributes: {}, relationships: {} };
     for (const field in v) {
-      if (field in this.$schema.attributes) {
+      if (field === this.constructor.$id) {
+        retVal.id = v[field];
+      } else if (field in this.$schema.attributes) {
         retVal.attributes[field] = v[field];
       } else if (field in this.$schema.relationships) {
-        retVal.relationships[field] = v[field];
+        retVal.relationships[field] = v[field].map(rel => {
+          const relSchema = this.$schema.relationships[field].type.$sides[field];
+          const schematized = { id: rel[relSchema.other.field] };
+          for (const relField in rel) {
+            if (!(relField === relSchema.self.field || relField === relSchema.other.field)) {
+              schematized[relField] = rel[relField];
+            }
+          }
+          return schematized;
+        });
       }
     }
     return retVal;
@@ -73,7 +89,7 @@ export class Model {
   }
 
   $$overlayDirty(v) {
-    const retVal = mergeOptions({}, this.$$schematize(v));
+    const retVal = mergeOptions({}, v);
     for (const attr in this[$dirty].attributes) { // eslint-disable-line guard-for-in
       if (!retVal.attributes) {
         retVal.attributes = {};
@@ -84,8 +100,7 @@ export class Model {
       if (!retVal.relationships) {
         retVal.relationships = {};
       }
-      const newRel = this.$$resolveRelDeltas(rel, retVal.relationships[rel]);
-      retVal.relationships[rel] = newRel; // this.$$resolveRelDeltas(rel, retVal.relationships[rel]);
+      retVal.relationships[rel] = this.$$resolveRelDeltas(rel, retVal.relationships[rel]);
     }
     return retVal;
   }
@@ -103,15 +118,14 @@ export class Model {
 
   $$resolveRelDeltas(relName, current) {
     // Index current relationships by ID for efficient modification
-    const childIdField = this.$schema.relationships[relName].type.$sides[relName].other.field;
     const updates = (current || []).map(rel => {
-      return { [rel[childIdField]]: rel };
+      return { id: rel };
     }).reduce((acc, curr) => mergeOptions(acc, curr), {});
 
     // Apply any deltas in dirty cache on top of updates
     if (relName in this[$dirty].relationships) {
       this[$dirty].relationships[relName].forEach(delta => {
-        const childId = delta.data[childIdField];
+        const childId = delta.data.id;
         updates[childId] = this.$$applyDelta(updates[childId], delta);
       });
     }
@@ -135,9 +149,17 @@ export class Model {
           this[$dirty].relationships[key] = [];
         }
         opts[key].forEach(rel => {
+          const relSchema = this.$schema.relationships[key].type.$sides[key];
+          const id = rel[relSchema.other.field];
+          const data = { id };
+          for (const field in rel) {
+            if (!(field === relSchema.other.field || field === relSchema.self.field)) {
+              data[field] = rel[field];
+            }
+          }
           this[$dirty].relationships[key].push({
             op: 'add',
-            data: rel,
+            data: data,
           });
         });
       }
@@ -174,7 +196,7 @@ export class Model {
     .subscribe((v) => {
       this.$$fireUpdate(v);
     });
-    return this[$subject].subscribe(cb);
+    return this[$subject].subscribeOn(cb);
   }
 
   $$resetDirty(opts) {
@@ -206,13 +228,12 @@ export class Model {
       const keys = opts && !Array.isArray(opts) ? [opts] : opts;
       return this[$plump].get(this.constructor, this.$id, keys);
     }).then(self => {
-      const isClean = Object.keys(this[$dirty])
-      .map(k => Object.keys(this[$dirty][k]).length)
-      .reduce((acc, curr) => acc + curr, 0) === 0;
-      if (!self && isClean) {
+      debugger;
+      if (!self && this.$dirtyFields.length === 0) {
         return null;
       } else {
-        const retVal = this.$$overlayDirty(self);
+        const schematized = this.$$schematize(self);
+        const retVal = this.$$overlayDirty(schematized);
         retVal.type = this.$name;
         retVal.id = this.$id;
         return retVal;
@@ -220,6 +241,7 @@ export class Model {
     });
   }
 
+  // TODO: Should $save ultimately return this.$get()?
   $save(opts) {
     const update = this.$$flatten(opts);
     if (this.$id !== undefined) {
@@ -227,23 +249,34 @@ export class Model {
     }
     return this[$plump].save(this.constructor, update)
     .then((updated) => {
+      const schematized = this.$$schematize(updated);
       this.$$resetDirty(opts);
-      if (updated[this.constructor.$id]) {
-        this[this.constructor.$id] = updated[this.constructor.$id];
+      if (schematized.id) {
+        this[this.constructor.$id] = schematized.id;
       }
-      this.$$fireUpdate(updated);
+      this.$$fireUpdate(schematized);
       return this;
     });
   }
 
   $set(update) {
-    this.$$copyValuesFrom(update);
-    this.$$fireUpdate(update);
+    // Filter out non-attribute keys
+    const sanitized = {};
+    for (const key in update) {
+      if (key in this.$schema.attributes) {
+        sanitized[key] = update[key];
+      } else {
+        throw new Error(`Key ${key} is not an attributes of ${this.$name}`);
+      }
+    }
+    this.$$copyValuesFrom(sanitized);
+    this.$$fireUpdate(sanitized);
     return this;
   }
 
   $delete() {
-    return this[$plump].delete(this.constructor, this.$id);
+    return this[$plump].delete(this.constructor, this.$id)
+    .then(data => this.$$schematize(data));
   }
 
   $rest(opts) {
@@ -254,38 +287,39 @@ export class Model {
         url: `/${this.constructor.$name}/${this.$id}/${opts.url}`,
       }
     );
-    return this[$plump].restRequest(restOpts);
+    return this[$plump].restRequest(restOpts).then(data => this.$$schematize(data));
   }
 
   $add(key, item, extras) {
-    return Bluebird.resolve()
-    .then(() => {
-      if (this.$schema.relationships[key]) {
-        let id = 0;
-        if (typeof item === 'number') {
-          id = item;
-        } else if (item.$id) {
-          id = item.$id;
-        } else {
-          id = item[this.$schema.relationships[key].type.$sides[key].other.field];
-        }
-        if ((typeof id === 'number') && (id >= 1)) {
-          return this[$plump].add(this.constructor, this.$id, key, id, extras);
-        } else {
-          return Bluebird.reject(new Error('Invalid item added to hasMany'));
-        }
+    if (this.$schema.relationships[key]) {
+      let id = 0;
+      if (typeof item === 'number') {
+        id = item;
+      } else if (item.$id) {
+        id = item.$id;
       } else {
-        return Bluebird.reject(new Error('Cannot $add except to hasMany field'));
+        id = item[this.$schema.relationships[key].type.$sides[key].other.field];
       }
-    }).then((l) => {
-      this.$$copyValuesFrom({ [key]: l });
-      return l;
-    });
+      if ((typeof id === 'number') && (id >= 1)) {
+        if (!(key in this[$dirty].relationships)) {
+          this[$dirty].relationships[key] = [];
+        }
+        this[$dirty].relationships[key].push({
+          op: 'add',
+          data: Object.assign({ id }, extras),
+        });
+        this.$$fireUpdate();
+        return this;
+      } else {
+        throw new Error('Invalid item added to hasMany');
+      }
+    } else {
+      throw new Error('Cannot $add except to hasMany field');
+    }
   }
 
   $modifyRelationship(key, item, extras) {
     if (key in this.$schema.relationships) {
-      const relSchema = this.$schema.relationships[key].type.$sides[key];
       let id = 0;
       if (typeof item === 'number') {
         id = item;
@@ -298,26 +332,20 @@ export class Model {
         }
         this[$dirty].relationships[key].push({
           op: 'modify',
-          data: Object.assign(
-            {
-              [relSchema.self.field]: this.$id,
-              [relSchema.other.field]: id,
-            },
-            extras
-          ),
+          data: Object.assign({ id }, extras),
         });
-        return this[$plump].modifyRelationship(this.constructor, this.$id, key, id, extras);
+        this.$$fireUpdate();
+        return this;
       } else {
-        return Bluebird.reject(new Error('Invalid item added to hasMany'));
+        throw new Error('Invalid item added to hasMany');
       }
     } else {
-      return Bluebird.reject(new Error('Cannot $add except to hasMany field'));
+      throw new Error('Cannot $add except to hasMany field');
     }
   }
 
   $remove(key, item) {
     if (key in this.$schema.relationships) {
-      const relSchema = this.$schema.relationships[key].type.$sides[key];
       let id = 0;
       if (typeof item === 'number') {
         id = item;
@@ -328,18 +356,16 @@ export class Model {
         if (key in this[$dirty].relationships) {
           this[$dirty].relationships[key].push({
             op: 'remove',
-            data: {
-              [relSchema.self.field]: this.$id,
-              [relSchema.other.field]: id,
-            },
+            data: { id },
           });
         }
-        return this[$plump].remove(this.constructor, this.$id, key, id);
+        this.$$fireUpdate();
+        return this;
       } else {
-        return Bluebird.reject(new Error('Invalid item $removed from hasMany'));
+        throw new Error('Invalid item $removed from hasMany');
       }
     } else {
-      return Bluebird.reject(new Error('Cannot $remove except from hasMany field'));
+      throw new Error('Cannot $remove except from hasMany field');
     }
   }
 
