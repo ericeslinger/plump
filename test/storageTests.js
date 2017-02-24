@@ -13,11 +13,14 @@ chai.use(chaiAsPromised);
 const expect = chai.expect;
 
 const sampleObject = {
-  name: 'potato',
-  extended: {
-    actual: 'rutabaga',
-    otherValue: 42,
+  attributes: {
+    name: 'potato',
+    extended: {
+      actual: 'rutabaga',
+      otherValue: 42,
+    },
   },
+  relationships: {},
 };
 
 export function testSuite(mocha, storeOpts) {
@@ -85,7 +88,7 @@ export function testSuite(mocha, storeOpts) {
           .then(() => actualStore.add(TestType, createdObject.id, 'agreers', 102))
           .then(() => {
             return expect(actualStore.read(TestType, createdObject.id, 'likers'))
-            .to.eventually.deep.equal({
+            .to.eventually.have.property('relationships').that.deep.equals({
               likers: [
                 {
                   parent_id: 100,
@@ -100,7 +103,7 @@ export function testSuite(mocha, storeOpts) {
           })
           .then(() => {
             return expect(actualStore.read(TestType, createdObject.id, 'agreers'))
-            .to.eventually.deep.equal({
+            .to.eventually.have.property('relationships').that.deep.equals({
               agreers: [
                 {
                   parent_id: 100,
@@ -134,24 +137,26 @@ export function testSuite(mocha, storeOpts) {
                 {},
                 createdObject,
                 {
-                  children: [
-                    {
-                      child_id: 200,
-                      parent_id: createdObject.id,
-                    },
-                    {
-                      child_id: 201,
-                      parent_id: createdObject.id,
-                    },
-                    {
-                      child_id: 202,
-                      parent_id: createdObject.id,
-                    },
-                    {
-                      child_id: 203,
-                      parent_id: createdObject.id,
-                    },
-                  ],
+                  relationships: {
+                    children: [
+                      {
+                        child_id: 200,
+                        parent_id: createdObject.id,
+                      },
+                      {
+                        child_id: 201,
+                        parent_id: createdObject.id,
+                      },
+                      {
+                        child_id: 202,
+                        parent_id: createdObject.id,
+                      },
+                      {
+                        child_id: 203,
+                        parent_id: createdObject.id,
+                      },
+                    ],
+                  },
                 }
               )
             );
@@ -169,7 +174,7 @@ export function testSuite(mocha, storeOpts) {
           .then(() => actualStore.add(TestType, 500, 'children', createdObject.id))
           .then(() => {
             return expect(actualStore.read(TestType, createdObject.id, ['children']))
-            .to.eventually.deep.equal({
+            .to.eventually.have.property('relationships').that.deep.equals({
               children: [
                 {
                   child_id: 100,
@@ -209,7 +214,7 @@ export function testSuite(mocha, storeOpts) {
           return actualStore.add(TestType, createdObject.id, 'valenceChildren', 100, { perm: 1 })
           .then(() => {
             return expect(actualStore.read(TestType, createdObject.id, 'valenceChildren'))
-            .to.eventually.deep.equal({
+            .to.eventually.have.property('relationships').that.deep.equals({
               valenceChildren: [{
                 child_id: 100,
                 parent_id: createdObject.id,
@@ -226,7 +231,7 @@ export function testSuite(mocha, storeOpts) {
           return actualStore.add(TestType, createdObject.id, 'valenceChildren', 100, { perm: 1 })
           .then(() => {
             return expect(actualStore.read(TestType, createdObject.id, 'valenceChildren'))
-            .to.eventually.deep.equal({
+            .to.eventually.have.property('relationships').that.deep.equals({
               valenceChildren: [{
                 child_id: 100,
                 parent_id: createdObject.id,
@@ -236,7 +241,7 @@ export function testSuite(mocha, storeOpts) {
           }).then(() => actualStore.modifyRelationship(TestType, createdObject.id, 'valenceChildren', 100, { perm: 2 }))
           .then(() => {
             return expect(actualStore.read(TestType, createdObject.id, 'valenceChildren'))
-            .to.eventually.deep.equal({
+            .to.eventually.have.property('relationships').that.deep.equals({
               valenceChildren: [{
                 child_id: 100,
                 parent_id: createdObject.id,
@@ -253,7 +258,7 @@ export function testSuite(mocha, storeOpts) {
           return actualStore.add(TestType, createdObject.id, 'children', 100)
           .then(() => {
             return expect(actualStore.read(TestType, createdObject.id, 'children'))
-            .to.eventually.deep.equal({
+            .to.eventually.have.property('relationships').that.deep.equals({
               children: [{
                 child_id: 100,
                 parent_id: createdObject.id,
@@ -263,7 +268,7 @@ export function testSuite(mocha, storeOpts) {
           .then(() => actualStore.remove(TestType, createdObject.id, 'children', 100))
           .then(() => {
             return expect(actualStore.read(TestType, createdObject.id, 'children'))
-            .to.eventually.deep.equal({ children: [] });
+            .to.eventually.have.property('relationships').that.deep.equals({ children: [] });
           });
         });
       });
@@ -276,7 +281,7 @@ export function testSuite(mocha, storeOpts) {
           .then(() => actualStore.add(TestType, createdObject.id, 'queryChildren', 103, { perm: 3 }))
           .then(() => {
             return expect(actualStore.read(TestType, createdObject.id, 'queryChildren'))
-            .to.eventually.deep.equal({
+            .to.eventually.have.property('relationships').that.deep.equals({
               queryChildren: [
                 {
                   child_id: 102,
@@ -302,7 +307,8 @@ export function testSuite(mocha, storeOpts) {
           types: [TestType],
         });
         return actualStore.write(TestType, {
-          name: 'potato',
+          attributes: { name: 'potato' },
+          relationships: {},
         }).then((createdObject) => {
           return expect(memstore.read(TestType, createdObject.id)).to.eventually.have.property('name', 'potato');
         }).finally(() => {
@@ -315,7 +321,8 @@ export function testSuite(mocha, storeOpts) {
         let testItem;
         let memstore;
         return actualStore.write(TestType, {
-          name: 'potato',
+          attributes: { name: 'potato' },
+          relationships: {},
         }).then((createdObject) => {
           testItem = createdObject;
           return expect(actualStore.read(TestType, testItem.id)).to.eventually.have.property('name', 'potato');
@@ -341,7 +348,8 @@ export function testSuite(mocha, storeOpts) {
           types: [TestType],
         });
         return actualStore.write(TestType, {
-          name: 'potato',
+          attributes: { name: 'potato' },
+          relationships: {},
         }).then((createdObject) => {
           testItem = createdObject;
           return actualStore.add(TestType, testItem.id, 'likers', 100);
@@ -362,7 +370,8 @@ export function testSuite(mocha, storeOpts) {
         let testItem;
         let memstore;
         return actualStore.write(TestType, {
-          name: 'potato',
+          attributes: { name: 'potato' },
+          relationships: {},
         }).then((createdObject) => {
           testItem = createdObject;
           return expect(actualStore.read(TestType, testItem.id)).to.eventually.have.property('name', 'potato');

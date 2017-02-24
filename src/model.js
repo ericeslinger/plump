@@ -54,7 +54,7 @@ export class Model {
   $$schematize(v) {
     const retVal = { attributes: {}, relationships: {} };
     for (const field in v) {
-      if (field === this.constructor.$id) {
+      if (field === 'id' || field === this.constructor.$id) {
         retVal.id = v[field];
       } else if (field in this.$schema.attributes) {
         retVal.attributes[field] = v[field];
@@ -82,7 +82,7 @@ export class Model {
       if (this[$dirty].attributes[k]) {
         retVal[k] = this[$dirty].attributes[k];
       } else if (this[$dirty].relationships[k]) {
-        retVal[k] = this.$$resolveRelDeltas(k);
+        retVal[k] = this.$$resolveRelationships(k);
       }
     });
     return retVal;
@@ -100,7 +100,7 @@ export class Model {
       if (!retVal.relationships) {
         retVal.relationships = {};
       }
-      retVal.relationships[rel] = this.$$resolveRelDeltas(rel, retVal.relationships[rel]);
+      retVal.relationships[rel] = this.$$resolveRelationships(rel, retVal.relationships[rel]);
     }
     return retVal;
   }
@@ -116,10 +116,10 @@ export class Model {
     }
   }
 
-  $$resolveRelDeltas(relName, current) {
+  $$resolveRelationships(relName, current) {
     // Index current relationships by ID for efficient modification
     const updates = (current || []).map(rel => {
-      return { id: rel };
+      return { [rel.id]: rel };
     }).reduce((acc, curr) => mergeOptions(acc, curr), {});
 
     // Apply any deltas in dirty cache on top of updates
@@ -228,7 +228,6 @@ export class Model {
       const keys = opts && !Array.isArray(opts) ? [opts] : opts;
       return this[$plump].get(this.constructor, this.$id, keys);
     }).then(self => {
-      debugger;
       if (!self && this.$dirtyFields.length === 0) {
         return null;
       } else {
@@ -243,10 +242,24 @@ export class Model {
 
   // TODO: Should $save ultimately return this.$get()?
   $save(opts) {
-    const update = this.$$flatten(opts);
+    const options = opts || this.$fields;
+    const keys = Array.isArray(options) ? options : [options];
+
+    // Deep copy this.$$dirty, filtering out keys that are not in opts
+    const update = Object.keys(this[$dirty]).map(fieldType => {
+      return Object.keys(this[$dirty][fieldType])
+        .filter(key => key in keys)
+        .map(key => {
+          const val = this[$dirty][fieldType][key];
+          return { [key]: typeof val === 'object' ? mergeOptions({}, val) : val };
+        })
+        .reduce((acc, curr) => Object.assign(acc, curr), {});
+    }).reduce((acc, curr) => Object.assign(acc, curr), {});
+
     if (this.$id !== undefined) {
       update[this.constructor.$id] = this.$id;
     }
+
     return this[$plump].save(this.constructor, update)
     .then((updated) => {
       const schematized = this.$$schematize(updated);

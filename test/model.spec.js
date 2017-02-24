@@ -140,7 +140,6 @@ describe('model', () => {
       return one.$save()
       .then(() => one.$add('children', 100).$save())
       .then(() => {
-        debugger;
         return expect(one.$get('children'))
         .to.eventually.have.property('relationships')
         .that.deep.equals({ children: [{ id: 100 }] });

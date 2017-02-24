@@ -1,4 +1,6 @@
 import * as Bluebird from 'bluebird';
+import mergeOptions from 'merge-options';
+
 import { Storage } from './storage';
 import { createFilter } from './createFilter';
 import { $self } from '../model';
@@ -70,6 +72,47 @@ function maybeDelete(array, idx, keystring, store) {
   });
 }
 
+function applyDelta(base, delta) {
+  if (delta.op === 'add' || delta.op === 'modify') {
+    const retVal = mergeOptions({}, base, delta.data);
+    return retVal;
+  } else if (delta.op === 'remove') {
+    return undefined;
+  } else {
+    return base;
+  }
+}
+
+function resolveRelationship(deltas, base = []) {
+  // Index current relationships by ID for efficient modification
+  const updates = base.map(rel => {
+    return { [rel.id]: rel };
+  }).reduce((acc, curr) => mergeOptions(acc, curr), {});
+
+  // Apply any deltas in dirty cache on top of updates
+  deltas.forEach(delta => {
+    const childId = delta.data.id;
+    updates[childId] = applyDelta(updates[childId], delta);
+  });
+
+  // Collapse updates back into list, omitting undefineds
+  return Object.keys(updates)
+    .map(id => updates[id])
+    .filter(rel => rel !== undefined)
+    .reduce((acc, curr) => acc.concat(curr), []);
+}
+
+// TODO
+function resolveRelationships(schema, deltas, base = {}) {
+  const updates = {};
+  for (const relName in deltas) {
+    if (relName in schema.relationships) {
+      updates[relName] = resolveRelationship(deltas[relName], base[relName]);
+    }
+  }
+  return mergeOptions({}, base, updates);
+}
+
 
 export class KeyValueStore extends Storage {
   $$maxKey(t) {
@@ -86,54 +129,85 @@ export class KeyValueStore extends Storage {
     });
   }
 
-  write(t, v) {
-    const id = v[t.$schema.$id];
-    const updateObject = {};
-    for (const rel in t.$schema.relationships) {
-      if (v[rel] !== undefined) {
-        updateObject[rel] = v[rel].concat();
-      }
-    }
-    for (const attr in t.$schema.attributes) {
-      if (t.$schema.attributes[attr].type === 'object') {
-        updateObject[attr] = Object.assign({}, v[attr]);
-      } else {
-        updateObject[attr] = v[attr];
-      }
-    }
-    if ((id === undefined) || (id === null)) {
-      if (this.terminal) {
-        return this.$$maxKey(t.$name)
-        .then((n) => {
-          const toSave = Object.assign({}, updateObject, { [t.$schema.$id]: n + 1 });
-          return this._set(this.keyString(t.$name, n + 1), JSON.stringify(toSave))
-          .then(() => {
-            return this.notifyUpdate(t, toSave[t.$id], toSave);
-          })
-          .then(() => toSave);
-        });
-      } else {
-        throw new Error('Cannot create new content in a non-terminal store');
-      }
-    } else {
-      return this._get(this.keyString(t.$name, id))
-      .then((origValue) => {
-        const update = Object.assign({}, JSON.parse(origValue), updateObject);
-        return this._set(this.keyString(t.$name, id), JSON.stringify(update))
-        .then(() => {
-          return this.notifyUpdate(t, id, update);
+  createNew(t, v) {
+    const toSave = mergeOptions({}, v);
+    if (this.terminal) {
+      return this.$$maxKey(t.$name)
+      .then((n) => {
+        const id = n + 1;
+        toSave[t.$schema.$id] = id;
+        return Bluebird.all([
+          this.writeAttributes(t, id, toSave.attributes),
+          this.writeRelationships(t, id, toSave.relationships),
+        ]).then(() => {
+          return this.notifyUpdate(t, toSave[t.$id], {
+            attributes: toSave.attributes,
+            relationships: resolveRelationships(t.$schema, toSave.relationships),
+          });
         })
-        .then(() => update);
+        .then(() => toSave);
+      });
+    } else {
+      throw new Error('Cannot create new content in a non-terminal store');
+    }
+  }
+
+  getRelationships(t, id, opts) {
+    const keys = opts && !Array.isArray(opts) ? [opts] : opts;
+    return Bluebird.all(
+      keys.map(relName => {
+        return this._get(this.keyString(t.$name, id, relName))
+        .then(rel => {
+          return { relName: rel };
+        });
+      })
+    ).then(relList => relList.reduce((acc, curr) => mergeOptions(acc, curr), {}));
+  }
+
+  write(t, v) {
+    const id = v.id || v[t.$schema.$id];
+    if ((id === undefined) || (id === null)) {
+      return this.createNew(t, v);
+    } else {
+      return Bluebird.all([
+        this._get(this.keyString(t.$name, id)),
+        this.getRelationships(t, id, Object.keys(v.relationships)),
+      ]).then(([origAttributes, origRelationships]) => {
+        const updatedAttributes = Object.assign({}, JSON.parse(origAttributes), v.attributes);
+        const updatedRelationships = resolveRelationships(t.$schema, v.relationships, origRelationships);
+        return Bluebird.all([
+          this.writeAttributes(t, id, updatedAttributes),
+          this.writeRelationships(t, id, updatedRelationships),
+        ])
+        .then(() => {
+          return this.notifyUpdate(t, id, {
+            attributes: updatedAttributes,
+            relationships: updatedRelationships,
+          });
+        })
+        .then(() => {
+          return { attributes: updatedAttributes, relationships: updatedRelationships };
+        });
       });
     }
   }
 
-  readOne(t, id) {
+  writeAttributes(t, id, attributes) {
+    return this._set(this.keyString(t.$name, id), JSON.stringify(attributes));
+  }
+
+  writeRelationships(t, id, relationships) {
+    return Object.keys(relationships).map(relName => {
+      return this.writeHasMany(t, id, relName, relationships[relName]);
+    }).reduce((thenable, curr) => thenable.then(() => curr), Bluebird.resolve());
+  }
+
+  readAttributes(t, id) {
     return this._get(this.keyString(t.$name, id))
     .then((d) => JSON.parse(d));
   }
 
-  readMany(t, id, relationship) {
+  readRelationship(t, id, relationship) {
     const relationshipType = t.$schema.relationships[relationship].type;
     const sideInfo = relationshipType.$sides[relationship];
     return Bluebird.resolve()
@@ -290,6 +364,6 @@ export class KeyValueStore extends Storage {
   }
 
   keyString(typeName, id, relationship) {
-    return `${typeName}:${relationship || 'store'}:${id}`;
+    return `${typeName}:${relationship ? `rel.${relationship}` : 'attributes'}:${id}`;
   }
 }

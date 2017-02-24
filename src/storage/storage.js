@@ -1,7 +1,9 @@
 /* eslint no-unused-vars: 0 */
 
 import * as Bluebird from 'bluebird';
+import mergeOptions from 'merge-options';
 import { Subject } from 'rxjs/Rx';
+
 import { $self, $all } from '../model';
 
 const $emitter = Symbol('$emitter');
@@ -52,7 +54,7 @@ export class Storage {
   }
 
   // TODO: write the two-way has/get logic into this method
-  // and provide override hooks for readOne readMany
+  // and provide override hooks for readAttributes readRelationship
 
   read(type, id, key) {
     let keys = [$self];
@@ -65,30 +67,27 @@ export class Storage {
       keys = Object.keys(type.$schema.relationships);
       keys.push($self);
     }
-    // if (keys.indexOf($self) < 0) {
-    //   keys.push($self);
-    // }
     return Bluebird.resolve()
     .then(() => {
       return Bluebird.all(keys.map((k) => {
         if ((k !== $self) && (type.$schema.relationships[k])) {
-          return this.readMany(type, id, k);
+          return this.readRelationship(type, id, k);
         } else {
-          return this.readOne(type, id);
+          return this.readAttributes(type, id);
         }
       })).then((valArray) => {
         const selfIdx = keys.indexOf($self);
-        const retVal = {};
+        const retVal = { id, attributes: {}, relationships: {} };
         if (selfIdx >= 0) {
           if (valArray[selfIdx] === null) {
             return null;
           } else {
-            Object.assign(retVal, valArray[selfIdx]);
+            retVal.attributes = mergeOptions({}, valArray[selfIdx]);
           }
         }
         valArray.forEach((val, idx) => {
           if (idx !== selfIdx) {
-            Object.assign(retVal, val);
+            retVal.relationships = mergeOptions(retVal.relationships, val);
           }
         });
         return retVal;
@@ -112,12 +111,12 @@ export class Storage {
     return Bluebird.reject(new Error('Wipe not implemented'));
   }
 
-  readOne(type, id) {
-    return Bluebird.reject(new Error('ReadOne not implemented'));
+  readAttributes(type, id) {
+    return Bluebird.reject(new Error('readAttributes not implemented'));
   }
 
-  readMany(type, id, key) {
-    return Bluebird.reject(new Error('ReadMany not implemented'));
+  readRelationship(type, id, key) {
+    return Bluebird.reject(new Error('readRelationship not implemented'));
   }
 
   delete(type, id) {
@@ -170,7 +169,7 @@ export class Storage {
               });
               return null;
             } else {
-              return this.readMany(type, id, field)
+              return this.readRelationship(type, id, field)
               .then((list) => {
                 this[$emitter].next({
                   type, id, field, value: list[field],
