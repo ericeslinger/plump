@@ -1,7 +1,7 @@
 /* eslint-env node */
 /* eslint no-shadow: 0 */
 
-import { MemoryStore, Plump, $self } from '../src/index';
+import { MemoryStore, Plump } from '../src/index';
 import { TestType } from './testType';
 import Bluebird from 'bluebird';
 import chai from 'chai';
@@ -53,14 +53,14 @@ export function testSuite(mocha, storeOpts) {
       mocha.it('allows objects to be stored by id', () => {
         return actualStore.write(TestType, sampleObject)
         .then((createdObject) => {
-          const modObject = Object.assign({}, createdObject, { name: 'carrot' });
+          const modObject = Object.assign({}, createdObject, { attributes: { name: 'carrot' } });
           return actualStore.write(TestType, modObject)
           .then((updatedObject) => {
             return expect(actualStore.read(TestType, updatedObject.id))
             .to.eventually.containSubset(Object.assign(
               {},
               sampleObject,
-              { [TestType.$id]: createdObject.id, name: 'carrot' }
+              { [TestType.$id]: createdObject.id, attributes: { name: 'carrot' } }
             ));
           });
         });
@@ -90,14 +90,8 @@ export function testSuite(mocha, storeOpts) {
             return expect(actualStore.read(TestType, createdObject.id, 'likers'))
             .to.eventually.have.property('relationships').that.deep.equals({
               likers: [
-                {
-                  parent_id: 100,
-                  child_id: createdObject.id,
-                },
-                {
-                  parent_id: 101,
-                  child_id: createdObject.id,
-                },
+                { id: 100 },
+                { id: 101 },
               ],
             });
           })
@@ -105,18 +99,9 @@ export function testSuite(mocha, storeOpts) {
             return expect(actualStore.read(TestType, createdObject.id, 'agreers'))
             .to.eventually.have.property('relationships').that.deep.equals({
               agreers: [
-                {
-                  parent_id: 100,
-                  child_id: createdObject.id,
-                },
-                {
-                  parent_id: 101,
-                  child_id: createdObject.id,
-                },
-                {
-                  parent_id: 102,
-                  child_id: createdObject.id,
-                },
+                { id: 100 },
+                { id: 101 },
+                { id: 102 },
               ],
             });
           });
@@ -131,35 +116,13 @@ export function testSuite(mocha, storeOpts) {
           .then(() => actualStore.add(TestType, createdObject.id, 'children', 202))
           .then(() => actualStore.add(TestType, createdObject.id, 'children', 203))
           .then(() => {
-            return expect(actualStore.read(TestType, createdObject.id, ['children', $self]))
-            .to.eventually.containSubset(
-              Object.assign(
-                {},
-                createdObject,
-                {
-                  relationships: {
-                    children: [
-                      {
-                        child_id: 200,
-                        parent_id: createdObject.id,
-                      },
-                      {
-                        child_id: 201,
-                        parent_id: createdObject.id,
-                      },
-                      {
-                        child_id: 202,
-                        parent_id: createdObject.id,
-                      },
-                      {
-                        child_id: 203,
-                        parent_id: createdObject.id,
-                      },
-                    ],
-                  },
-                }
-              )
-            );
+            const storedObject = actualStore.read(TestType, createdObject.id, 'children');
+            return Bluebird.all([
+              expect(storedObject).to.eventually.have.property('attributes')
+                .that.contains.all.keys(Object.keys(sampleObject.attributes)),
+              expect(storedObject).to.eventually.have.property('relationships')
+                .that.deep.equals({ children: [{ id: 200 }, { id: 201 }, { id: 202 }, { id: 203 }] }),
+            ]);
           });
         });
       });
@@ -176,32 +139,17 @@ export function testSuite(mocha, storeOpts) {
             return expect(actualStore.read(TestType, createdObject.id, ['children']))
             .to.eventually.have.property('relationships').that.deep.equals({
               children: [
-                {
-                  child_id: 100,
-                  parent_id: createdObject.id,
-                },
-                {
-                  child_id: 101,
-                  parent_id: createdObject.id,
-                },
-                {
-                  child_id: 102,
-                  parent_id: createdObject.id,
-                },
-                {
-                  child_id: 103,
-                  parent_id: createdObject.id,
-                },
+                { id: 100 },
+                { id: 101 },
+                { id: 102 },
+                { id: 103 },
               ],
             });
           }).then(() => {
             return expect(actualStore.read(TestType, 100, ['parents']))
-            .to.eventually.deep.equal({
+            .to.eventually.have.property('relationships').that.deep.equals({
               parents: [
-                {
-                  child_id: 100,
-                  parent_id: createdObject.id,
-                },
+                { id: 100 },
               ],
             });
           });
@@ -216,9 +164,8 @@ export function testSuite(mocha, storeOpts) {
             return expect(actualStore.read(TestType, createdObject.id, 'valenceChildren'))
             .to.eventually.have.property('relationships').that.deep.equals({
               valenceChildren: [{
-                child_id: 100,
-                parent_id: createdObject.id,
-                perm: 1,
+                id: 100,
+                meta: { perm: 1 },
               }],
             });
           });
@@ -233,9 +180,8 @@ export function testSuite(mocha, storeOpts) {
             return expect(actualStore.read(TestType, createdObject.id, 'valenceChildren'))
             .to.eventually.have.property('relationships').that.deep.equals({
               valenceChildren: [{
-                child_id: 100,
-                parent_id: createdObject.id,
-                perm: 1,
+                id: 100,
+                meta: { perm: 1 },
               }],
             });
           }).then(() => actualStore.modifyRelationship(TestType, createdObject.id, 'valenceChildren', 100, { perm: 2 }))
@@ -243,9 +189,8 @@ export function testSuite(mocha, storeOpts) {
             return expect(actualStore.read(TestType, createdObject.id, 'valenceChildren'))
             .to.eventually.have.property('relationships').that.deep.equals({
               valenceChildren: [{
-                child_id: 100,
-                parent_id: createdObject.id,
-                perm: 2,
+                id: 100,
+                meta: { perm: 2 },
               }],
             });
           });
@@ -259,10 +204,7 @@ export function testSuite(mocha, storeOpts) {
           .then(() => {
             return expect(actualStore.read(TestType, createdObject.id, 'children'))
             .to.eventually.have.property('relationships').that.deep.equals({
-              children: [{
-                child_id: 100,
-                parent_id: createdObject.id,
-              }],
+              children: [{ id: 100 }],
             });
           })
           .then(() => actualStore.remove(TestType, createdObject.id, 'children', 100))
@@ -284,13 +226,11 @@ export function testSuite(mocha, storeOpts) {
             .to.eventually.have.property('relationships').that.deep.equals({
               queryChildren: [
                 {
-                  child_id: 102,
-                  parent_id: createdObject.id,
-                  perm: 2,
+                  id: 102,
+                  meta: { perm: 2 },
                 }, {
-                  child_id: 103,
-                  parent_id: createdObject.id,
-                  perm: 3,
+                  id: 103,
+                  meta: { perm: 3 },
                 },
               ],
             });
@@ -310,14 +250,17 @@ export function testSuite(mocha, storeOpts) {
           attributes: { name: 'potato' },
           relationships: {},
         }).then((createdObject) => {
-          return expect(memstore.read(TestType, createdObject.id)).to.eventually.have.property('name', 'potato');
+          // can be passing with a setTimeout
+          // console.log(`CREATED: ${JSON.stringify(createdObject, null, 2)}`);
+          return expect(memstore.read(TestType, createdObject.id))
+          .to.eventually.have.deep.property('attributes.name', 'potato');
         }).finally(() => {
           return testPlump.teardown();
         });
       });
 
       mocha.it('should pass basic cacheable-read events up the stack', () => {
-        let testPlump;
+        const testPlump = new Plump({ types: [TestType] });
         let testItem;
         let memstore;
         return actualStore.write(TestType, {
@@ -325,18 +268,18 @@ export function testSuite(mocha, storeOpts) {
           relationships: {},
         }).then((createdObject) => {
           testItem = createdObject;
-          return expect(actualStore.read(TestType, testItem.id)).to.eventually.have.property('name', 'potato');
+          return expect(actualStore.read(TestType, testItem.id))
+          .to.eventually.have.deep.property('attributes.name', 'potato');
         }).then(() => {
           memstore = new MemoryStore();
-          testPlump = new Plump({
-            storage: [memstore, actualStore],
-            types: [TestType],
-          });
+          testPlump.addStore(memstore);
+          testPlump.addStore(actualStore);
           return expect(memstore.read(TestType, testItem.id)).to.eventually.be.null;
         }).then(() => {
           return actualStore.read(TestType, testItem.id);
         }).then(() => {
-          return expect(memstore.read(TestType, testItem.id)).to.eventually.have.property('name', 'potato');
+          return expect(memstore.read(TestType, testItem.id))
+          .to.eventually.have.deep.property('attributes.name', 'potato');
         }).finally(() => testPlump.teardown());
       });
 
@@ -354,19 +297,17 @@ export function testSuite(mocha, storeOpts) {
           testItem = createdObject;
           return actualStore.add(TestType, testItem.id, 'likers', 100);
         }).then(() => {
-          return expect(memstore.read(TestType, testItem.id, 'likers')).to.eventually.deep.equal({
+          return expect(memstore.read(TestType, testItem.id, 'likers'))
+          .to.eventually.have.property('relationships').that.deep.equals({
             likers: [
-              {
-                parent_id: 100,
-                child_id: testItem.id,
-              },
+              { id: 100 },
             ],
           });
         }).finally(() => testPlump.teardown());
       });
 
       mocha.it('should pass cacheable-read events on hasMany relationships to other datastores', () => {
-        let testPlump;
+        const testPlump = new Plump({ types: [TestType] });
         let testItem;
         let memstore;
         return actualStore.write(TestType, {
@@ -374,24 +315,21 @@ export function testSuite(mocha, storeOpts) {
           relationships: {},
         }).then((createdObject) => {
           testItem = createdObject;
-          return expect(actualStore.read(TestType, testItem.id)).to.eventually.have.property('name', 'potato');
+          return expect(actualStore.read(TestType, testItem.id))
+          .to.eventually.have.deep.property('attributes.name', 'potato');
         }).then(() => actualStore.add(TestType, testItem.id, 'likers', 100))
         .then(() => {
           memstore = new MemoryStore();
-          testPlump = new Plump({
-            storage: [memstore, actualStore],
-            types: [TestType],
-          });
+          testPlump.addStore(actualStore);
+          testPlump.addStore(memstore);
           return expect(memstore.read(TestType, testItem.id)).to.eventually.be.null;
         }).then(() => {
           return actualStore.read(TestType, testItem.id, 'likers');
         }).then(() => {
-          return expect(memstore.read(TestType, testItem.id, 'likers')).to.eventually.deep.equal({
+          return expect(memstore.read(TestType, testItem.id, 'likers'))
+          .to.eventually.have.property('relationships').that.deep.equals({
             likers: [
-              {
-                parent_id: 100,
-                child_id: testItem.id,
-              },
+              { id: 100 },
             ],
           });
         }).finally(() => testPlump.teardown());

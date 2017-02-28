@@ -59,8 +59,9 @@ export class Plump {
     if (store.terminal) {
       this[$storeSubscriptions].push(store.onUpdate(({ type, id, value, field }) => {
         this[$storage].forEach((storage) => {
+          // console.log(`RECEIVED ${JSON.stringify(value, null, 2)}`);
           if (field) {
-            storage.writeHasMany(type, id, field, value);
+            storage.writeHasMany(type, id, field, value.relationships[field]);
           } else {
             storage.write(type, value);
           }

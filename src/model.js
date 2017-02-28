@@ -247,13 +247,14 @@ export class Model {
 
     // Deep copy this.$$dirty, filtering out keys that are not in opts
     const update = Object.keys(this[$dirty]).map(fieldType => {
-      return Object.keys(this[$dirty][fieldType])
+      return { [fieldType]: Object.keys(this[$dirty][fieldType])
         .filter(key => key in keys)
         .map(key => {
           const val = this[$dirty][fieldType][key];
           return { [key]: typeof val === 'object' ? mergeOptions({}, val) : val };
         })
-        .reduce((acc, curr) => Object.assign(acc, curr), {});
+        .reduce((acc, curr) => Object.assign(acc, curr), {}),
+      };
     }).reduce((acc, curr) => Object.assign(acc, curr), {});
 
     if (this.$id !== undefined) {

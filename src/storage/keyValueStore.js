@@ -9,27 +9,6 @@ function saneNumber(i) {
   return ((typeof i === 'number') && (!isNaN(i)) && (i !== Infinity) & (i !== -Infinity));
 }
 
-function findEntryCallback(relationship, relationshipTitle, target) {
-  const sideInfo = relationship.$sides[relationshipTitle];
-  return (value) => {
-    if (
-      (value[sideInfo.self.field] === target[sideInfo.self.field]) &&
-      (value[sideInfo.other.field] === target[sideInfo.other.field])
-    ) {
-      if (relationship.$restrict) {
-        return Object.keys(relationship.$restrict).reduce(
-          (prior, restriction) => prior && value[restriction] === relationship.$restrict[restriction].value,
-          true
-        );
-      } else {
-        return true;
-      }
-    } else {
-      return false;
-    }
-  };
-}
-
 function maybePush(array, val, keystring, store, idx) {
   return Bluebird.resolve()
   .then(() => {
@@ -47,10 +26,10 @@ function maybeUpdate(array, val, keystring, store, extras, idx) {
   return Bluebird.resolve()
   .then(() => {
     if (idx >= 0) {
-      const modifiedRelationship = Object.assign(
+      const modifiedRelationship = mergeOptions(
         {},
         array[idx],
-        extras
+        extras ? { meta: extras } : {}
       );
       array[idx] = modifiedRelationship; // eslint-disable-line no-param-reassign
       return store._set(keystring, JSON.stringify(array));
@@ -129,6 +108,28 @@ export class KeyValueStore extends Storage {
     });
   }
 
+  getRelationships(t, id, opts) {
+    const keys = opts && !Array.isArray(opts) ? [opts] : opts;
+    return Bluebird.all(
+      keys.map(relName => {
+        return this._get(this.keyString(t.$name, id, relName))
+        .then(rel => {
+          return { [relName]: rel };
+        });
+      })
+    ).then(relList => relList.reduce((acc, curr) => mergeOptions(acc, curr), {}));
+  }
+
+  write(t, v) {
+    // console.log(`WRITING ${JSON.stringify(v, null, 2)}`);
+    const id = v.id || v[t.$schema.$id];
+    if ((id === undefined) || (id === null)) {
+      return this.createNew(t, v);
+    } else {
+      return this.overwrite(t, id, v);
+    }
+  }
+
   createNew(t, v) {
     const toSave = mergeOptions({}, v);
     if (this.terminal) {
@@ -136,11 +137,13 @@ export class KeyValueStore extends Storage {
       .then((n) => {
         const id = n + 1;
         toSave[t.$schema.$id] = id;
+        // console.log(`CREATING NEW IN ${this.terminal ? 'terminal' : 'nonterminal'}`);
         return Bluebird.all([
           this.writeAttributes(t, id, toSave.attributes),
           this.writeRelationships(t, id, toSave.relationships),
         ]).then(() => {
           return this.notifyUpdate(t, toSave[t.$id], {
+            [t.$schema.$id]: id,
             attributes: toSave.attributes,
             relationships: resolveRelationships(t.$schema, toSave.relationships),
           });
@@ -152,54 +155,58 @@ export class KeyValueStore extends Storage {
     }
   }
 
-  getRelationships(t, id, opts) {
-    const keys = opts && !Array.isArray(opts) ? [opts] : opts;
-    return Bluebird.all(
-      keys.map(relName => {
-        return this._get(this.keyString(t.$name, id, relName))
-        .then(rel => {
-          return { relName: rel };
-        });
-      })
-    ).then(relList => relList.reduce((acc, curr) => mergeOptions(acc, curr), {}));
-  }
-
-  write(t, v) {
-    const id = v.id || v[t.$schema.$id];
-    if ((id === undefined) || (id === null)) {
-      return this.createNew(t, v);
-    } else {
+  overwrite(t, id, v) {
+    return Bluebird.all([
+      this._get(this.keyString(t.$name, id)),
+      this.getRelationships(t, id, Object.keys(v.relationships)),
+    ]).then(([origAttributes, origRelationships]) => {
+      // console.log('GOT ORIGINAL VALUES');
+      const updatedAttributes = Object.assign({}, JSON.parse(origAttributes), v.attributes);
+      const updatedRelationships = resolveRelationships(t.$schema, v.relationships, origRelationships);
+      const updated = { id, attributes: updatedAttributes, relationships: updatedRelationships };
       return Bluebird.all([
-        this._get(this.keyString(t.$name, id)),
-        this.getRelationships(t, id, Object.keys(v.relationships)),
-      ]).then(([origAttributes, origRelationships]) => {
-        const updatedAttributes = Object.assign({}, JSON.parse(origAttributes), v.attributes);
-        const updatedRelationships = resolveRelationships(t.$schema, v.relationships, origRelationships);
-        return Bluebird.all([
-          this.writeAttributes(t, id, updatedAttributes),
-          this.writeRelationships(t, id, updatedRelationships),
-        ])
-        .then(() => {
-          return this.notifyUpdate(t, id, {
-            attributes: updatedAttributes,
-            relationships: updatedRelationships,
-          });
-        })
-        .then(() => {
-          return { attributes: updatedAttributes, relationships: updatedRelationships };
-        });
+        this.writeAttributes(t, id, updatedAttributes),
+        this.writeRelationships(t, id, updatedRelationships),
+      ])
+      .then(() => {
+        // console.log('NOTIFYING OF UPDATE');
+        return this.notifyUpdate(t, id, updated);
+      })
+      .then(() => {
+        return updated;
       });
-    }
+    });
   }
 
   writeAttributes(t, id, attributes) {
-    return this._set(this.keyString(t.$name, id), JSON.stringify(attributes));
+    const $id = attributes.id ? 'id' : t.$schema.$id;
+    const toWrite = mergeOptions({}, attributes, { [$id]: id });
+    return this._set(this.keyString(t.$name, id), JSON.stringify(toWrite));
   }
 
   writeRelationships(t, id, relationships) {
     return Object.keys(relationships).map(relName => {
-      return this.writeHasMany(t, id, relName, relationships[relName]);
+      return this._set(this.keyString(t.$name, id, relName), JSON.stringify(relationships[relName]));
     }).reduce((thenable, curr) => thenable.then(() => curr), Bluebird.resolve());
+  }
+
+  read(type, id, key) {
+    const keys = Array.isArray(key) ? key : [key];
+    return Bluebird.resolve()
+    .then(() => {
+      return Bluebird.all([
+        this.readAttributes(type, id),
+        this.readRelationships(type, id, key),
+      ]);
+    }).then(([attributes, relationships]) => {
+      const result = { id, attributes, relationships };
+      if (result) {
+        return this.notifyUpdate(type, id, result, keys)
+        .then(() => result);
+      } else {
+        return result;
+      }
+    });
   }
 
   readAttributes(t, id) {
@@ -207,43 +214,38 @@ export class KeyValueStore extends Storage {
     .then((d) => JSON.parse(d));
   }
 
-  readRelationship(t, id, relationship) {
+  readRelationships(t, id, key) {
+    // If there is no key, it defaults to all relationships
+    // Otherwise, it wraps it in an Array if it isn't already one
+    const keys = key && !Array.isArray(key) ? [key] : key || Object.keys(t.$schema.relationships);
+    return keys.map(relName => {
+      return this.readRelationship(t, id, relName);
+    }).reduce((thenableAcc, thenableCurr) => {
+      return Bluebird.all([thenableAcc, thenableCurr])
+      .then(([acc, curr]) => {
+        return mergeOptions(acc, curr);
+      }, {});
+    });
+  }
+
+  readRelationship(t, id, relationship, attributes) {
     const relationshipType = t.$schema.relationships[relationship].type;
     const sideInfo = relationshipType.$sides[relationship];
-    return Bluebird.resolve()
-    .then(() => {
-      const resolves = [this._get(this.keyString(t.$name, id, relationship))];
-      if (sideInfo.self.query && sideInfo.self.query.requireLoad) {
-        resolves.push(this.readOne(t, id));
-      } else {
-        resolves.push(Bluebird.resolve({ id }));
-      }
-      // TODO: if there's a query, KVS loads a *lot* into memory and filters
-      return Bluebird.all(resolves);
-    })
+    const resolves = [this._get(this.keyString(t.$name, id, relationship))];
+    if (sideInfo.self.query && sideInfo.self.query.requireLoad && !attributes) {
+      resolves.push(this.readAttributes(t, id));
+    } else {
+      resolves.push(Bluebird.resolve(attributes));
+    }
+    // TODO: if there's a query, KVS loads a *lot* into memory and filters
+    return Bluebird.all(resolves)
     .then(([arrayString, context]) => {
       let relationshipArray = JSON.parse(arrayString) || [];
       if (sideInfo.self.query) {
         const filterBlock = Storage.massReplace(sideInfo.self.query.logic, context);
         relationshipArray = relationshipArray.filter(createFilter(filterBlock));
       }
-      if (relationshipType.$restrict) {
-        return relationshipArray.filter((v) => {
-          return Object.keys(relationshipType.$restrict).reduce(
-            (prior, restriction) => prior && v[restriction] === relationshipType.$restrict[restriction].value,
-            true
-          );
-        }).map((entry) => {
-          Object.keys(relationshipType.$restrict).forEach((k) => {
-            delete entry[k]; // eslint-disable-line no-param-reassign
-          });
-          return entry;
-        });
-      } else {
-        return relationshipArray;
-      }
-    }).then((ary) => {
-      return { [relationship]: ary };
+      return { [relationship]: relationshipArray };
     });
   }
 
@@ -259,21 +261,6 @@ export class KeyValueStore extends Storage {
     }
   }
 
-  writeHasMany(type, id, field, value) {
-    let toSave = value;
-    const relationshipBlock = type.$schema.relationships[field].type;
-    if (relationshipBlock.$restrict) {
-      const restrictBlock = {};
-      Object.keys(relationshipBlock.$restrict).forEach((k) => {
-        restrictBlock[k] = relationshipBlock.$restrict[k].value;
-      });
-      toSave = toSave.map((v) => Object.assign({}, v, restrictBlock));
-    }
-    // const sideInfo = relationshipBlock.$sides[field];
-    const thisKeyString = this.keyString(type.$name, id, field);
-    return this._set(thisKeyString, JSON.stringify(toSave));
-  }
-
   add(type, id, relationshipTitle, childId, extras = {}) {
     const relationshipBlock = type.$schema.relationships[relationshipTitle].type;
     const sideInfo = relationshipBlock.$sides[relationshipTitle];
@@ -286,27 +273,26 @@ export class KeyValueStore extends Storage {
     .then(([thisArrayString, otherArrayString]) => {
       const thisArray = JSON.parse(thisArrayString) || [];
       const otherArray = JSON.parse(otherArrayString) || [];
-      const newField = {
-        [sideInfo.other.field]: childId,
-        [sideInfo.self.field]: id,
-      };
-      if (relationshipBlock.$restrict) {
-        Object.keys(relationshipBlock.$restrict).forEach((restriction) => {
-          newField[restriction] = relationshipBlock.$restrict[restriction].value;
-        });
-      }
+      const newChild = { id: childId };
+      const newParent = { id };
       if (relationshipBlock.$extras) {
+        newChild.meta = newChild.meta || {};
+        newParent.meta = newParent.meta || {};
         Object.keys(relationshipBlock.$extras).forEach((extra) => {
-          newField[extra] = extras[extra];
+          newChild.meta[extra] = extras[extra];
+          newParent.meta[extra] = extras[extra];
         });
       }
-      const thisIdx = thisArray.findIndex(findEntryCallback(relationshipBlock, relationshipTitle, newField));
-      const otherIdx = otherArray.findIndex(findEntryCallback(relationshipBlock, relationshipTitle, newField));
+      const thisIdx = thisArray.findIndex(item => item.id === childId);
+      // findEntryCallback(relationshipBlock, relationshipTitle, newChild));
+      const otherIdx = otherArray.findIndex(item => item.id === id);
+      // findEntryCallback(relationshipBlock, relationshipTitle, newChild));
       return Bluebird.all([
-        maybePush(thisArray, newField, thisKeyString, this, thisIdx),
-        maybePush(otherArray, newField, otherKeyString, this, otherIdx),
+        maybePush(thisArray, newChild, thisKeyString, this, thisIdx),
+        maybePush(otherArray, newParent, otherKeyString, this, otherIdx),
       ])
       .then(() => this.notifyUpdate(type, id, null, relationshipTitle))
+      .then(() => this.notifyUpdate(type, childId, null, sideInfo.other.title))
       .then(() => thisArray);
     });
   }
@@ -323,18 +309,17 @@ export class KeyValueStore extends Storage {
     .then(([thisArrayString, otherArrayString]) => {
       const thisArray = JSON.parse(thisArrayString) || [];
       const otherArray = JSON.parse(otherArrayString) || [];
-      const target = {
-        [sideInfo.other.field]: childId,
-        [sideInfo.self.field]: id,
-      };
-      const thisIdx = thisArray.findIndex(findEntryCallback(relationshipBlock, relationshipTitle, target));
-      const otherIdx = otherArray.findIndex(findEntryCallback(relationshipBlock, relationshipTitle, target));
+      const thisTarget = { id: childId };
+      const otherTarget = { id };
+      const thisIdx = thisArray.findIndex(item => item.id === childId);
+      const otherIdx = otherArray.findIndex(item => item.id === id);
       return Bluebird.all([
-        maybeUpdate(thisArray, target, thisKeyString, this, extras, thisIdx),
-        maybeUpdate(otherArray, target, otherKeyString, this, extras, otherIdx),
+        maybeUpdate(thisArray, thisTarget, thisKeyString, this, extras, thisIdx),
+        maybeUpdate(otherArray, otherTarget, otherKeyString, this, extras, otherIdx),
       ]);
     })
-    .then((res) => this.notifyUpdate(type, id, null, relationshipTitle).then(() => res));
+    .then((res) => this.notifyUpdate(type, id, null, relationshipTitle).then(() => res))
+    .then((res) => this.notifyUpdate(type, childId, null, sideInfo.other.title).then(() => res));
   }
 
   remove(type, id, relationshipTitle, childId) {
@@ -349,18 +334,15 @@ export class KeyValueStore extends Storage {
     .then(([thisArrayString, otherArrayString]) => {
       const thisArray = JSON.parse(thisArrayString) || [];
       const otherArray = JSON.parse(otherArrayString) || [];
-      const target = {
-        [sideInfo.other.field]: childId,
-        [sideInfo.self.field]: id,
-      };
-      const thisIdx = thisArray.findIndex(findEntryCallback(relationshipBlock, relationshipTitle, target));
-      const otherIdx = otherArray.findIndex(findEntryCallback(relationshipBlock, relationshipTitle, target));
+      const thisIdx = thisArray.findIndex(item => item.id === childId);
+      const otherIdx = otherArray.findIndex(item => item.id === id);
       return Bluebird.all([
         maybeDelete(thisArray, thisIdx, thisKeyString, this),
         maybeDelete(otherArray, otherIdx, otherKeyString, this),
       ]);
     })
-    .then((res) => this.notifyUpdate(type, id, null, relationshipTitle).then(() => res));
+    .then((res) => this.notifyUpdate(type, id, null, relationshipTitle).then(() => res))
+    .then((res) => this.notifyUpdate(type, childId, null, sideInfo.other.title).then(() => res));
   }
 
   keyString(typeName, id, relationship) {
