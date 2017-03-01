@@ -462,6 +462,19 @@ Model.resolveRelationship = function resolveRelationship(deltas, base = []) {
     .reduce((acc, curr) => acc.concat(curr), []);
 };
 
+Model.$$storeCache = new Map();
+
+Model.cacheSet = function cacheSet(store, key, value) {
+  if (this.$$storeCache.get(store) === undefined) {
+    this.$$storeCache.set(store, {});
+  }
+  this.$$storeCache.get(store)[key] = value;
+};
+
+Model.cacheGet = function cacheGet(store, key) {
+  return (this.$$storeCache.get(store) || {})[key];
+};
+
 Model.$id = 'id';
 Model.$name = 'Base';
 Model.$schema = {
