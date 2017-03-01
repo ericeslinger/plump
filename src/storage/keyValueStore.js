@@ -121,7 +121,6 @@ export class KeyValueStore extends Storage {
   }
 
   write(t, v) {
-    // console.log(`WRITING ${JSON.stringify(v, null, 2)}`);
     const id = v.id || v[t.$schema.$id];
     if ((id === undefined) || (id === null)) {
       return this.createNew(t, v);
@@ -137,7 +136,6 @@ export class KeyValueStore extends Storage {
       .then((n) => {
         const id = n + 1;
         toSave[t.$schema.$id] = id;
-        // console.log(`CREATING NEW IN ${this.terminal ? 'terminal' : 'nonterminal'}`);
         return Bluebird.all([
           this.writeAttributes(t, id, toSave.attributes),
           this.writeRelationships(t, id, toSave.relationships),
@@ -160,7 +158,6 @@ export class KeyValueStore extends Storage {
       this._get(this.keyString(t.$name, id)),
       this.getRelationships(t, id, Object.keys(v.relationships)),
     ]).then(([origAttributes, origRelationships]) => {
-      // console.log('GOT ORIGINAL VALUES');
       const updatedAttributes = Object.assign({}, JSON.parse(origAttributes), v.attributes);
       const updatedRelationships = resolveRelationships(t.$schema, v.relationships, origRelationships);
       const updated = { id, attributes: updatedAttributes, relationships: updatedRelationships };
@@ -169,7 +166,6 @@ export class KeyValueStore extends Storage {
         this.writeRelationships(t, id, updatedRelationships),
       ])
       .then(() => {
-        // console.log('NOTIFYING OF UPDATE');
         return this.notifyUpdate(t, id, updated);
       })
       .then(() => {
@@ -191,20 +187,20 @@ export class KeyValueStore extends Storage {
   }
 
   read(type, id, key) {
-    const keys = Array.isArray(key) ? key : [key];
-    return Bluebird.resolve()
-    .then(() => {
-      return Bluebird.all([
-        this.readAttributes(type, id),
-        this.readRelationships(type, id, key),
-      ]);
-    }).then(([attributes, relationships]) => {
-      const result = { id, attributes, relationships };
-      if (result) {
-        return this.notifyUpdate(type, id, result, keys)
-        .then(() => result);
+    const keys = key && !Array.isArray(key) ? [key] : key;
+    return this.readAttributes(type, id)
+    .then(attributes => Bluebird.all([attributes, this.readRelationships(type, id, keys, attributes)]))
+    .then(([attributes, relationships]) => {
+      if (attributes) { // proxy for whether the object is actually in the store
+        const result = { id, attributes, relationships };
+        if (result) {
+          return this.notifyUpdate(type, id, result, keys)
+          .then(() => result);
+        } else {
+          return result;
+        }
       } else {
-        return result;
+        return null;
       }
     });
   }
@@ -214,12 +210,12 @@ export class KeyValueStore extends Storage {
     .then((d) => JSON.parse(d));
   }
 
-  readRelationships(t, id, key) {
+  readRelationships(t, id, key, attributes) {
     // If there is no key, it defaults to all relationships
     // Otherwise, it wraps it in an Array if it isn't already one
     const keys = key && !Array.isArray(key) ? [key] : key || Object.keys(t.$schema.relationships);
     return keys.map(relName => {
-      return this.readRelationship(t, id, relName);
+      return this.readRelationship(t, id, relName, attributes);
     }).reduce((thenableAcc, thenableCurr) => {
       return Bluebird.all([thenableAcc, thenableCurr])
       .then(([acc, curr]) => {
@@ -234,12 +230,11 @@ export class KeyValueStore extends Storage {
     const resolves = [this._get(this.keyString(t.$name, id, relationship))];
     if (sideInfo.self.query && sideInfo.self.query.requireLoad && !attributes) {
       resolves.push(this.readAttributes(t, id));
-    } else {
-      resolves.push(Bluebird.resolve(attributes));
     }
     // TODO: if there's a query, KVS loads a *lot* into memory and filters
     return Bluebird.all(resolves)
-    .then(([arrayString, context]) => {
+    .then(([arrayString, maybeContext]) => {
+      const context = maybeContext || { id };
       let relationshipArray = JSON.parse(arrayString) || [];
       if (sideInfo.self.query) {
         const filterBlock = Storage.massReplace(sideInfo.self.query.logic, context);

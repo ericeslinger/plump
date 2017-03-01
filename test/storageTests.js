@@ -72,7 +72,7 @@ export function testSuite(mocha, storeOpts) {
           return expect(actualStore.read(TestType, createdObject.id))
           .to.eventually.containSubset(Object.assign({}, sampleObject, { [TestType.$id]: createdObject.id }))
           .then(() => actualStore.delete(TestType, createdObject.id))
-          .then(() => expect(actualStore.read(TestType, createdObject.id)).to.eventually.deep.equal(null));
+          .then(() => expect(actualStore.read(TestType, createdObject.id)).to.eventually.be.null);
         });
       });
     });
@@ -134,7 +134,7 @@ export function testSuite(mocha, storeOpts) {
           .then(() => actualStore.add(TestType, createdObject.id, 'children', 101))
           .then(() => actualStore.add(TestType, createdObject.id, 'children', 102))
           .then(() => actualStore.add(TestType, createdObject.id, 'children', 103))
-          .then(() => actualStore.add(TestType, 500, 'children', createdObject.id))
+          .then(() => actualStore.add(TestType, 100, 'children', createdObject.id))
           .then(() => {
             return expect(actualStore.read(TestType, createdObject.id, ['children']))
             .to.eventually.have.property('relationships').that.deep.equals({
@@ -146,7 +146,7 @@ export function testSuite(mocha, storeOpts) {
               ],
             });
           }).then(() => {
-            return expect(actualStore.read(TestType, 100, ['parents']))
+            return expect(actualStore.read(TestType, createdObject.id, ['parents']))
             .to.eventually.have.property('relationships').that.deep.equals({
               parents: [
                 { id: 100 },
@@ -222,6 +222,7 @@ export function testSuite(mocha, storeOpts) {
           .then(() => actualStore.add(TestType, createdObject.id, 'queryChildren', 102, { perm: 2 }))
           .then(() => actualStore.add(TestType, createdObject.id, 'queryChildren', 103, { perm: 3 }))
           .then(() => {
+            debugger;
             return expect(actualStore.read(TestType, createdObject.id, 'queryChildren'))
             .to.eventually.have.property('relationships').that.deep.equals({
               queryChildren: [
@@ -251,7 +252,6 @@ export function testSuite(mocha, storeOpts) {
           relationships: {},
         }).then((createdObject) => {
           // can be passing with a setTimeout
-          // console.log(`CREATED: ${JSON.stringify(createdObject, null, 2)}`);
           return expect(memstore.read(TestType, createdObject.id))
           .to.eventually.have.deep.property('attributes.name', 'potato');
         }).finally(() => {

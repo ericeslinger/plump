@@ -18,23 +18,22 @@ function getComparator(comparatorString) {
 
 function handleWhere(blockFilter) {
   if (!blockFilter[0]) {
-    return function bad() {
-      return false;
-    };
+    return () => true;
   }
 
   if (Array.isArray(blockFilter[0])) {
     return blockFilter.map(createFilter).reduce((prev, curr) => { // eslint-disable-line
       return (elem) => prev(elem) && curr(elem);
-    }, () => { return true; });
+    }, () => true);
   } else {
-    const prop = blockFilter[0];
+    const properties = blockFilter[0].split('.');
     const comparatorString = blockFilter[1];
-    const value = blockFilter[2];
+    const expected = blockFilter[2];
+    const comparator = getComparator(comparatorString);
 
     return (elem) => {
-      const comparator = getComparator(comparatorString);
-      return comparator(elem[prop], value);
+      const actual = properties.reduce((level, key) => level ? level[key] : undefined, elem);
+      return comparator(actual, expected);
     };
   }
 }

@@ -25,7 +25,6 @@ export class MemoryStore extends KeyValueStore {
   _set(k, v) {
     return Promise.resolve()
     .then(() => {
-      // console.log(`Setting ${k} to ${JSON.stringify(v)} in ${this.terminal ? 'terminal' : 'non-terminal'}`);
       this[$store][k] = v;
     });
   }

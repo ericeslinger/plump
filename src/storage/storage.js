@@ -153,39 +153,34 @@ export class Storage {
     return this[$emitter].subscribe(observer);
   }
 
-  notifyUpdate(type, id, value, opts = [$self]) {
-    let keys = opts;
-    if (!Array.isArray(keys)) {
-      keys = [keys];
-    }
+  notifyUpdate(type, id, value, opts = ['attributes']) {
+    const keys = Array.isArray(opts) ? opts : [opts];
     return Bluebird.all(keys.map((field) => {
       return Bluebird.resolve()
       .then(() => {
         if (this.terminal) {
-          if (field !== $self) {
-            if (value !== null) {
-              this[$emitter].next({
-                type, id, field, value: value[field],
-              });
-              return null;
-            } else {
-              return this.readRelationship(type, id, field)
-              .then((list) => {
-                this[$emitter].next({
-                  type, id, field, value: list[field],
-                });
-                return null;
-              });
-            }
+          if (field === 'attributes') {
+            return field in value ? Bluebird.resolve(value[field]) : this.readAttributes(type, id);
           } else {
-            this[$emitter].next({
-              type, id, value,
-            });
-            return null;
+            if (value && value.relationships && field in value.relationships) { // eslint-disable-line no-lonely-if
+              return Bluebird.resolve(value.relationships[field]);
+            } else {
+              return this.readRelationship(type, id, field);
+            }
           }
         } else {
           return null;
         }
+      }).then((val) => {
+        if (val) {
+          this[$emitter].next({
+            type,
+            id,
+            value: val,
+            field,
+          });
+        }
+        return null;
       });
     }));
   }
