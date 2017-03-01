@@ -15,7 +15,7 @@ export class MemoryStore extends KeyValueStore {
   }
 
   _keys(typeName) {
-    return Promise.resolve(Object.keys(this[$store]).filter((k) => k.indexOf(`${typeName}:store:`) === 0));
+    return Promise.resolve(Object.keys(this[$store]).filter((k) => k.indexOf(`${typeName}:attributes:`) === 0));
   }
 
   _get(k) {

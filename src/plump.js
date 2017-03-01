@@ -1,4 +1,4 @@
-import { Model, $self } from './model';
+import { Model } from './model';
 import { Subject, Observable } from 'rxjs/Rx';
 import Bluebird from 'bluebird';
 
@@ -60,7 +60,7 @@ export class Plump {
       this[$storeSubscriptions].push(store.onUpdate(({ type, id, value, field }) => {
         this[$storage].forEach((storage) => {
           if (field) {
-            storage.writeHasMany(type, id, field, value);
+            storage.writeHasMany(type, id, field, value.relationships[field]);
           } else {
             storage.write(type, value);
           }
@@ -74,19 +74,12 @@ export class Plump {
   }
 
   find(t, id) {
-    let Type = t;
-    if (typeof t === 'string') {
-      Type = this[$types][t];
-    }
-    const retVal = new Type({ [Type.$id]: id }, this);
-    return retVal;
+    const Type = typeof t === 'string' ? this[$types][t] : t;
+    return new Type({ [Type.$id]: id }, this);
   }
 
   forge(t, val) {
-    let Type = t;
-    if (typeof t === 'string') {
-      Type = this[$types][t];
-    }
+    const Type = typeof t === 'string' ? this[$types][t] : t;
     return new Type(val, this);
   }
 
@@ -109,14 +102,8 @@ export class Plump {
     this[$storeSubscriptions] = undefined;
   }
 
-  get(type, id, keyOpts) {
-    let keys = keyOpts;
-    if (!keys) {
-      keys = [$self];
-    }
-    if (!Array.isArray(keys)) {
-      keys = [keys];
-    }
+  get(type, id, opts) {
+    const keys = opts && !Array.isArray(opts) ? [opts] : opts;
     return this[$storage].reduce((thenable, storage) => {
       return thenable.then((v) => {
         if (v !== null) {
@@ -129,7 +116,7 @@ export class Plump {
       });
     }, Promise.resolve(null))
     .then((v) => {
-      if (((v === null) || (v[$self] === null)) && (this[$terminal])) {
+      if (((v === null) || (v.attributes === null)) && (this[$terminal])) {
         return this[$terminal].read(type, id, keys);
       } else {
         return v;
@@ -139,14 +126,8 @@ export class Plump {
     });
   }
 
-  streamGet(type, id, keyOpts) {
-    let keys = keyOpts;
-    if (!keys) {
-      keys = [$self];
-    }
-    if (!Array.isArray(keys)) {
-      keys = [keys];
-    }
+  streamGet(type, id, opts) {
+    const keys = opts && !Array.isArray(opts) ? [opts] : opts;
     return Observable.create((observer) => {
       return Bluebird.all((this[$storage].map((store) => {
         return store.read(type, id, keys)
