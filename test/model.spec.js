@@ -69,7 +69,7 @@ describe('model', () => {
         return expect(plump.find('tests', one.$id).$get())
         .to.eventually.have.deep.property('attributes.name', 'potato');
       })
-      .then(() => one.$delete())
+      .then(() => {debugger; one.$delete();})
       .then(() => expect(plump.find('tests', one.$id).$get()).to.eventually.be.null);
     });
 

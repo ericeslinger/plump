@@ -46,7 +46,9 @@ export class Model {
   }
 
   get $dirtyFields() {
-    return Object.keys(this[$dirty]).map(k => Object.keys(this[$dirty][k]))
+    return Object.keys(this[$dirty])
+    .map(k => Object.keys(this[$dirty][k]))
+    .filter(k => k !== this.constructor.$id) // id should never be dirty
     .reduce((acc, curr) => acc.concat(curr), []);
   }
 
@@ -105,14 +107,16 @@ export class Model {
 
   $$resetDirty(opts) {
     const key = opts || this.$dirtyFields;
+    const newDirty = { attributes: {}, relationships: {} };
     const keys = Array.isArray(key) ? key : [key];
     keys.forEach(field => {
       if (field in this[$dirty].attributes) {
-        delete this[$dirty].attributes[field];
+        newDirty.attributes = this[$dirty].attributes[field];
       } else if (field in this[$dirty].relationships) {
-        delete this[$dirty].relationships[field];
+        newDirty.relationships = this[$dirty].relationships[field];
       }
     });
+    this[$dirty] = newDirty;
   }
 
   $$fireUpdate(v) {
@@ -197,7 +201,7 @@ export class Model {
 
   $delete() {
     return this[$plump].delete(this.constructor, this.$id)
-    .then(data => this.constructor.schematize(data));
+    .then(data => data.map(this.constructor.schematize));
   }
 
   $rest(opts) {

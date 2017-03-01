@@ -78,6 +78,14 @@ export class Storage {
     });
   }
 
+  readAttributes(type, id) {
+    return Bluebird.reject(new Error('readAttributes not implemented'));
+  }
+
+  readRelationship(type, id, key) {
+    return Bluebird.reject(new Error('readRelationship not implemented'));
+  }
+
   readRelationships(t, id, key, attributes) {
     // If there is no key, it defaults to all relationships
     // Otherwise, it wraps it in an Array if it isn't already one
@@ -99,14 +107,6 @@ export class Storage {
 
   wipe(type, id, field) {
     return Bluebird.reject(new Error('Wipe not implemented'));
-  }
-
-  readAttributes(type, id) {
-    return Bluebird.reject(new Error('readAttributes not implemented'));
-  }
-
-  readRelationship(type, id, key) {
-    return Bluebird.reject(new Error('readRelationship not implemented'));
   }
 
   delete(type, id) {
