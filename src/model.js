@@ -26,6 +26,7 @@ export class Model {
     this[$subject] = new BehaviorSubject();
     this[$subject].next({});
     this.$$copyValuesFrom(opts);
+    // this.$$fireUpdate(opts);
   }
 
   get $name() {
@@ -48,6 +49,7 @@ export class Model {
   get $dirtyFields() {
     return Object.keys(this[$dirty])
     .map(k => Object.keys(this[$dirty][k]))
+    .reduce((acc, curr) => acc.concat(curr), [])
     .filter(k => k !== this.constructor.$id) // id should never be dirty
     .reduce((acc, curr) => acc.concat(curr), []);
   }
@@ -68,9 +70,8 @@ export class Model {
 
   $$copyValuesFrom(opts = {}) {
     const idField = this.constructor.$id in opts ? this.constructor.$id : 'id';
-    this[this.constructor.$id] = opts[idField];
+    this[this.constructor.$id] = opts[idField] || this.$id;
     this[$dirty] = this.constructor.schematize(opts);
-    this.$$fireUpdate();
   }
 
   $$hookToPlump() {
@@ -109,11 +110,12 @@ export class Model {
     const key = opts || this.$dirtyFields;
     const newDirty = { attributes: {}, relationships: {} };
     const keys = Array.isArray(key) ? key : [key];
-    keys.forEach(field => {
-      if (field in this[$dirty].attributes) {
-        newDirty.attributes = this[$dirty].attributes[field];
-      } else if (field in this[$dirty].relationships) {
-        newDirty.relationships = this[$dirty].relationships[field];
+    Object.keys(this[$dirty]).forEach(fieldType => {
+      for (const field in this[$dirty][fieldType]) {
+        if (keys.indexOf(field) < 0) {
+          const val = this[$dirty][fieldType][field];
+          newDirty[fieldType][field] = typeof val === 'object' ? mergeOptions({}, val) : val;
+        }
       }
     });
     this[$dirty] = newDirty;
@@ -174,12 +176,11 @@ export class Model {
 
     return this[$plump].save(this.constructor, update)
     .then((updated) => {
-      const schematized = this.constructor.schematize(updated, { includeId: true });
       this.$$resetDirty(opts);
-      if (schematized.id) {
-        this[this.constructor.$id] = schematized.id;
+      if (updated.id) {
+        this[this.constructor.$id] = updated.id;
       }
-      this.$$fireUpdate(schematized);
+      // this.$$fireUpdate(updated);
       return this;
     });
   }
@@ -195,7 +196,7 @@ export class Model {
       }
     }
     this.$$copyValuesFrom(sanitized);
-    this.$$fireUpdate(sanitized);
+    // this.$$fireUpdate(sanitized);
     return this;
   }
 
@@ -233,7 +234,7 @@ export class Model {
           op: 'add',
           data: Object.assign({ id }, extras),
         });
-        this.$$fireUpdate();
+        // this.$$fireUpdate();
         return this;
       } else {
         throw new Error('Invalid item added to hasMany');
@@ -259,7 +260,7 @@ export class Model {
           op: 'modify',
           data: Object.assign({ id }, extras),
         });
-        this.$$fireUpdate();
+        // this.$$fireUpdate();
         return this;
       } else {
         throw new Error('Invalid item added to hasMany');
@@ -284,7 +285,7 @@ export class Model {
             data: { id },
           });
         }
-        this.$$fireUpdate();
+        // this.$$fireUpdate();
         return this;
       } else {
         throw new Error('Invalid item $removed from hasMany');

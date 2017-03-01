@@ -69,7 +69,7 @@ describe('model', () => {
         return expect(plump.find('tests', one.$id).$get())
         .to.eventually.have.deep.property('attributes.name', 'potato');
       })
-      .then(() => {debugger; one.$delete();})
+      .then(() => one.$delete())
       .then(() => expect(plump.find('tests', one.$id).$get()).to.eventually.be.null);
     });
 
@@ -94,13 +94,13 @@ describe('model', () => {
         return Bluebird.all([
           expect(one.$get()).to.eventually.have.deep.property('attributes.name', 'rutabaga'),
           expect(plump.get(TestType, one.$id))
-          .to.eventually.have.property('name', 'potato'),
+          .to.eventually.have.deep.property('attributes.name', 'potato'),
         ]);
       }).then(() => {
         return one.$save();
       }).then(() => {
         return expect(plump.get(TestType, one.$id))
-        .to.eventually.have.property('name', 'rutabaga');
+        .to.eventually.have.deep.property('attributes.name', 'rutabaga');
       });
     });
 
