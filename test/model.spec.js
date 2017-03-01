@@ -4,6 +4,10 @@ import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 import Bluebird from 'bluebird';
 
+Bluebird.config({
+  longStackTraces: true,
+});
+
 import { Plump, Model, Storage, MemoryStore, $all } from '../src/index';
 import { TestType } from './testType';
 
@@ -42,11 +46,9 @@ describe('model', () => {
     });
 
     it('should load data from datastores', () => {
-      return memstore2.write(TestType, {
-        id: 2,
-        name: 'potato',
-      }).then(() => {
-        const two = plump.find('tests', 2);
+      return memstore2.write(TestType, { attributes: { name: 'potato' }, relationships: {} })
+      .then(createdObject => {
+        const two = plump.find('tests', createdObject.id);
         return expect(two.$get()).to.eventually.have.deep.property('attributes.name', 'potato');
       });
     });
@@ -339,8 +341,11 @@ describe('model', () => {
         .then(() => one.$get())
         .then((val) => {
           return coldMemstore.write(TestType, {
-            name: 'potato',
             id: val.id,
+            attributes: {
+              name: 'potato',
+              id: val.id,
+            },
           })
           .then(() => {
             let phase = 0;

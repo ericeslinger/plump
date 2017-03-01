@@ -6,6 +6,10 @@ import { Plump, MemoryStore, $self } from '../src/index';
 import { TestType } from './testType';
 import Bluebird from 'bluebird';
 
+Bluebird.config({
+  longStackTraces: true,
+});
+
 chai.use(chaiAsPromised);
 const expect = chai.expect;
 

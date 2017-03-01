@@ -4,6 +4,11 @@
 import { MemoryStore, Plump } from '../src/index';
 import { TestType } from './testType';
 import Bluebird from 'bluebird';
+
+Bluebird.config({
+  longStackTraces: true,
+});
+
 import chai from 'chai';
 import chaiSubset from 'chai-subset';
 import chaiAsPromised from 'chai-as-promised';

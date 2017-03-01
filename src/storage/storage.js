@@ -56,42 +56,18 @@ export class Storage {
   // TODO: write the two-way has/get logic into this method
   // and provide override hooks for readAttributes readRelationship
 
-  read(type, id, key) {
-    let keys = [$self];
-    if (Array.isArray(key)) {
-      keys = key;
-    } else if (key) {
-      keys = [key];
-    }
-    if (keys.indexOf($all) >= 0) {
-      keys = Object.keys(type.$schema.relationships);
-      keys.push($self);
-    }
-    return Bluebird.resolve()
-    .then(() => {
-      return Bluebird.all(keys.map((k) => {
-        if ((k !== $self) && (type.$schema.relationships[k])) {
-          return this.readRelationship(type, id, k);
-        } else {
-          return this.readAttributes(type, id);
-        }
-      })).then((valArray) => {
-        const selfIdx = keys.indexOf($self);
-        const retVal = { id, attributes: {}, relationships: {} };
-        if (selfIdx >= 0) {
-          if (valArray[selfIdx] === null) {
-            return null;
-          } else {
-            retVal.attributes = mergeOptions({}, valArray[selfIdx]);
-          }
-        }
-        valArray.forEach((val, idx) => {
-          if (idx !== selfIdx) {
-            retVal.relationships = mergeOptions(retVal.relationships, val);
-          }
+  read(type, id, opts) {
+    const keys = opts && !Array.isArray(opts) ? [opts] : opts;
+    return this.readAttributes(type, id)
+    .then(attributes => {
+      if (attributes) {
+        return this.readRelationships(type, id, keys)
+        .then(relationships => {
+          return { type, id, attributes, relationships };
         });
-        return retVal;
-      });
+      } else {
+        return null;
+      }
     }).then((result) => {
       if (result) {
         return this.notifyUpdate(type, id, result, keys)
@@ -100,6 +76,20 @@ export class Storage {
         return result;
       }
     });
+  }
+
+  readRelationships(t, id, key, attributes) {
+    // If there is no key, it defaults to all relationships
+    // Otherwise, it wraps it in an Array if it isn't already one
+    const keys = key && !Array.isArray(key) ? [key] : key || [];
+    return keys.filter(k => k in t.$schema.relationships).map(relName => {
+      return this.readRelationship(t, id, relName, attributes);
+    }).reduce((thenableAcc, thenableCurr) => {
+      return Bluebird.all([thenableAcc, thenableCurr])
+      .then(([acc, curr]) => {
+        return mergeOptions(acc, curr);
+      });
+    }, Bluebird.resolve({}));
   }
 
   // wipe should quietly erase a value from the store. This is used during

@@ -135,7 +135,7 @@ export class KeyValueStore extends Storage {
       return this.$$maxKey(t.$name)
       .then((n) => {
         const id = n + 1;
-        toSave[t.$schema.$id] = id;
+        toSave.id = id;
         return Bluebird.all([
           this.writeAttributes(t, id, toSave.attributes),
           this.writeRelationships(t, id, toSave.relationships),
@@ -186,42 +186,9 @@ export class KeyValueStore extends Storage {
     }).reduce((thenable, curr) => thenable.then(() => curr), Bluebird.resolve());
   }
 
-  read(type, id, key) {
-    const keys = key && !Array.isArray(key) ? [key] : key;
-    return this.readAttributes(type, id)
-    .then(attributes => Bluebird.all([attributes, this.readRelationships(type, id, keys, attributes)]))
-    .then(([attributes, relationships]) => {
-      if (attributes) { // proxy for whether the object is actually in the store
-        const result = { id, attributes, relationships };
-        if (result) {
-          return this.notifyUpdate(type, id, result, keys)
-          .then(() => result);
-        } else {
-          return result;
-        }
-      } else {
-        return null;
-      }
-    });
-  }
-
   readAttributes(t, id) {
     return this._get(this.keyString(t.$name, id))
     .then((d) => JSON.parse(d));
-  }
-
-  readRelationships(t, id, key, attributes) {
-    // If there is no key, it defaults to all relationships
-    // Otherwise, it wraps it in an Array if it isn't already one
-    const keys = key && !Array.isArray(key) ? [key] : key || Object.keys(t.$schema.relationships);
-    return keys.map(relName => {
-      return this.readRelationship(t, id, relName, attributes);
-    }).reduce((thenableAcc, thenableCurr) => {
-      return Bluebird.all([thenableAcc, thenableCurr])
-      .then(([acc, curr]) => {
-        return mergeOptions(acc, curr);
-      }, {});
-    });
   }
 
   readRelationship(t, id, relationship, attributes) {
