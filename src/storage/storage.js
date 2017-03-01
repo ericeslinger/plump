@@ -1,7 +1,9 @@
 /* eslint no-unused-vars: 0 */
 
 import * as Bluebird from 'bluebird';
+import mergeOptions from 'merge-options';
 import { Subject } from 'rxjs/Rx';
+
 import { $self, $all } from '../model';
 
 const $emitter = Symbol('$emitter');
@@ -52,47 +54,20 @@ export class Storage {
   }
 
   // TODO: write the two-way has/get logic into this method
-  // and provide override hooks for readOne readMany
+  // and provide override hooks for readAttributes readRelationship
 
-  read(type, id, key) {
-    let keys = [$self];
-    if (Array.isArray(key)) {
-      keys = key;
-    } else if (key) {
-      keys = [key];
-    }
-    if (keys.indexOf($all) >= 0) {
-      keys = Object.keys(type.$schema.relationships);
-      keys.push($self);
-    }
-    // if (keys.indexOf($self) < 0) {
-    //   keys.push($self);
-    // }
-    return Bluebird.resolve()
-    .then(() => {
-      return Bluebird.all(keys.map((k) => {
-        if ((k !== $self) && (type.$schema.relationships[k])) {
-          return this.readMany(type, id, k);
-        } else {
-          return this.readOne(type, id);
-        }
-      })).then((valArray) => {
-        const selfIdx = keys.indexOf($self);
-        const retVal = {};
-        if (selfIdx >= 0) {
-          if (valArray[selfIdx] === null) {
-            return null;
-          } else {
-            Object.assign(retVal, valArray[selfIdx]);
-          }
-        }
-        valArray.forEach((val, idx) => {
-          if (idx !== selfIdx) {
-            Object.assign(retVal, val);
-          }
+  read(type, id, opts) {
+    const keys = opts && !Array.isArray(opts) ? [opts] : opts;
+    return this.readAttributes(type, id)
+    .then(attributes => {
+      if (attributes) {
+        return this.readRelationships(type, id, keys)
+        .then(relationships => {
+          return { type, id, attributes, relationships };
         });
-        return retVal;
-      });
+      } else {
+        return null;
+      }
     }).then((result) => {
       if (result) {
         return this.notifyUpdate(type, id, result, keys)
@@ -103,6 +78,28 @@ export class Storage {
     });
   }
 
+  readAttributes(type, id) {
+    return Bluebird.reject(new Error('readAttributes not implemented'));
+  }
+
+  readRelationship(type, id, key) {
+    return Bluebird.reject(new Error('readRelationship not implemented'));
+  }
+
+  readRelationships(t, id, key, attributes) {
+    // If there is no key, it defaults to all relationships
+    // Otherwise, it wraps it in an Array if it isn't already one
+    const keys = key && !Array.isArray(key) ? [key] : key || [];
+    return keys.filter(k => k in t.$schema.relationships).map(relName => {
+      return this.readRelationship(t, id, relName, attributes);
+    }).reduce((thenableAcc, thenableCurr) => {
+      return Bluebird.all([thenableAcc, thenableCurr])
+      .then(([acc, curr]) => {
+        return mergeOptions(acc, curr);
+      });
+    }, Bluebird.resolve({}));
+  }
+
   // wipe should quietly erase a value from the store. This is used during
   // cache invalidation events when the current value is known to be incorrect.
   // it is not a delete (which is a user-initiated, event-causing thing), but
@@ -110,14 +107,6 @@ export class Storage {
 
   wipe(type, id, field) {
     return Bluebird.reject(new Error('Wipe not implemented'));
-  }
-
-  readOne(type, id) {
-    return Bluebird.reject(new Error('ReadOne not implemented'));
-  }
-
-  readMany(type, id, key) {
-    return Bluebird.reject(new Error('ReadMany not implemented'));
   }
 
   delete(type, id) {
@@ -154,39 +143,34 @@ export class Storage {
     return this[$emitter].subscribe(observer);
   }
 
-  notifyUpdate(type, id, value, opts = [$self]) {
-    let keys = opts;
-    if (!Array.isArray(keys)) {
-      keys = [keys];
-    }
+  notifyUpdate(type, id, value, opts = ['attributes']) {
+    const keys = Array.isArray(opts) ? opts : [opts];
     return Bluebird.all(keys.map((field) => {
       return Bluebird.resolve()
       .then(() => {
         if (this.terminal) {
-          if (field !== $self) {
-            if (value !== null) {
-              this[$emitter].next({
-                type, id, field, value: value[field],
-              });
-              return null;
-            } else {
-              return this.readMany(type, id, field)
-              .then((list) => {
-                this[$emitter].next({
-                  type, id, field, value: list[field],
-                });
-                return null;
-              });
-            }
+          if (field === 'attributes') {
+            return field in value ? Bluebird.resolve(value[field]) : this.readAttributes(type, id);
           } else {
-            this[$emitter].next({
-              type, id, value,
-            });
-            return null;
+            if (value && value.relationships && field in value.relationships) { // eslint-disable-line no-lonely-if
+              return Bluebird.resolve(value.relationships[field]);
+            } else {
+              return this.readRelationship(type, id, field);
+            }
           }
         } else {
           return null;
         }
+      }).then((val) => {
+        if (val) {
+          this[$emitter].next({
+            type,
+            id,
+            value: val,
+            field,
+          });
+        }
+        return null;
       });
     }));
   }
