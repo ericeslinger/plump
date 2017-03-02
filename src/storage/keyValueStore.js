@@ -62,7 +62,8 @@ function applyDelta(base, delta) {
   }
 }
 
-function resolveRelationship(deltas, base = []) {
+function resolveRelationship(deltas, maybeBase) {
+  const base = maybeBase || [];
   // Index current relationships by ID for efficient modification
   const updates = base.map(rel => {
     return { [rel.id]: rel };
@@ -114,7 +115,7 @@ export class KeyValueStore extends Storage {
       keys.map(relName => {
         return this._get(this.keyString(t.$name, id, relName))
         .then(rel => {
-          return { [relName]: rel };
+          return { [relName]: JSON.parse(rel) };
         });
       })
     ).then(relList => relList.reduce((acc, curr) => mergeOptions(acc, curr), {}));
