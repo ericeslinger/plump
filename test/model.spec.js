@@ -133,8 +133,10 @@ describe('model', () => {
     it('should show empty hasMany lists as {key: []}', () => {
       const one = new TestType({ name: 'frotato' }, plump);
       return one.$save()
-      .then(() => expect(one.$get('children')).to.eventually.have.property('relationships')
-      .that.deep.equals({ children: [] }));
+      .then(() => {
+        return expect(one.$get('children')).to.eventually.have.property('relationships')
+        .that.deep.equals({ children: [] });
+      });
     });
 
     it('should add hasMany elements', () => {
@@ -169,8 +171,10 @@ describe('model', () => {
         .that.deep.equals({ children: [{ id: 100 }] });
       })
       .then(() => one.$remove('children', 100).$save())
-      .then(() => expect(one.$get('children')).to.eventually.have.property('relationships')
-      .that.deep.equals({ children: [] }));
+      .then(() => {
+        return expect(one.$get('children')).to.eventually.have.property('relationships')
+        .that.deep.equals({ children: [] });
+      });
     });
 
     it('should include valence in hasMany operations', () => {

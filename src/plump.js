@@ -121,8 +121,6 @@ export class Plump {
       } else {
         return v;
       }
-    }).then((v) => {
-      return v;
     });
   }
 

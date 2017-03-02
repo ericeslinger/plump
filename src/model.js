@@ -29,6 +29,8 @@ export class Model {
     // this.$$fireUpdate(opts);
   }
 
+  // CONVENIENCE ACCESSORS
+
   get $name() {
     return this.constructor.$name;
   }
@@ -54,19 +56,7 @@ export class Model {
     .reduce((acc, curr) => acc.concat(curr), []);
   }
 
-  // $$flatten(opts) {
-  //   const key = opts || this.$dirtyFields;
-  //   const keys = Array.isArray(key) ? key : [key];
-  //   const retVal = {};
-  //   keys.forEach(k => {
-  //     if (this[$dirty].attributes[k]) {
-  //       retVal[k] = this[$dirty].attributes[k];
-  //     } else if (this[$dirty].relationships[k]) {
-  //       retVal[k] = this.$$resolveRelationships(k);
-  //     }
-  //   });
-  //   return retVal;
-  // }
+  // WIRING
 
   $$copyValuesFrom(opts = {}) {
     const idField = this.constructor.$id in opts ? this.constructor.$id : 'id';
@@ -122,12 +112,20 @@ export class Model {
   }
 
   $$fireUpdate(v) {
-    const update = this.constructor.resolveAndOverlay(v, this[$dirty]);
+    const update = this.constructor.resolveAndOverlay(this[$dirty], v);
     if (this.$id) {
       update.id = this.$id;
     }
     this[$subject].next(update);
   }
+
+  $teardown() {
+    if (this[$unsubscribe]) {
+      this[$unsubscribe].unsubscribe();
+    }
+  }
+
+  // API METHODS
 
   $get(opts) {
     // If opts is falsy (i.e., undefined), get attributes
@@ -143,7 +141,7 @@ export class Model {
         return null;
       } else {
         const schematized = this.constructor.schematize(self || {});
-        const withDirty = this.constructor.resolveAndOverlay(schematized, this[$dirty]);
+        const withDirty = this.constructor.resolveAndOverlay(this[$dirty], schematized);
         const retVal = this.constructor.applyDefaults(withDirty);
         retVal.type = this.$name;
         retVal.id = this.$id;
@@ -162,8 +160,7 @@ export class Model {
       const value = Object.keys(this[$dirty][fieldType])
         .filter(key => keys.indexOf(key) >= 0)
         .map(key => {
-          const val = this[$dirty][fieldType][key];
-          return { [key]: typeof val === 'object' ? mergeOptions({}, val) : val };
+          return { [key]: this[$dirty][fieldType][key] };
         })
         .reduce((acc, curr) => Object.assign(acc, curr), {});
 
@@ -279,12 +276,13 @@ export class Model {
         id = item.$id;
       }
       if ((typeof id === 'number') && (id >= 1)) {
-        if (key in this[$dirty].relationships) {
-          this[$dirty].relationships[key].push({
-            op: 'remove',
-            data: { id },
-          });
+        if (!(key in this[$dirty].relationships)) {
+          this[$dirty].relationships[key] = [];
         }
+        this[$dirty].relationships[key].push({
+          op: 'remove',
+          data: { id },
+        });
         // this.$$fireUpdate();
         return this;
       } else {
@@ -292,12 +290,6 @@ export class Model {
       }
     } else {
       throw new Error('Cannot $remove except from hasMany field');
-    }
-  }
-
-  $teardown() {
-    if (this[$unsubscribe]) {
-      this[$unsubscribe].unsubscribe();
     }
   }
 }
@@ -342,28 +334,103 @@ Model.$rest = function $rest(plump, opts) {
   return plump.restRequest(restOpts);
 };
 
+// SCHEMA FUNCTIONS
+
+Model.addDelta = function addDelta(relName, relationship) {
+  return relationship.map(rel => {
+    const relSchema = this.$schema.relationships[relName].type.$sides[relName];
+    const schematized = { op: 'add', data: { id: rel[relSchema.other.field] } };
+    for (const relField in rel) {
+      if (!(relField === relSchema.self.field || relField === relSchema.other.field)) {
+        schematized.data[relField] = rel[relField];
+      }
+    }
+    return schematized;
+  });
+};
+
+Model.applyDefaults = function applyDefaults(v) {
+  const retVal = mergeOptions({}, v);
+  for (const attr in this.$schema.attributes) {
+    if ('default' in this.$schema.attributes[attr] && !(attr in retVal.attributes)) {
+      retVal.attributes[attr] = this.$schema.attributes[attr].default;
+    }
+  }
+  Object.keys(this.$schema).filter(k => k !== '$id')
+  .forEach(fieldType => {
+    for (const field in this.$schema[fieldType]) {
+      if (!(field in retVal[fieldType])) {
+        if ('default' in this.$schema[fieldType][field]) {
+          retVal[fieldType][field] = this.$schema[fieldType][field].default;
+        }
+      }
+    }
+  });
+  return retVal;
+};
+
+Model.applyDelta = function applyDelta(current, delta) {
+  if (delta.op === 'add' || delta.op === 'modify') {
+    const retVal = mergeOptions({}, current, delta.data);
+    return retVal;
+  } else if (delta.op === 'remove') {
+    return undefined;
+  } else {
+    return current;
+  }
+};
+
 Model.assign = function assign(opts) {
   const schematized = this.schematize(opts, { includeId: true });
   const retVal = this.applyDefaults(schematized);
+  Object.keys(this.$schema).filter(k => k !== '$id')
+  .forEach(fieldType => {
+    for (const field in this.$schema[fieldType]) {
+      if (!(field in retVal[fieldType])) {
+        retVal[fieldType][field] = fieldType === 'relationships' ? [] : null;
+      }
+    }
+  });
   retVal.type = this.$name;
-  // {
-  //   type: this.$name,
-  //   id: opts[this.$schema.$id] || null,
-  //   attributes: {},
-  //   relationships: {},
-  // };
-  // ['attributes', 'relationships'].forEach(fieldType => {
-  //   for (const key in this.$schema[fieldType]) {
-  //     if (opts[key]) {
-  //       start[fieldType][key] = opts[key];
-  //     } else if (this.$schema[fieldType][key].default) {
-  //       start[fieldType][key] = this.$schema[fieldType][key].default;
-  //     } else {
-  //       start[fieldType][key] = fieldType === 'attributes' ? null : [];
-  //     }
-  //   }
-  // });
   return retVal;
+};
+
+Model.resolveAndOverlay = function resolveAndOverlay(update, base = { attributes: {}, relationships: {} }) {
+  const attributes = mergeOptions({}, base.attributes, update.attributes);
+  const baseIsResolved = Object.keys(base.relationships).map(relName => {
+    return base.relationships[relName].map(rel => !('op' in rel)).reduce((acc, curr) => acc && curr, true);
+  }).reduce((acc, curr) => acc && curr, true);
+  const resolvedBaseRels = baseIsResolved ? base.relationships : this.resolveRelationships(base.relationships);
+  const resolvedRelationships = this.resolveRelationships(update.relationships, resolvedBaseRels);
+  return { attributes, relationships: resolvedRelationships };
+};
+
+Model.resolveRelationships = function resolveRelationships(deltas, base = {}) {
+  const updates = Object.keys(deltas).map(relName => {
+    const resolved = this.resolveRelationship(deltas[relName], base[relName]);
+    return { [relName]: resolved };
+  })
+  .reduce((acc, curr) => mergeOptions(acc, curr), {});
+  return mergeOptions({}, base, updates);
+};
+
+Model.resolveRelationship = function resolveRelationship(deltas, base = []) {
+  // Index current relationships by ID for efficient modification
+  const updates = base.map(rel => {
+    return { [rel.id]: rel };
+  }).reduce((acc, curr) => mergeOptions(acc, curr), {});
+
+  // Apply deltas on top of updates
+  deltas.forEach(delta => {
+    const childId = delta.data ? delta.data.id : delta.id;
+    updates[childId] = delta.op ? this.applyDelta(updates[childId], delta) : delta;
+  });
+
+  // Reduce updates back into list, omitting undefineds
+  return Object.keys(updates)
+    .map(id => updates[id])
+    .filter(rel => rel !== undefined)
+    .reduce((acc, curr) => acc.concat(curr), []);
 };
 
 Model.schematize = function schematize(v = {}, opts = { includeId: false }) {
@@ -389,79 +456,7 @@ Model.schematize = function schematize(v = {}, opts = { includeId: false }) {
   return retVal;
 };
 
-Model.addDelta = function addDelta(relName, relationship) {
-  return relationship.map(rel => {
-    const relSchema = this.$schema.relationships[relName].type.$sides[relName];
-    const schematized = { op: 'add', data: { id: rel[relSchema.other.field] } };
-    for (const relField in rel) {
-      if (!(relField === relSchema.self.field || relField === relSchema.other.field)) {
-        schematized.data[relField] = rel[relField];
-      }
-    }
-    return schematized;
-  });
-};
-
-Model.applyDefaults = function applyDefaults(v) {
-  const retVal = mergeOptions({}, v);
-  Object.keys(this.$schema).filter(k => k !== '$id')
-  .forEach(fieldType => {
-    for (const field in this.$schema[fieldType]) {
-      if ('default' in this.$schema[fieldType][field] && !(field in retVal[fieldType])) {
-        retVal[fieldType][field] = this.$schema[fieldType][field].default;
-      }
-    }
-  });
-  return retVal;
-};
-
-Model.applyDelta = function applyDelta(current, delta) {
-  if (delta.op === 'add' || delta.op === 'modify') {
-    const retVal = mergeOptions({}, current, delta.data);
-    return retVal;
-  } else if (delta.op === 'remove') {
-    return undefined;
-  } else {
-    return current;
-  }
-};
-
-Model.resolveAndOverlay = function resolveAndOverlay(base = { attributes: {}, relationships: {} }, update) {
-  const attributes = mergeOptions({}, base.attributes, update.attributes);
-  const baseIsResolved = Object.keys(base.relationships).map(relName => {
-    return base.relationships[relName].map(rel => !('op' in rel)).reduce((acc, curr) => acc && curr, true);
-  }).reduce((acc, curr) => acc && curr, true);
-  const resolvedBaseRels = baseIsResolved ? base.relationships : this.resolveRelationships(base.relationships);
-  const resolvedRelationships = this.resolveRelationships(update.relationships, resolvedBaseRels);
-  return { attributes, relationships: resolvedRelationships };
-};
-
-Model.resolveRelationships = function resolveRelationships(deltas, base = {}) {
-  return Object.keys(deltas).map(relName => {
-    const resolved = this.resolveRelationship(deltas[relName], base[relName]);
-    return { [relName]: resolved };
-  })
-  .reduce((acc, curr) => mergeOptions(acc, curr), {});
-};
-
-Model.resolveRelationship = function resolveRelationship(deltas, base = []) {
-  // Index current relationships by ID for efficient modification
-  const updates = base.map(rel => {
-    return { [rel.id]: rel };
-  }).reduce((acc, curr) => mergeOptions(acc, curr), {});
-
-  // Apply deltas on top of updates
-  deltas.forEach(delta => {
-    const childId = delta.data ? delta.data.id : delta.id;
-    updates[childId] = delta.op ? this.applyDelta(updates[childId], delta) : delta;
-  });
-
-  // Reduce updates back into list, omitting undefineds
-  return Object.keys(updates)
-    .map(id => updates[id])
-    .filter(rel => rel !== undefined)
-    .reduce((acc, curr) => acc.concat(curr), []);
-};
+// METADATA
 
 Model.$id = 'id';
 Model.$name = 'Base';
