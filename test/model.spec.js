@@ -69,7 +69,7 @@ describe('model', () => {
         return expect(plump.find('tests', one.$id).$get())
         .to.eventually.have.deep.property('attributes.name', 'potato');
       })
-      .then(() => {debugger; one.$delete();})
+      .then(() => one.$delete())
       .then(() => expect(plump.find('tests', one.$id).$get()).to.eventually.be.null);
     });
 
@@ -94,13 +94,13 @@ describe('model', () => {
         return Bluebird.all([
           expect(one.$get()).to.eventually.have.deep.property('attributes.name', 'rutabaga'),
           expect(plump.get(TestType, one.$id))
-          .to.eventually.have.property('name', 'potato'),
+          .to.eventually.have.deep.property('attributes.name', 'potato'),
         ]);
       }).then(() => {
         return one.$save();
       }).then(() => {
         return expect(plump.get(TestType, one.$id))
-        .to.eventually.have.property('name', 'rutabaga');
+        .to.eventually.have.deep.property('attributes.name', 'rutabaga');
       });
     });
 
@@ -133,8 +133,10 @@ describe('model', () => {
     it('should show empty hasMany lists as {key: []}', () => {
       const one = new TestType({ name: 'frotato' }, plump);
       return one.$save()
-      .then(() => expect(one.$get('children')).to.eventually.have.property('relationships')
-      .that.deep.equals({ children: [] }));
+      .then(() => {
+        return expect(one.$get('children')).to.eventually.have.property('relationships')
+        .that.deep.equals({ children: [] });
+      });
     });
 
     it('should add hasMany elements', () => {
@@ -169,8 +171,10 @@ describe('model', () => {
         .that.deep.equals({ children: [{ id: 100 }] });
       })
       .then(() => one.$remove('children', 100).$save())
-      .then(() => expect(one.$get('children')).to.eventually.have.property('relationships')
-      .that.deep.equals({ children: [] }));
+      .then(() => {
+        return expect(one.$get('children')).to.eventually.have.property('relationships')
+        .that.deep.equals({ children: [] });
+      });
     });
 
     it('should include valence in hasMany operations', () => {

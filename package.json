@@ -5,7 +5,7 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "test": "mocha --compilers js:babel-core/register test/*.spec.js --require test/helper.js"
+    "test": "mocha --compilers js:babel-core/register test/*.spec.js --require test/helper.js -i --grep='event'"
   },
   "repository": {
     "type": "git",
