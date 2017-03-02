@@ -22,12 +22,12 @@ export class Plump {
     options.types.forEach((t) => this.addType(t));
   }
 
-  addTypesFromSchema(schema, ExtendingModel = Model) {
-    Object.keys(schema).forEach((k) => {
+  addTypesFromSchema(schemata, ExtendingModel = Model) {
+    for (const k in schemata) { // eslint-disable-line guard-for-in
       class DynamicModel extends ExtendingModel {}
-      DynamicModel.fromJSON(schema[k]);
+      DynamicModel.fromJSON(schemata[k]);
       this.addType(DynamicModel);
-    });
+    }
   }
 
   addType(T) {

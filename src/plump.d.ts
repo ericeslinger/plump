@@ -11,31 +11,31 @@ export as namespace plump;
 
 declare class Plump {
     new (opts?: {
-      storage?: Array<Storage>,
-      types?: Array<typeof Model>
+      storage?: Storage[],
+      types?: Model[],
     });
 
     addTypesFromSchema(
-      schema: Model.Fields, // representation of Model.$fields
+      schemata: { [k: string]: Model.Schema },
       ExtendingModel: Model
     ): void;
 
-    addType(T: typeof Model): void;
+    addType(T: Model): void;
 
-    type(T: string): typeof Model;
+    type(T: string): Model;
 
-    types(): (typeof Model)[];
+    types(): Model[];
 
     addStore(store: Storage): void;
 
     find(
-      t: string | typeof Model,
+      t: string | Model,
       id: number
     ): Model;
 
     forge(
-      t: string | typeof Model,
-      val: Model.Fields
+      t: string | Model,
+      val: Model.Schema
     ): Model;
 
     subscribe(
@@ -44,42 +44,43 @@ declare class Plump {
       handler: () => void
     ): Rx.Subscription;
 
+    restRequest(opts: any): Bluebird<Model.Data>;
+
     teardown(): void;
 
     get(
-      type: typeof Model,
+      type: Model,
       id: number,
       keyOpts?: PropertyKey[]
     ): Bluebird<Model>;
 
     streamGet(
-      type: typeof Model,
+      type: Model,
       id: number,
       keyOpts?: PropertyKey[]
     ): Rx.Observable<Model>;
 
     save(
-      type: typeof Model,
-      val: Model.Fields
+      type: Model,
+      val: Model.Schema
     ): Bluebird<any>;
 
     delete(
-      type: typeof Model,
+      type: Model,
       id: number
-    ): Bluebird<Model>;
+    ): Bluebird<any>;
 
     add(
-      type: typeof Model,
+      type: Model,
       id: number,
       relationshipTitle: string,
       childId: number,
       extras?: StringIndexed<any>
-    ): Bluebird<Model>;
+    ): Bluebird<any>;
 
-    restRequest(opts: any): Bluebird<any>;
 
     modifyRelationship(
-      type: typeof Model,
+      type: Model,
       id: number,
       relationshipTitle: string,
       childId: number,
@@ -87,14 +88,14 @@ declare class Plump {
     ): Bluebird<any>;
 
     remove(
-      type: typeof Model,
+      type: Model,
       id: number,
       relationshipTitle: string,
       childId: number
     ): Bluebird<any>;
 
     invalidate(
-      type: typeof Model,
+      type: Model,
       id: number,
       field: symbol | string,
     ): Bluebird<any>;

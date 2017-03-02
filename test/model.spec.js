@@ -8,18 +8,8 @@ Bluebird.config({
   longStackTraces: true,
 });
 
-import { Plump, Model, Storage, MemoryStore, $all } from '../src/index';
+import { Plump, Model, MemoryStore, $all } from '../src/index';
 import { TestType } from './testType';
-
-// For testing while actual bulkRead implementations are in development
-Storage.prototype.bulkRead = function bulkRead(opts) { // eslint-disable-line no-unused-vars
-  return Bluebird.all([
-    this.read(TestType, 2, $all),
-    this.read(TestType, 3, $all),
-  ]).then(children => {
-    return { children };
-  });
-};
 
 const memstore2 = new MemoryStore({ terminal: true });
 
@@ -186,17 +176,23 @@ describe('model', () => {
         .to.eventually.have.property('relationships')
         .that.deep.equals({ valenceChildren: [{
           id: 100,
-          perm: 1,
+          meta: {
+            perm: 1,
+          },
         }] });
       })
       .then(() => one.$modifyRelationship('valenceChildren', 100, { perm: 2 }).$save())
       .then(() => {
         return expect(one.$get('valenceChildren'))
         .to.eventually.have.property('relationships')
-        .that.deep.equals({ valenceChildren: [{
-          id: 100,
-          perm: 2,
-        }] });
+        .that.deep.equals({
+          valenceChildren: [{
+            id: 100,
+            meta: {
+              perm: 2,
+            },
+          }],
+        });
       });
     });
   });

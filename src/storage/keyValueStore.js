@@ -3,7 +3,6 @@ import mergeOptions from 'merge-options';
 
 import { Storage } from './storage';
 import { createFilter } from './createFilter';
-import { $self } from '../model';
 
 function saneNumber(i) {
   return ((typeof i === 'number') && (!isNaN(i)) && (i !== Infinity) & (i !== -Infinity));
@@ -217,7 +216,7 @@ export class KeyValueStore extends Storage {
   }
 
   wipe(t, id, field) {
-    if (field === $self) {
+    if (field === 'attributes') {
       return this._del(this.keyString(t.$name, id));
     } else {
       return this._del(this.keyString(t.$name, id, field));
@@ -241,10 +240,12 @@ export class KeyValueStore extends Storage {
       if (relationshipBlock.$extras) {
         newChild.meta = newChild.meta || {};
         newParent.meta = newParent.meta || {};
-        Object.keys(relationshipBlock.$extras).forEach((extra) => {
-          newChild.meta[extra] = extras[extra];
-          newParent.meta[extra] = extras[extra];
-        });
+        for (const extra in extras) {
+          if (extra in relationshipBlock.$extras) {
+            newChild.meta[extra] = extras[extra];
+            newParent.meta[extra] = extras[extra];
+          }
+        }
       }
       const thisIdx = thisArray.findIndex(item => item.id === childId);
       // findEntryCallback(relationshipBlock, relationshipTitle, newChild));
