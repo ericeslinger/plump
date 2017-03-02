@@ -100,11 +100,11 @@ export class Model {
     const key = opts || this.$dirtyFields;
     const newDirty = { attributes: {}, relationships: {} };
     const keys = Array.isArray(key) ? key : [key];
-    Object.keys(this[$dirty]).forEach(fieldType => {
-      for (const field in this[$dirty][fieldType]) {
+    Object.keys(this[$dirty]).forEach(schemaField => {
+      for (const field in this[$dirty][schemaField]) {
         if (keys.indexOf(field) < 0) {
-          const val = this[$dirty][fieldType][field];
-          newDirty[fieldType][field] = typeof val === 'object' ? mergeOptions({}, val) : val;
+          const val = this[$dirty][schemaField][field];
+          newDirty[schemaField][field] = typeof val === 'object' ? mergeOptions({}, val) : val;
         }
       }
     });
@@ -156,15 +156,15 @@ export class Model {
     const keys = Array.isArray(options) ? options : [options];
 
     // Deep copy dirty cache, filtering out keys that are not in opts
-    const update = Object.keys(this[$dirty]).map(fieldType => {
-      const value = Object.keys(this[$dirty][fieldType])
+    const update = Object.keys(this[$dirty]).map(schemaField => {
+      const value = Object.keys(this[$dirty][schemaField])
         .filter(key => keys.indexOf(key) >= 0)
         .map(key => {
-          return { [key]: this[$dirty][fieldType][key] };
+          return { [key]: this[$dirty][schemaField][key] };
         })
         .reduce((acc, curr) => Object.assign(acc, curr), {});
 
-      return { [fieldType]: value };
+      return { [schemaField]: value };
     }).reduce((acc, curr) => Object.assign(acc, curr), {});
 
     if (this.$id !== undefined) {
@@ -229,7 +229,7 @@ export class Model {
         }
         this[$dirty].relationships[key].push({
           op: 'add',
-          data: Object.assign({ id }, extras),
+          data: Object.assign({ id }, { meta: extras }),
         });
         // this.$$fireUpdate();
         return this;
@@ -255,7 +255,7 @@ export class Model {
         }
         this[$dirty].relationships[key].push({
           op: 'modify',
-          data: Object.assign({ id }, extras),
+          data: Object.assign({ id }, { meta: extras }),
         });
         // this.$$fireUpdate();
         return this;
@@ -357,11 +357,11 @@ Model.applyDefaults = function applyDefaults(v) {
     }
   }
   Object.keys(this.$schema).filter(k => k !== '$id')
-  .forEach(fieldType => {
-    for (const field in this.$schema[fieldType]) {
-      if (!(field in retVal[fieldType])) {
-        if ('default' in this.$schema[fieldType][field]) {
-          retVal[fieldType][field] = this.$schema[fieldType][field].default;
+  .forEach(schemaField => {
+    for (const field in this.$schema[schemaField]) {
+      if (!(field in retVal[schemaField])) {
+        if ('default' in this.$schema[schemaField][field]) {
+          retVal[schemaField][field] = this.$schema[schemaField][field].default;
         }
       }
     }
@@ -384,10 +384,10 @@ Model.assign = function assign(opts) {
   const schematized = this.schematize(opts, { includeId: true });
   const retVal = this.applyDefaults(schematized);
   Object.keys(this.$schema).filter(k => k !== '$id')
-  .forEach(fieldType => {
-    for (const field in this.$schema[fieldType]) {
-      if (!(field in retVal[fieldType])) {
-        retVal[fieldType][field] = fieldType === 'relationships' ? [] : null;
+  .forEach(schemaField => {
+    for (const field in this.$schema[schemaField]) {
+      if (!(field in retVal[schemaField])) {
+        retVal[schemaField][field] = schemaField === 'relationships' ? [] : null;
       }
     }
   });
@@ -439,16 +439,16 @@ Model.schematize = function schematize(v = {}, opts = { includeId: false }) {
     retVal.id = this.$id in v ? v[this.$id] : v.id;
   }
   Object.keys(this.$schema).filter(k => k !== '$id')
-  .forEach(fieldType => {
-    if (fieldType in v) {
-      retVal[fieldType] = mergeOptions({}, v[fieldType]);
+  .forEach(schemaField => {
+    if (schemaField in v) {
+      retVal[schemaField] = mergeOptions({}, v[schemaField]);
     } else {
-      if (!(fieldType in retVal)) {
-        retVal[fieldType] = {};
+      if (!(schemaField in retVal)) {
+        retVal[schemaField] = {};
       }
-      for (const field in this.$schema[fieldType]) {
+      for (const field in this.$schema[schemaField]) {
         if (field in v) {
-          retVal[fieldType][field] = fieldType === 'relationships' ? this.addDelta(field, v[field]) : v[field];
+          retVal[schemaField][field] = schemaField === 'relationships' ? this.addDelta(field, v[field]) : v[field];
         }
       }
     }
