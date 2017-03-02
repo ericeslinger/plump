@@ -2,9 +2,9 @@ import * as Rx from 'rxjs/Rx';
 import * as Bluebird from 'bluebird';
 
 import { StringIndexed, NumericIDed} from './util';
-import * as Plump from './index.d';
-import * as Model from './model.d';
-import * as Storage from './storage/storage.d';
+import { Plump } from './index.d';
+import { Model }from './model.d';
+import { Storage } from './storage/storage.d';
 
 declare abstract class Relationship {
   static fromJSON(
@@ -26,23 +26,23 @@ declare abstract class Relationship {
   static $sides: Relationship.Sides;
 
 
-  new (model: typeof Model, title: string, plump: Plump);
+  new (model: Model, title: string, plump: Plump);
 
   $otherItem(childId: number): Model;
 
   $add(
     childId: number,
     extras: StringIndexed<any>
-  ): Bluebird<any>;
-
-  $remove(childId: number): Bluebird<any>;
-
-  $list(): Bluebird<Model[]>;
+  ): Bluebird<[Relationship.Data[], Relationship.Data[]]>;
 
   $modify(
     childId: number,
     extras: StringIndexed<any>
-  ): Bluebird<any>;
+  ): Bluebird<void | null>;
+
+  $remove(childId: number): Bluebird<void | null>;
+
+  $list(): Bluebird<Model[]>;
 }
 
 declare namespace Relationship {
@@ -60,6 +60,14 @@ declare namespace Relationship {
     [relationshipName: string]: {
       self: GenericSideData,
       other: OtherSideData,
+    }
+  }
+
+  interface Data {
+    id: number,
+    meta?: {
+      extras?: StringIndexed<any>,
+      restrict?: { type: string, value: any }, // TODO: Constrain value to value of type
     }
   }
 }
