@@ -48,8 +48,13 @@ QueryChildren.$sides = {
 };
 QueryChildren.$storeData = {
   sql: {
+    joinFields: {
+      queryParents: 'child_id',
+      queryChildren: 'parent_id',
+    },
     joinQuery: {
-      queryParents: 'on "tests"."id" = "queryparents"."parent_id" and "queryparents"."perm" >= 2',
+      queryParents: 'on "tests"."id" = "queryParents"."parent_id" and "queryParents"."perm" >= 2',
+      queryChildren: 'on "tests"."id" = "queryChildren"."child_id" and "queryChildren"."perm" >= 2',
     },
   },
 };
@@ -70,7 +75,7 @@ TestType.$schema = {
   attributes: {
     id: { type: 'number' },
     name: { type: 'string' },
-    otherTitleName: { type: 'string', default: '' },
+    otherName: { type: 'string', default: '' },
     extended: { type: 'object', default: {} },
   },
   relationships: {
