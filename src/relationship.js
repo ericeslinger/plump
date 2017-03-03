@@ -34,8 +34,8 @@ Relationship.fromJSON = function fromJSON(json) {
   if (json.$extras) {
     this.$extras = json.$extras;
   }
-  if (json.$restrict) {
-    this.$restrict = json.$restrict;
+  if (json.$storeData) {
+    this.$storeData = json.$storeData;
   }
   this.$sides = mergeOptions({}, json.$sides);
 };
@@ -45,11 +45,11 @@ Relationship.toJSON = function toJSON() {
     $name: this.$name,
     $sides: this.$sides,
   };
-  if (this.$restrict) {
-    rV.$restrict = this.$restrict;
-  }
   if (this.$extras) {
     rV.$extras = this.$extras;
+  }
+  if (this.$storeData) {
+    rV.$storeData = this.$storeData;
   }
   return rV;
 };

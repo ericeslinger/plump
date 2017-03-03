@@ -11,121 +11,30 @@ export class QueryChildren extends Relationship {}
 
 Children.$name = 'parent_child_relationship';
 Children.$sides = {
-  parents: {
-    self: {
-      field: 'child_id',
-      type: 'tests',
-    },
-    other: {
-      field: 'parent_id',
-      type: 'tests',
-      title: 'children',
-    },
-  },
-  children: {
-    self: {
-      field: 'parent_id',
-      type: 'tests',
-    },
-    other: {
-      field: 'child_id',
-      type: 'tests',
-      title: 'parents',
+  parents: { otherType: 'tests', otherName: 'children' },
+  children: { otherType: 'tests', otherName: 'parents' },
+};
+Children.$storeData = {
+  sql: {
+    joinFields: {
+      parents: 'child_id',
+      children: 'parent_id',
     },
   },
 };
-
-Likes.$sides = {
-  likers: {
-    self: {
-      field: 'child_id',
-      type: 'tests',
-    },
-    other: {
-      field: 'parent_id',
-      type: 'tests',
-      title: 'likees',
-    },
-  },
-  likees: {
-    self: {
-      field: 'parent_id',
-      type: 'tests',
-    },
-    other: {
-      field: 'child_id',
-      type: 'tests',
-      title: 'likers',
-    },
-  },
-};
-
-Likes.$restrict = {
-  reaction: {
-    type: 'string',
-    value: 'like',
-  },
-};
-Likes.$name = 'reactions';
-Agrees.$sides = {
-  agreers: {
-    self: {
-      field: 'child_id',
-      type: 'tests',
-    },
-    other: {
-      field: 'parent_id',
-      type: 'tests',
-      title: 'agreees',
-    },
-  },
-  agreees: {
-    self: {
-      field: 'parent_id',
-      type: 'tests',
-    },
-    other: {
-      field: 'child_id',
-      type: 'tests',
-      title: 'agreers',
-    },
-  },
-};
-
-Agrees.$restrict = {
-  reaction: {
-    type: 'string',
-    value: 'agree',
-  },
-};
-Agrees.$name = 'reactions';
-
 
 ValenceChildren.$sides = {
-  valenceParents: {
-    self: {
-      field: 'child_id',
-      type: 'tests',
-    },
-    other: {
-      field: 'parent_id',
-      type: 'tests',
-      title: 'valenceChildren',
-    },
-  },
-  valenceChildren: {
-    self: {
-      field: 'parent_id',
-      type: 'tests',
-    },
-    other: {
-      field: 'child_id',
-      type: 'tests',
-      title: 'valenceParents',
+  valenceParents: { otherType: 'tests', otherName: 'valenceChildren' },
+  valenceChildren: { otherType: 'tests', otherName: 'valenceParents' },
+};
+ValenceChildren.$storeData = {
+  sql: {
+    joinFields: {
+      valenceParents: 'child_id',
+      valenceChildren: 'parent_id',
     },
   },
 };
-
 ValenceChildren.$extras = {
   perm: {
     type: 'number',
@@ -134,34 +43,13 @@ ValenceChildren.$extras = {
 ValenceChildren.$name = 'valence_children';
 
 QueryChildren.$sides = {
-  queryParents: {
-    self: {
-      field: 'child_id',
-      type: 'tests',
-      query: {
-        logic: ['where', ['where', 'id', '>', '{id}'], ['where', 'meta.perm', '>=', 2]],
-        requireLoad: true,
-      },
-    },
-    other: {
-      field: 'parent_id',
-      type: 'tests',
-      title: 'queryChildren',
-    },
-  },
-  queryChildren: {
-    self: {
-      field: 'parent_id',
-      type: 'tests',
-      query: {
-        logic: ['where', ['where', 'id', '>', '{id}'], ['where', 'meta.perm', '>=', 2]],
-        requireLoad: true,
-      },
-    },
-    other: {
-      field: 'child_id',
-      type: 'tests',
-      title: 'queryParents',
+  queryParents: { otherType: 'tests', otherName: 'queryChildren' },
+  queryChildren: { otherType: 'tests', otherName: 'queryParents' },
+};
+QueryChildren.$storeData = {
+  sql: {
+    joinQuery: {
+      queryParents: 'on "tests"."id" = "queryparents"."parent_id" and "queryparents"."perm" >= 2',
     },
   },
 };
@@ -182,7 +70,7 @@ TestType.$schema = {
   attributes: {
     id: { type: 'number' },
     name: { type: 'string' },
-    otherName: { type: 'string', default: '' },
+    otherTitleName: { type: 'string', default: '' },
     extended: { type: 'object', default: {} },
   },
   relationships: {
@@ -192,10 +80,6 @@ TestType.$schema = {
     valenceParents: { type: ValenceChildren },
     queryChildren: { type: QueryChildren, readOnly: true },
     queryParents: { type: QueryChildren, readOnly: true },
-    likers: { type: Likes },
-    likees: { type: Likes },
-    agreers: { type: Agrees },
-    agreees: { type: Agrees },
   },
 };
 TestType.$include = {
