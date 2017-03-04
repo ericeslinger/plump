@@ -56,6 +56,10 @@ QueryChildren.$storeData = {
       queryParents: 'on "tests"."id" = "queryParents"."parent_id" and "queryParents"."perm" >= 2',
       queryChildren: 'on "tests"."id" = "queryChildren"."child_id" and "queryChildren"."perm" >= 2',
     },
+    where: {
+      queryParents: 'where "queryParents"."parent_id" = ? and "queryParents"."perm" >= 2',
+      queryChildren: 'where "queryChildren"."child_id" = ? and "queryChildren"."perm" >= 2',
+    },
   },
 };
 QueryChildren.$extras = {
