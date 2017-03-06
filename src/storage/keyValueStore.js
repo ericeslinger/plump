@@ -107,18 +107,6 @@ export class KeyValueStore extends Storage {
     });
   }
 
-  getRelationships(t, id, opts) {
-    const keys = opts && !Array.isArray(opts) ? [opts] : opts;
-    return Bluebird.all(
-      keys.map(relName => {
-        return this._get(this.keyString(t.$name, id, relName))
-        .then(rel => {
-          return { [relName]: JSON.parse(rel) };
-        });
-      })
-    ).then(relList => relList.reduce((acc, curr) => mergeOptions(acc, curr), {}));
-  }
-
   write(t, v) {
     const id = v.id || v[t.$schema.$id];
     if ((id === undefined) || (id === null)) {
@@ -155,7 +143,7 @@ export class KeyValueStore extends Storage {
   overwrite(t, id, v) {
     return Bluebird.all([
       this._get(this.keyString(t.$name, id)),
-      this.getRelationships(t, id, Object.keys(v.relationships)),
+      this.readRelationships(t, id, Object.keys(v.relationships)),
     ]).then(([origAttributes, origRelationships]) => {
       const updatedAttributes = Object.assign({}, JSON.parse(origAttributes), v.attributes);
       const updatedRelationships = resolveRelationships(t.$schema, v.relationships, origRelationships);
@@ -187,13 +175,28 @@ export class KeyValueStore extends Storage {
 
   readAttributes(t, id) {
     return this._get(this.keyString(t.$name, id))
-    .then((d) => JSON.parse(d));
+    .then((d) => {
+      const data = JSON.parse(d);
+      if (data) {
+        return {
+          type: t.$name,
+          id: id,
+          attributes: data,
+        };
+      } else {
+        return null;
+      }
+    });
   }
 
   readRelationship(t, id, relationship) {
     return this._get(this.keyString(t.$name, id, relationship))
     .then((arrayString) => {
-      return { [relationship]: JSON.parse(arrayString) || [] };
+      return {
+        type: t.$name,
+        id: id,
+        relationships: { [relationship]: JSON.parse(arrayString) || [] },
+      };
     });
   }
 
