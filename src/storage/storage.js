@@ -63,7 +63,15 @@ export class Storage {
       if (attributes) {
         return this.readRelationships(type, id, keys)
         .then(relationships => {
-          return { type: type.$name, id, attributes, relationships };
+          return mergeOptions({
+            type: type.$name,
+            id: id,
+            attributes: {},
+            relationships: {},
+          },
+            attributes,
+            relationships
+          );
         });
       } else {
         return null;
