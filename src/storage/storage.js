@@ -63,7 +63,7 @@ export class Storage {
       if (attributes) {
         return this.readRelationships(type, id, keys)
         .then(relationships => {
-          return { type, id, attributes, relationships };
+          return { type: type.$name, id, attributes, relationships };
         });
       } else {
         return null;
