@@ -53,12 +53,12 @@ QueryChildren.$storeData = {
       queryChildren: 'parent_id',
     },
     joinQuery: {
-      queryParents: 'on "tests"."id" = "queryParents"."parent_id" and "queryParents"."perm" >= 2',
-      queryChildren: 'on "tests"."id" = "queryChildren"."child_id" and "queryChildren"."perm" >= 2',
+      queryParents: 'on "tests"."id" = "queryParents"."child_id" and "queryParents"."perm" >= 2',
+      queryChildren: 'on "tests"."id" = "queryChildren"."parent_id" and "queryChildren"."perm" >= 2',
     },
     where: {
-      queryParents: 'where "queryParents"."parent_id" = ? and "queryParents"."perm" >= 2',
-      queryChildren: 'where "queryChildren"."child_id" = ? and "queryChildren"."perm" >= 2',
+      queryParents: 'where "queryParents"."child_id" = ? and "queryParents"."perm" >= 2',
+      queryChildren: 'where "queryChildren"."parent_id" = ? and "queryChildren"."perm" >= 2',
     },
   },
 };
