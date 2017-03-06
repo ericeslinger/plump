@@ -4,78 +4,79 @@ import * as Bluebird from 'bluebird';
 import { StringIndexed } from '../util.d';
 
 import { Model } from '../model';
+import { Relationship } from '../relationship';
 
 export as namespace storage;
 
 declare abstract class Storage {
   static massReplace(
-    block: any[],
+    block: Storage.BlockFilter,
     context: StringIndexed<any>
-  ): any[];
+  ): Storage.BlockFilter;
 
+  constructor(opts: { terminal?: boolean });
 
-  new (opts: { isTerminal?: boolean });
+  onUpdate(observer: Rx.Observer<any>): Rx.Subscription;
 
-  hot(type: typeof Model, id: number): boolean;
+  notifyUpdate(
+    type: Model,
+    id: number,
+    value: Model.Data,
+    opts?: string | symbol | (string | symbol)[]
+  ): Bluebird<any>;
+
+  hot(type: Model, id: number): boolean;
 
   write(
-    type: typeof Model,
+    type: Model,
     value: {
       [index: string]: any,
       id?: number
     }
-  ): Bluebird<any>;
+  ): Bluebird<Model.Data>;
 
   read(
-    type: typeof Model,
+    type: Model,
     id: number,
     key?: string | string[]
-  ): Bluebird<any>;
+  ): Bluebird<Model.Data>;
 
   wipe(
-    type: typeof Model,
+    type: Model,
     id: number,
     field: string | symbol
   ): Bluebird<any>;
 
   delete(
-    type: typeof Model,
+    type: Model,
     id: number
   ): Bluebird<any>;
 
   add(
-    type: typeof Model,
+    type: Model,
     id: number,
     relationshipTitle: string,
     childId: number,
     extras?: StringIndexed<any>
-  ): Bluebird<any>;
-
-  remove(
-    type: typeof Model,
-    id: number,
-    relationshipTitle: string,
-    childId: number
-  ): Bluebird<any>;
+  ): Bluebird<[Relationship.Data[], Relationship.Data[]]>;
 
   modifyRelationship(
-    type: typeof Model,
+    type: Model,
     id: number,
     relationship: string,
     childId: number,
     extras?: StringIndexed<any>
   ): Bluebird<any>;
 
-  query(q: { type: string, query: any }): Bluebird<any>;
-
-  onUpdate(observer: Rx.Observer<any>): Rx.Subscription;
-
-  notifyUpdate(
-    type: typeof Model,
+  remove(
+    type: Model,
     id: number,
-    value: StringIndexed<any>,
-    opts?: string | symbol | (string | symbol)[]
+    relationshipTitle: string,
+    childId: number
   ): Bluebird<any>;
+
+  // TODO: What is this?
+  query?(q: { type: string, query: any }): Bluebird<(Model.Data | Relationship.Data)[]>;
 }
 
 declare namespace Storage {

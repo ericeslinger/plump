@@ -18,6 +18,7 @@ chai.use(chaiAsPromised);
 const expect = chai.expect;
 
 const sampleObject = {
+  type: 'tests',
   attributes: {
     name: 'potato',
     extended: {
