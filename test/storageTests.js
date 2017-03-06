@@ -18,6 +18,7 @@ chai.use(chaiAsPromised);
 const expect = chai.expect;
 
 const sampleObject = {
+  type: 'tests',
   attributes: {
     name: 'potato',
     extended: {
@@ -83,36 +84,6 @@ export function testSuite(mocha, storeOpts) {
     });
 
     mocha.describe('relationships', () => {
-      mocha.it('handles relationships with restrictions', () => {
-        return actualStore.write(TestType, sampleObject)
-        .then((createdObject) => {
-          return actualStore.add(TestType, createdObject.id, 'likers', 100)
-          .then(() => actualStore.add(TestType, createdObject.id, 'likers', 101))
-          .then(() => actualStore.add(TestType, createdObject.id, 'agreers', 100))
-          .then(() => actualStore.add(TestType, createdObject.id, 'agreers', 101))
-          .then(() => actualStore.add(TestType, createdObject.id, 'agreers', 102))
-          .then(() => {
-            return expect(actualStore.read(TestType, createdObject.id, 'likers'))
-            .to.eventually.have.property('relationships').that.deep.equals({
-              likers: [
-                { id: 100 },
-                { id: 101 },
-              ],
-            });
-          })
-          .then(() => {
-            return expect(actualStore.read(TestType, createdObject.id, 'agreers'))
-            .to.eventually.have.property('relationships').that.deep.equals({
-              agreers: [
-                { id: 100 },
-                { id: 101 },
-                { id: 102 },
-              ],
-            });
-          });
-        });
-      });
-
       mocha.it('can fetch a base and hasmany in one read', () => {
         return actualStore.write(TestType, sampleObject)
         .then((createdObject) => {
@@ -216,30 +187,6 @@ export function testSuite(mocha, storeOpts) {
           .then(() => {
             return expect(actualStore.read(TestType, createdObject.id, 'children'))
             .to.eventually.have.property('relationships').that.deep.equals({ children: [] });
-          });
-        });
-      });
-
-      mocha.it('supports queries in hasMany relationships', () => {
-        return actualStore.write(TestType, sampleObject)
-        .then((createdObject) => {
-          return actualStore.add(TestType, createdObject.id, 'queryChildren', 101, { perm: 1 })
-          .then(() => actualStore.add(TestType, createdObject.id, 'queryChildren', 102, { perm: 2 }))
-          .then(() => actualStore.add(TestType, createdObject.id, 'queryChildren', 103, { perm: 3 }))
-          .then(() => {
-            debugger;
-            return expect(actualStore.read(TestType, createdObject.id, 'queryChildren'))
-            .to.eventually.have.property('relationships').that.deep.equals({
-              queryChildren: [
-                {
-                  id: 102,
-                  meta: { perm: 2 },
-                }, {
-                  id: 103,
-                  meta: { perm: 3 },
-                },
-              ],
-            });
           });
         });
       });

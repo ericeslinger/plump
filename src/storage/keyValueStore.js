@@ -2,7 +2,6 @@ import * as Bluebird from 'bluebird';
 import mergeOptions from 'merge-options';
 
 import { Storage } from './storage';
-import { createFilter } from './createFilter';
 
 function saneNumber(i) {
   return ((typeof i === 'number') && (!isNaN(i)) && (i !== Infinity) & (i !== -Infinity));
@@ -191,23 +190,10 @@ export class KeyValueStore extends Storage {
     .then((d) => JSON.parse(d));
   }
 
-  readRelationship(t, id, relationship, attributes) {
-    const relationshipType = t.$schema.relationships[relationship].type;
-    const sideInfo = relationshipType.$sides[relationship];
-    const resolves = [this._get(this.keyString(t.$name, id, relationship))];
-    if (sideInfo.self.query && sideInfo.self.query.requireLoad && !attributes) {
-      resolves.push(this.readAttributes(t, id));
-    }
-    // TODO: if there's a query, KVS loads a *lot* into memory and filters
-    return Bluebird.all(resolves)
-    .then(([arrayString, maybeContext]) => {
-      const context = maybeContext || { id };
-      let relationshipArray = JSON.parse(arrayString) || [];
-      if (sideInfo.self.query) {
-        const filterBlock = Storage.massReplace(sideInfo.self.query.logic, context);
-        relationshipArray = relationshipArray.filter(createFilter(filterBlock));
-      }
-      return { [relationship]: relationshipArray };
+  readRelationship(t, id, relationship) {
+    return this._get(this.keyString(t.$name, id, relationship))
+    .then((arrayString) => {
+      return { [relationship]: JSON.parse(arrayString) || [] };
     });
   }
 
@@ -223,11 +209,13 @@ export class KeyValueStore extends Storage {
     }
   }
 
-  add(type, id, relationshipTitle, childId, extras = {}) {
-    const relationshipBlock = type.$schema.relationships[relationshipTitle].type;
-    const sideInfo = relationshipBlock.$sides[relationshipTitle];
-    const thisKeyString = this.keyString(type.$name, id, relationshipTitle);
-    const otherKeyString = this.keyString(sideInfo.other.type, childId, sideInfo.other.title);
+  add(type, id, relName, childId, extras = {}) {
+    const relationshipBlock = type.$schema.relationships[relName].type;
+    const thisType = type.$name;
+    const otherType = relationshipBlock.$sides[relName].otherType;
+    const otherName = relationshipBlock.$sides[relName].otherName;
+    const thisKeyString = this.keyString(thisType, id, relName);
+    const otherKeyString = this.keyString(otherType, childId, otherName);
     return Bluebird.all([
       this._get(thisKeyString),
       this._get(otherKeyString),
@@ -248,24 +236,24 @@ export class KeyValueStore extends Storage {
         }
       }
       const thisIdx = thisArray.findIndex(item => item.id === childId);
-      // findEntryCallback(relationshipBlock, relationshipTitle, newChild));
       const otherIdx = otherArray.findIndex(item => item.id === id);
-      // findEntryCallback(relationshipBlock, relationshipTitle, newChild));
       return Bluebird.all([
         maybePush(thisArray, newChild, thisKeyString, this, thisIdx),
         maybePush(otherArray, newParent, otherKeyString, this, otherIdx),
       ])
-      .then(() => this.notifyUpdate(type, id, null, relationshipTitle))
-      .then(() => this.notifyUpdate(type, childId, null, sideInfo.other.title))
+      .then(() => this.notifyUpdate(type, id, null, relName))
+      .then(() => this.notifyUpdate(type, childId, null, otherName))
       .then(() => thisArray);
     });
   }
 
-  modifyRelationship(type, id, relationshipTitle, childId, extras) {
-    const relationshipBlock = type.$schema.relationships[relationshipTitle].type;
-    const sideInfo = relationshipBlock.$sides[relationshipTitle];
-    const thisKeyString = this.keyString(type.$name, id, relationshipTitle);
-    const otherKeyString = this.keyString(sideInfo.other.type, childId, sideInfo.other.title);
+  modifyRelationship(type, id, relName, childId, extras) {
+    const relationshipBlock = type.$schema.relationships[relName].type;
+    const thisType = type.$name;
+    const otherType = relationshipBlock.$sides[relName].otherType;
+    const otherName = relationshipBlock.$sides[relName].otherName;
+    const thisKeyString = this.keyString(thisType, id, relName);
+    const otherKeyString = this.keyString(otherType, childId, otherName);
     return Bluebird.all([
       this._get(thisKeyString),
       this._get(otherKeyString),
@@ -282,15 +270,17 @@ export class KeyValueStore extends Storage {
         maybeUpdate(otherArray, otherTarget, otherKeyString, this, extras, otherIdx),
       ]);
     })
-    .then((res) => this.notifyUpdate(type, id, null, relationshipTitle).then(() => res))
-    .then((res) => this.notifyUpdate(type, childId, null, sideInfo.other.title).then(() => res));
+    .then((res) => this.notifyUpdate(type, id, null, relName).then(() => res))
+    .then((res) => this.notifyUpdate(type, childId, null, otherName).then(() => res));
   }
 
-  remove(type, id, relationshipTitle, childId) {
-    const relationshipBlock = type.$schema.relationships[relationshipTitle].type;
-    const sideInfo = relationshipBlock.$sides[relationshipTitle];
-    const thisKeyString = this.keyString(type.$name, id, relationshipTitle);
-    const otherKeyString = this.keyString(sideInfo.other.type, childId, sideInfo.other.title);
+  remove(type, id, relName, childId) {
+    const relationshipBlock = type.$schema.relationships[relName].type;
+    const thisType = type.$name;
+    const otherType = relationshipBlock.$sides[relName].otherType;
+    const otherName = relationshipBlock.$sides[relName].otherName;
+    const thisKeyString = this.keyString(thisType, id, relName);
+    const otherKeyString = this.keyString(otherType, childId, otherName);
     return Bluebird.all([
       this._get(thisKeyString),
       this._get(otherKeyString),
@@ -305,8 +295,8 @@ export class KeyValueStore extends Storage {
         maybeDelete(otherArray, otherIdx, otherKeyString, this),
       ]);
     })
-    .then((res) => this.notifyUpdate(type, id, null, relationshipTitle).then(() => res))
-    .then((res) => this.notifyUpdate(type, childId, null, sideInfo.other.title).then(() => res));
+    .then((res) => this.notifyUpdate(type, id, null, relName).then(() => res))
+    .then((res) => this.notifyUpdate(type, childId, null, otherName).then(() => res));
   }
 
   keyString(typeName, id, relationship) {

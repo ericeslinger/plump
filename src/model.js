@@ -433,6 +433,17 @@ Model.resolveRelationship = function resolveRelationship(deltas, base = []) {
     .reduce((acc, curr) => acc.concat(curr), []);
 };
 
+Model.cacheSet = function cacheSet(store, key, value) {
+  if (this.$$storeCache.get(store) === undefined) {
+    this.$$storeCache.set(store, {});
+  }
+  this.$$storeCache.get(store)[key] = value;
+};
+
+Model.cacheGet = function cacheGet(store, key) {
+  return (this.$$storeCache.get(store) || {})[key];
+};
+
 Model.schematize = function schematize(v = {}, opts = { includeId: false }) {
   const retVal = {};
   if (opts.includeId) {
@@ -457,6 +468,8 @@ Model.schematize = function schematize(v = {}, opts = { includeId: false }) {
 };
 
 // METADATA
+
+Model.$$storeCache = new Map();
 
 Model.$id = 'id';
 Model.$name = 'Base';
