@@ -74,6 +74,11 @@ QueryChildren.$name = 'query_children';
 TestType.$name = 'tests';
 TestType.$id = 'id';
 TestType.$packageIncludes = ['children'];
+TestType.$storeData = {
+  sql: {
+    bulkQuery: 'where "tests"."id" >= ?',
+  },
+};
 TestType.$schema = {
   $id: 'id',
   attributes: {
