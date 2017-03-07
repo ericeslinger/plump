@@ -86,6 +86,12 @@ export class Storage {
     });
   }
 
+  bulkRead(type, id) {
+    // override this if you want to do any special pre-processing
+    // for reading from the store prior to a REST service event
+    return this.readAttributes(type, id);
+  }
+
   readAttributes(type, id) {
     return Bluebird.reject(new Error('readAttributes not implemented'));
   }
