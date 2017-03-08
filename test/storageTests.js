@@ -96,8 +96,9 @@ export function testSuite(mocha, storeOpts) {
             return Bluebird.all([
               expect(storedObject).to.eventually.have.property('attributes')
                 .that.contains.all.keys(Object.keys(sampleObject.attributes)),
-              expect(storedObject).to.eventually.have.property('relationships')
-                .that.deep.equals({ children: [{ id: 200 }, { id: 201 }, { id: 202 }, { id: 203 }] }),
+              expect(storedObject).to.eventually.deep.containSubset({
+                relationships: { children: [{ id: 200 }, { id: 201 }, { id: 202 }, { id: 203 }] },
+              }),
             ]);
           });
         });
@@ -113,20 +114,20 @@ export function testSuite(mocha, storeOpts) {
           .then(() => actualStore.add(TestType, 100, 'children', createdObject.id))
           .then(() => {
             return expect(actualStore.read(TestType, createdObject.id, ['children']))
-            .to.eventually.have.property('relationships').that.deep.equals({
-              children: [
-                { id: 100 },
-                { id: 101 },
-                { id: 102 },
-                { id: 103 },
-              ],
+            .to.eventually.deep.containSubset({
+              relationships: {
+                children: [
+                  { id: 100 },
+                  { id: 101 },
+                  { id: 102 },
+                  { id: 103 },
+                ],
+              },
             });
           }).then(() => {
             return expect(actualStore.read(TestType, createdObject.id, ['parents']))
-            .to.eventually.have.property('relationships').that.deep.equals({
-              parents: [
-                { id: 100 },
-              ],
+            .to.eventually.deep.containSubset({
+              relationships: { parents: [{ id: 100 }] },
             });
           });
         });
@@ -138,11 +139,8 @@ export function testSuite(mocha, storeOpts) {
           return actualStore.add(TestType, createdObject.id, 'valenceChildren', 100, { perm: 1 })
           .then(() => {
             return expect(actualStore.read(TestType, createdObject.id, 'valenceChildren'))
-            .to.eventually.have.property('relationships').that.deep.equals({
-              valenceChildren: [{
-                id: 100,
-                meta: { perm: 1 },
-              }],
+            .to.eventually.deep.containSubset({
+              relationships: { valenceChildren: [{ id: 100, meta: { perm: 1 } }] },
             });
           });
         });
@@ -154,20 +152,14 @@ export function testSuite(mocha, storeOpts) {
           return actualStore.add(TestType, createdObject.id, 'valenceChildren', 100, { perm: 1 })
           .then(() => {
             return expect(actualStore.read(TestType, createdObject.id, 'valenceChildren'))
-            .to.eventually.have.property('relationships').that.deep.equals({
-              valenceChildren: [{
-                id: 100,
-                meta: { perm: 1 },
-              }],
+            .to.eventually.deep.containSubset({
+              relationships: { valenceChildren: [{ id: 100, meta: { perm: 1 } }] },
             });
           }).then(() => actualStore.modifyRelationship(TestType, createdObject.id, 'valenceChildren', 100, { perm: 2 }))
           .then(() => {
             return expect(actualStore.read(TestType, createdObject.id, 'valenceChildren'))
-            .to.eventually.have.property('relationships').that.deep.equals({
-              valenceChildren: [{
-                id: 100,
-                meta: { perm: 2 },
-              }],
+            .to.eventually.deep.containSubset({
+              relationships: { valenceChildren: [{ id: 100, meta: { perm: 2 } }] },
             });
           });
         });
@@ -179,14 +171,16 @@ export function testSuite(mocha, storeOpts) {
           return actualStore.add(TestType, createdObject.id, 'children', 100)
           .then(() => {
             return expect(actualStore.read(TestType, createdObject.id, 'children'))
-            .to.eventually.have.property('relationships').that.deep.equals({
-              children: [{ id: 100 }],
+            .to.eventually.deep.containSubset({
+              relationships: { children: [{ id: 100 }] },
             });
           })
           .then(() => actualStore.remove(TestType, createdObject.id, 'children', 100))
           .then(() => {
             return expect(actualStore.read(TestType, createdObject.id, 'children'))
-            .to.eventually.have.property('relationships').that.deep.equals({ children: [] });
+            .to.eventually.deep.containSubset({
+              relationships: { children: [] },
+            });
           });
         });
       });
