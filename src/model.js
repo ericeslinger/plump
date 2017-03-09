@@ -183,15 +183,13 @@ export class Model {
   }
 
   $set(update) {
+    const flat = update.attributes || update;
     // Filter out non-attribute keys
-    const sanitized = {};
-    for (const key in update) {
-      if (key in this.$schema.attributes) {
-        sanitized[key] = update[key];
-      } else {
-        throw new Error(`Key ${key} is not an attributes of ${this.$name}`);
-      }
-    }
+    const sanitized = Object.keys(flat)
+      .filter(k => k in this.$schema.attributes)
+      .map(k => { return { [k]: flat[k] }; })
+      .reduce((acc, curr) => mergeOptions(acc, curr), {});
+
     this.$$copyValuesFrom(sanitized);
     // this.$$fireUpdate(sanitized);
     return this;
@@ -218,8 +216,8 @@ export class Model {
       let id = 0;
       if (typeof item === 'number') {
         id = item;
-      } else if (item.$id) {
-        id = item.$id;
+      } else if (item.id) {
+        id = item.id;
       } else {
         id = item[this.$schema.relationships[key].type.$sides[key].other.field];
       }
@@ -395,6 +393,17 @@ Model.assign = function assign(opts) {
   return retVal;
 };
 
+Model.cacheGet = function cacheGet(store, key) {
+  return (this.$$storeCache.get(store) || {})[key];
+};
+
+Model.cacheSet = function cacheSet(store, key, value) {
+  if (this.$$storeCache.get(store) === undefined) {
+    this.$$storeCache.set(store, {});
+  }
+  this.$$storeCache.get(store)[key] = value;
+};
+
 Model.resolveAndOverlay = function resolveAndOverlay(update, base = { attributes: {}, relationships: {} }) {
   const attributes = mergeOptions({}, base.attributes, update.attributes);
   const baseIsResolved = Object.keys(base.relationships).map(relName => {
@@ -431,17 +440,6 @@ Model.resolveRelationship = function resolveRelationship(deltas, base = []) {
     .map(id => updates[id])
     .filter(rel => rel !== undefined)
     .reduce((acc, curr) => acc.concat(curr), []);
-};
-
-Model.cacheSet = function cacheSet(store, key, value) {
-  if (this.$$storeCache.get(store) === undefined) {
-    this.$$storeCache.set(store, {});
-  }
-  this.$$storeCache.get(store)[key] = value;
-};
-
-Model.cacheGet = function cacheGet(store, key) {
-  return (this.$$storeCache.get(store) || {})[key];
 };
 
 Model.schematize = function schematize(v = {}, opts = { includeId: false }) {
