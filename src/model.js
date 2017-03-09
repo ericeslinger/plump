@@ -151,7 +151,7 @@ export class Model {
   }
 
   $bulkGet() {
-    this[$plump].bulkGet(this.constructor, this.$id);
+    return this[$plump].bulkGet(this.constructor, this.$id);
   }
 
   // TODO: Should $save ultimately return this.$get()?
