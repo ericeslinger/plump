@@ -130,7 +130,7 @@ export class Model {
   $get(opts) {
     // If opts is falsy (i.e., undefined), get attributes
     // Otherwise, get what was requested,
-    // wrapping it in a Array if it wasn't already one
+    // wrapping the request in a Array if it wasn't already one
     let keys = opts && !Array.isArray(opts) ? [opts] : opts;
     if (keys && keys.indexOf($all) >= 0) {
       keys = Object.keys(this.$schema.relationships);
@@ -148,6 +148,10 @@ export class Model {
         return retVal;
       }
     });
+  }
+
+  $bulkGet() {
+    this[$plump].bulkGet(this.constructor, this.$id);
   }
 
   // TODO: Should $save ultimately return this.$get()?
