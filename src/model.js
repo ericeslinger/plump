@@ -182,7 +182,7 @@ export class Model {
         this[this.constructor.$id] = updated.id;
       }
       // this.$$fireUpdate(updated);
-      return this;
+      return this.$get();
     });
   }
 
@@ -226,9 +226,7 @@ export class Model {
         id = item[this.$schema.relationships[key].type.$sides[key].other.field];
       }
       if ((typeof id === 'number') && (id >= 1)) {
-        if (!(key in this[$dirty].relationships)) {
-          this[$dirty].relationships[key] = [];
-        }
+        this[$dirty].relationships[key] = this[$dirty].relationships[key] || [];
         this[$dirty].relationships[key].push({
           op: 'add',
           data: Object.assign({ id }, { meta: extras }),

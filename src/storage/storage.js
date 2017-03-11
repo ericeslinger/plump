@@ -86,7 +86,7 @@ export class Storage {
   bulkRead(type, id) {
     // override this if you want to do any special pre-processing
     // for reading from the store prior to a REST service event
-    return this.read(type, id).then((data) => {
+    return this.read(type, id).then(data => {
       return { data, included: [] };
     });
   }
