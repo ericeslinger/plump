@@ -112,7 +112,7 @@ export class KeyValueStore extends Storage {
     // const t = this.getType(v.type);
     return Bluebird.all([
       this._get(this.keyString(v.type, v.id)),
-      this.readRelationships(v.type, v.id, Object.keys(v.relationships)),
+      this.readRelationships(v.type, v.id, Object.keys(v.relationships || {})),
     ]).then(([origAttributes, origRelationships]) => {
       const updatedAttributes = Object.assign({}, JSON.parse(origAttributes), v.attributes);
       const updatedRelationships = this.resolveRelationships(v.type, v.relationships, origRelationships);

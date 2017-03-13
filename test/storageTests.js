@@ -220,7 +220,7 @@ export function testSuite(mocha, storeOpts) {
     });
 
     mocha.describe('events', () => {
-      mocha.it('should pass basic cacheable-write events to other datastores', () => {
+      mocha.it('should pass basic write-invalidation events to other datastores', () => {
         const memstore = new MemoryStore();
         const testPlump = new Plump({
           storage: [memstore, actualStore],
@@ -231,8 +231,27 @@ export function testSuite(mocha, storeOpts) {
           attributes: { name: 'potato' },
           relationships: {},
         }).then((createdObject) => {
-          return expect(memstore.read('tests', createdObject.id))
-          .to.eventually.have.deep.property('attributes.name', 'potato');
+          return actualStore.read('tests', createdObject.id)
+          .then(() => {
+            return new Bluebird((resolve) => setTimeout(resolve, 100))
+            .then(() => {
+              return expect(memstore.read('tests', createdObject.id))
+              .to.eventually.have.deep.property('attributes.name', 'potato');
+            }).then(() => {
+              return actualStore.write({
+                type: 'tests',
+                id: createdObject.id,
+                attributes: {
+                  name: 'grotato',
+                },
+              });
+            }).then(() => {
+              return new Bluebird((resolve) => setTimeout(resolve, 100));
+            }).then(() => {
+              return expect(memstore.read('tests', createdObject.id))
+              .to.eventually.have.deep.property('attributes').that.is.null;
+            });
+          });
         }).finally(() => {
           return testPlump.teardown();
         });
@@ -257,13 +276,20 @@ export function testSuite(mocha, storeOpts) {
           return expect(memstore.read('tests', testItem.id)).to.eventually.be.null;
         }).then(() => {
           return actualStore.read('tests', testItem.id);
-        }).then(() => {
+        })
+        .then(() => {
+          // NOTE: this timeout is a hack, it is because
+          // cacheable read events trigger multiple async things, but don't block
+          // the promise from returning
+          return new Bluebird((resolve) => setTimeout(resolve, 100));
+        })
+        .then(() => {
           return expect(memstore.read('tests', testItem.id))
           .to.eventually.have.deep.property('attributes.name', 'potato');
         }).finally(() => testPlump.teardown());
       });
 
-      mocha.it('should pass cacheable-write events on hasMany relationships to other datastores', () => {
+      mocha.it('should pass write-invalidation events on hasMany relationships to other datastores', () => {
         let testItem;
         const memstore = new MemoryStore();
         const testPlump = new Plump({
@@ -276,14 +302,29 @@ export function testSuite(mocha, storeOpts) {
           relationships: {},
         }).then((createdObject) => {
           testItem = createdObject;
-          return actualStore.add('tests', testItem.id, 'likers', 100);
+          return expect(actualStore.read('tests', testItem.id))
+          .to.eventually.have.deep.property('attributes.name', 'potato');
+        }).then(() => actualStore.add('tests', testItem.id, 'children', 100))
+        .then(() => {
+          return expect(memstore.read('tests', testItem.id)).to.eventually.be.null;
         }).then(() => {
-          return expect(memstore.read('tests', testItem.id, 'likers'))
+          return actualStore.read('tests', testItem.id, 'children');
+        }).then(() => {
+          // NOTE: this timeout is a hack, it is because
+          // cacheable read events trigger multiple async things, but don't block
+          // the promise from returning
+          return new Bluebird((resolve) => setTimeout(resolve, 100));
+        }).then(() => {
+          return expect(memstore.read('tests', testItem.id, 'children'))
           .to.eventually.have.property('relationships').that.deep.equals({
-            likers: [
+            children: [
               { id: 100 },
             ],
           });
+        }).then(() => actualStore.add('tests', testItem.id, 'children', 101))
+        .then(() => {
+          return expect(memstore.read('tests', testItem.id, 'children'))
+          .to.eventually.have.deep.property('relationships').that.is.null;
         }).finally(() => testPlump.teardown());
       });
 
@@ -299,18 +340,23 @@ export function testSuite(mocha, storeOpts) {
           testItem = createdObject;
           return expect(actualStore.read('tests', testItem.id))
           .to.eventually.have.deep.property('attributes.name', 'potato');
-        }).then(() => actualStore.add('tests', testItem.id, 'likers', 100))
+        }).then(() => actualStore.add('tests', testItem.id, 'children', 100))
         .then(() => {
           memstore = new MemoryStore();
           testPlump.addStore(actualStore);
           testPlump.addStore(memstore);
           return expect(memstore.read('tests', testItem.id)).to.eventually.be.null;
         }).then(() => {
-          return actualStore.read('tests', testItem.id, 'likers');
+          return actualStore.read('tests', testItem.id, 'children');
         }).then(() => {
-          return expect(memstore.read('tests', testItem.id, 'likers'))
+          // NOTE: this timeout is a hack, it is because
+          // cacheable read events trigger multiple async things, but don't block
+          // the promise from returning
+          return new Bluebird((resolve) => setTimeout(resolve, 100));
+        }).then(() => {
+          return expect(memstore.read('tests', testItem.id, 'children'))
           .to.eventually.have.property('relationships').that.deep.equals({
-            likers: [
+            children: [
               { id: 100 },
             ],
           });
