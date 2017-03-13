@@ -16,7 +16,7 @@ export class Plump {
       types: [],
     }, opts);
     this[$teardown] = new Subject();
-    this.destroy = this[$teardown].asObservable();
+    this.destroy$ = this[$teardown].asObservable();
     this[$subscriptions] = {};
     this[$storeSubscriptions] = [];
     this[$storage] = [];
@@ -37,7 +37,9 @@ export class Plump {
     if (this[$types][T.$name] === undefined) {
       this[$types][T.$name] = T;
       this[$storage].forEach(s => s.addType(T));
-      this[$terminal].addType(T);
+      if (this[$terminal]) {
+        this[$terminal].addType(T);
+      }
     } else {
       throw new Error(`Duplicate Type registered: ${T.$name}`);
     }
@@ -58,13 +60,13 @@ export class Plump {
       } else {
         this[$terminal] = store;
         this[$storage].forEach((cacheStore) => {
-          store.observable.takeUntil(this.destroy).subscribe((val) => cacheStore.write(val));
+          cacheStore.wire(store, this.destroy$);
         });
       }
     } else {
       this[$storage].push(store);
       if (this[$terminal] !== undefined) {
-        this[$terminal].observable.takeUntil(this.destroy).subscribe((val) => store.write(val));
+        store.wire(this[$terminal], this.destroy$);
       }
     }
     this.types().forEach(t => store.addType(this.type(t)));

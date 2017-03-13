@@ -159,19 +159,17 @@ export class Model {
     const update = Object.keys(this[$dirty]).map(schemaField => {
       const value = Object.keys(this[$dirty][schemaField])
         .filter(key => keys.indexOf(key) >= 0)
-        .map(key => {
-          return { [key]: this[$dirty][schemaField][key] };
-        })
+        .map(key => ({ [key]: this[$dirty][schemaField][key] }))
         .reduce((acc, curr) => Object.assign(acc, curr), {});
-
       return { [schemaField]: value };
     }).reduce((acc, curr) => Object.assign(acc, curr), {});
 
     if (this.$id !== undefined) {
-      update[this.constructor.$id] = this.$id;
+      update.id = this.$id;
     }
+    update.type = this.$name;
 
-    return this[$plump].save(this.constructor, update)
+    return this[$plump].save(update)
     .then((updated) => {
       this.$$resetDirty(opts);
       if (updated.id) {

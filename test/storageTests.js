@@ -50,7 +50,7 @@ export function testSuite(mocha, storeOpts) {
 
     mocha.describe('core CRUD', () => {
       mocha.it('supports creating values with no id field, and retrieving values', () => {
-        return actualStore.write('tests', sampleObject)
+        return actualStore.write(sampleObject)
         .then((createdObject) => {
           return expect(actualStore.read('tests', createdObject.id))
           .to.eventually.containSubset(Object.assign({}, sampleObject, { [TestType.$id]: createdObject.id }));
@@ -58,10 +58,10 @@ export function testSuite(mocha, storeOpts) {
       });
 
       mocha.it('allows objects to be stored by id', () => {
-        return actualStore.write('tests', sampleObject)
+        return actualStore.write(sampleObject)
         .then((createdObject) => {
           const modObject = Object.assign({}, createdObject, { attributes: { name: 'carrot' } });
-          return actualStore.write('tests', modObject)
+          return actualStore.write(modObject)
           .then((updatedObject) => {
             return expect(actualStore.read('tests', updatedObject.id))
             .to.eventually.containSubset(Object.assign(
@@ -74,7 +74,7 @@ export function testSuite(mocha, storeOpts) {
       });
 
       mocha.it('allows for deletion of objects by id', () => {
-        return actualStore.write('tests', sampleObject)
+        return actualStore.write(sampleObject)
         .then((createdObject) => {
           return expect(actualStore.read('tests', createdObject.id))
           .to.eventually.containSubset(Object.assign({}, sampleObject, { [TestType.$id]: createdObject.id }))
@@ -86,7 +86,7 @@ export function testSuite(mocha, storeOpts) {
 
     mocha.describe('relationships', () => {
       mocha.it('can fetch a base and hasmany in one read', () => {
-        return actualStore.write('tests', sampleObject)
+        return actualStore.write(sampleObject)
         .then((createdObject) => {
           return actualStore.add('tests', createdObject.id, 'children', 200)
           .then(() => actualStore.add('tests', createdObject.id, 'children', 201))
@@ -121,8 +121,8 @@ export function testSuite(mocha, storeOpts) {
           },
         });
         return Bluebird.all([
-          actualStore.write('tests', deltaItem),
-          actualStore.write('tests', rawItem),
+          actualStore.write(deltaItem),
+          actualStore.write(rawItem),
         ]).then((items) => {
           return Bluebird.all(items.map((it) => {
             return expect(actualStore.read('tests', it.id, ['children']))
@@ -138,7 +138,7 @@ export function testSuite(mocha, storeOpts) {
       });
 
       mocha.it('can add to a hasMany relationship', () => {
-        return actualStore.write('tests', sampleObject)
+        return actualStore.write(sampleObject)
         .then((createdObject) => {
           return actualStore.add('tests', createdObject.id, 'children', 100)
           .then(() => actualStore.add('tests', createdObject.id, 'children', 101))
@@ -167,7 +167,7 @@ export function testSuite(mocha, storeOpts) {
       });
 
       mocha.it('can add to a hasMany relationship with extras', () => {
-        return actualStore.write('tests', sampleObject)
+        return actualStore.write(sampleObject)
         .then((createdObject) => {
           return actualStore.add('tests', createdObject.id, 'valenceChildren', 100, { perm: 1 })
           .then(() => {
@@ -180,7 +180,7 @@ export function testSuite(mocha, storeOpts) {
       });
 
       mocha.it('can modify valence on a hasMany relationship', () => {
-        return actualStore.write('tests', sampleObject)
+        return actualStore.write(sampleObject)
         .then((createdObject) => {
           return actualStore.add('tests', createdObject.id, 'valenceChildren', 100, { perm: 1 })
           .then(() => {
@@ -199,7 +199,7 @@ export function testSuite(mocha, storeOpts) {
       });
 
       mocha.it('can remove from a hasMany relationship', () => {
-        return actualStore.write('tests', sampleObject)
+        return actualStore.write(sampleObject)
         .then((createdObject) => {
           return actualStore.add('tests', createdObject.id, 'children', 100)
           .then(() => {
@@ -226,11 +226,11 @@ export function testSuite(mocha, storeOpts) {
           storage: [memstore, actualStore],
           types: [TestType],
         });
-        return actualStore.write('tests', {
+        return actualStore.write({
+          type: 'tests',
           attributes: { name: 'potato' },
           relationships: {},
         }).then((createdObject) => {
-          // can be passing with a setTimeout
           return expect(memstore.read('tests', createdObject.id))
           .to.eventually.have.deep.property('attributes.name', 'potato');
         }).finally(() => {
@@ -242,7 +242,8 @@ export function testSuite(mocha, storeOpts) {
         const testPlump = new Plump({ types: [TestType] });
         let testItem;
         let memstore;
-        return actualStore.write('tests', {
+        return actualStore.write({
+          type: 'tests',
           attributes: { name: 'potato' },
           relationships: {},
         }).then((createdObject) => {
@@ -269,7 +270,8 @@ export function testSuite(mocha, storeOpts) {
           storage: [memstore, actualStore],
           types: [TestType],
         });
-        return actualStore.write('tests', {
+        return actualStore.write({
+          type: 'tests',
           attributes: { name: 'potato' },
           relationships: {},
         }).then((createdObject) => {
@@ -289,7 +291,8 @@ export function testSuite(mocha, storeOpts) {
         const testPlump = new Plump({ types: [TestType] });
         let testItem;
         let memstore;
-        return actualStore.write('tests', {
+        return actualStore.write({
+          type: 'tests',
           attributes: { name: 'potato' },
           relationships: {},
         }).then((createdObject) => {

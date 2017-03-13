@@ -36,7 +36,7 @@ describe('model', () => {
     });
 
     it('should load data from datastores', () => {
-      return memstore2.write(TestType, { attributes: { name: 'potato' }, relationships: {} })
+      return memstore2.write({ type: 'tests', attributes: { name: 'potato' }, relationships: {} })
       .then(createdObject => {
         const two = plump.find('tests', createdObject.id);
         return expect(two.$get()).to.eventually.have.deep.property('attributes.name', 'potato');
