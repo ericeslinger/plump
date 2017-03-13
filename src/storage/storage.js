@@ -83,7 +83,6 @@ export class Storage {
   }
 
   addType(t) {
-    console.log('adding', t.$name);
     this[$types][t.$name] = t;
   }
 

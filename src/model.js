@@ -169,11 +169,10 @@ export class Model {
         .reduce((acc, curr) => Object.assign(acc, curr), {});
 
       return { [schemaField]: value };
-    }).reduce((acc, curr) => Object.assign(acc, curr), {});
-
-    if (this.$id !== undefined) {
-      update[this.constructor.$id] = this.$id;
-    }
+    })
+    .reduce(
+      (acc, curr) => Object.assign(acc, curr),
+      { id: this.$id, type: this.constructor.$name });
 
     return this[$plump].save(this.constructor, update)
     .then((updated) => {
@@ -461,9 +460,7 @@ Model.schematize = function schematize(v = {}, opts = { includeId: false }) {
     if (schemaField in v) {
       retVal[schemaField] = mergeOptions({}, v[schemaField]);
     } else {
-      if (!(schemaField in retVal)) {
-        retVal[schemaField] = {};
-      }
+      retVal[schemaField] = retVal[schemaField] || {};
       for (const field in this.$schema[schemaField]) {
         if (field in v) {
           retVal[schemaField][field] = schemaField === 'relationships' ? this.addDelta(field, v[field]) : v[field];
