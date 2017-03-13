@@ -171,7 +171,7 @@ export class Model {
       return { [schemaField]: value };
     })
     .reduce(
-      (acc, curr) => Object.assign(acc, curr),
+      (acc, curr) => mergeOptions(acc, curr),
       { id: this.$id, type: this.constructor.$name });
 
     return this[$plump].save(this.constructor, update)
@@ -225,10 +225,7 @@ export class Model {
         id = item[this.$schema.relationships[key].type.$sides[key].other.field];
       }
       if ((typeof id === 'number') && (id >= 1)) {
-        const data = { id };
-        if (extras) {
-          data.meta = extras;
-        }
+        const data = { id, meta: extras || item.meta };
         this[$dirty].relationships[key] = this[$dirty].relationships[key] || [];
         this[$dirty].relationships[key].push({
           op: 'add',
@@ -258,7 +255,7 @@ export class Model {
         }
         this[$dirty].relationships[key].push({
           op: 'modify',
-          data: Object.assign({ id }, { meta: extras }),
+          data: Object.assign({ id }, { meta: extras || item.meta }),
         });
         // this.$$fireUpdate();
         return this;
