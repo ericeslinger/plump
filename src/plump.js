@@ -151,8 +151,8 @@ export class Plump {
     });
   }
 
-  bulkGet(root, opts) {
-    return this[$terminal].bulkRead(root, opts);
+  bulkGet(type, id) {
+    return this[$terminal].bulkRead(type, id);
   }
 
   save(...args) {

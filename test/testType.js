@@ -80,6 +80,7 @@ TestType.$storeData = {
   },
 };
 TestType.$schema = {
+  $name: 'tests',
   $id: 'id',
   attributes: {
     id: { type: 'number' },
