@@ -6,7 +6,9 @@ import { Subject } from 'rxjs/Rx';
 
 import { $self, $all } from '../model';
 
-const $emitter = Symbol('$emitter');
+const $readSubject = Symbol('$readSubject');
+const $writeSubject = Symbol('$writeSubject');
+const $types = Symbol('$types');
 
 // type: an object that defines the type. typically this will be
 // part of the Model class hierarchy, but Storage objects call no methods
@@ -31,7 +33,11 @@ export class Storage {
     // authorization questions, but the design may allow for authorization to be
     // cached.
     this.terminal = opts.terminal || false;
-    this[$emitter] = new Subject();
+    this[$readSubject] = new Subject();
+    this[$writeSubject] = new Subject();
+    this.read$ = this[$readSubject].asObservable();
+    this.write$ = this[$writeSubject].asObservable();
+    this[$types] = {};
   }
 
   hot(type, id) {
@@ -47,16 +53,49 @@ export class Storage {
     return false;
   }
 
-  write(type, value) {
+  // hook a non-terminal store into a terminal store.
+  wire(store, shutdownSignal) {
+    if (this.terminal) {
+      throw new Error('Cannot wire a terminal store into another store');
+    } else {
+      // TODO: figure out where the type data comes from.
+      store.read$.takeUntil(shutdownSignal).subscribe((v) => this.write(v));
+      store.write$.takeUntil(shutdownSignal).subscribe((v) => {
+        v.invalidate.forEach((invalid) => {
+          this.wipe(v.type, v.id, invalid);
+        });
+      });
+    }
+  }
+
+  write(value, opts) {
     // if value.id exists, this is an update. If it doesn't, it is an
     // insert. In the case of an update, it should merge down the tree.
     return Bluebird.reject(new Error('Write not implemented'));
   }
 
+  getType(t) {
+    if (typeof t === 'string') {
+      return this[$types][t];
+    } else {
+      return t;
+    }
+  }
+
+  addType(t) {
+    console.log('adding', t.$name);
+    this[$types][t.$name] = t;
+  }
+
+  addTypes(a) {
+    a.forEach(t => this.addType(t));
+  }
+
   // TODO: write the two-way has/get logic into this method
   // and provide override hooks for readAttributes readRelationship
 
-  read(type, id, opts) {
+  read(typeName, id, opts) {
+    const type = this.getType(typeName);
     const keys = opts && !Array.isArray(opts) ? [opts] : opts;
     return this.readAttributes(type, id)
     .then(attributes => {
@@ -78,11 +117,9 @@ export class Storage {
       }
     }).then((result) => {
       if (result) {
-        return this.notifyUpdate(type, id, result, keys)
-        .then(() => result);
-      } else {
-        return result;
+        this.fireReadUpdate(result);
       }
+      return result;
     });
   }
 
@@ -102,7 +139,8 @@ export class Storage {
     return Bluebird.reject(new Error('readRelationship not implemented'));
   }
 
-  readRelationships(t, id, key, attributes) {
+  readRelationships(type, id, key, attributes) {
+    const t = this.getType(type);
     // If there is no key, it defaults to all relationships
     // Otherwise, it wraps it in an Array if it isn't already one
     const keys = key && !Array.isArray(key) ? [key] : key || [];
@@ -152,43 +190,18 @@ export class Storage {
     return Bluebird.reject(new Error('Query not implemented'));
   }
 
-  onUpdate(observer) {
-    // observer follows the RxJS pattern - it is either a function (for next())
-    // or {next, error, complete};
-    // returns an unsub hook (retVal.unsubscribe())
-    return this[$emitter].subscribe(observer);
+  fireWriteUpdate(val) {
+    this[$writeSubject].next(val);
+    return Bluebird.resolve(val);
   }
 
-  notifyUpdate(type, id, value, opts = ['attributes']) {
-    const keys = Array.isArray(opts) ? opts : [opts];
-    return Bluebird.all(keys.map((field) => {
-      return Bluebird.resolve()
-      .then(() => {
-        if (this.terminal) {
-          if (field === 'attributes') {
-            return field in value ? Bluebird.resolve(value[field]) : this.readAttributes(type, id);
-          } else {
-            if (value && value.relationships && field in value.relationships) { // eslint-disable-line no-lonely-if
-              return Bluebird.resolve(value.relationships[field]);
-            } else {
-              return this.readRelationship(type, id, field);
-            }
-          }
-        } else {
-          return null;
-        }
-      }).then((val) => {
-        if (val) {
-          this[$emitter].next({
-            type,
-            id,
-            value: val,
-            field,
-          });
-        }
-        return null;
-      });
-    }));
+  fireReadUpdate(val) {
+    this[$readSubject].next(val);
+    return Bluebird.resolve(val);
+  }
+
+  notifyUpdate(v) {
+    return Bluebird.resolve(v);
   }
 
   $$testIndex(...args) {

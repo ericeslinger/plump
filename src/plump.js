@@ -5,6 +5,7 @@ import Bluebird from 'bluebird';
 const $types = Symbol('$types');
 const $storage = Symbol('$storage');
 const $terminal = Symbol('$terminal');
+const $teardown = Symbol('$teardown');
 const $subscriptions = Symbol('$subscriptions');
 const $storeSubscriptions = Symbol('$storeSubscriptions');
 
@@ -14,6 +15,8 @@ export class Plump {
       storage: [],
       types: [],
     }, opts);
+    this[$teardown] = new Subject();
+    this.destroy = this[$teardown].asObservable();
     this[$subscriptions] = {};
     this[$storeSubscriptions] = [];
     this[$storage] = [];
@@ -33,6 +36,8 @@ export class Plump {
   addType(T) {
     if (this[$types][T.$name] === undefined) {
       this[$types][T.$name] = T;
+      this[$storage].forEach(s => s.addType(T));
+      this[$terminal].addType(T);
     } else {
       throw new Error(`Duplicate Type registered: ${T.$name}`);
     }
@@ -48,29 +53,21 @@ export class Plump {
 
   addStore(store) {
     if (store.terminal) {
-      if (this[$terminal] === undefined) {
-        this[$terminal] = store;
-      } else {
+      if (this[$terminal] !== undefined) {
         throw new Error('cannot have more than one terminal store');
+      } else {
+        this[$terminal] = store;
+        this[$storage].forEach((cacheStore) => {
+          store.observable.takeUntil(this.destroy).subscribe((val) => cacheStore.write(val));
+        });
       }
     } else {
       this[$storage].push(store);
+      if (this[$terminal] !== undefined) {
+        this[$terminal].observable.takeUntil(this.destroy).subscribe((val) => store.write(val));
+      }
     }
-    if (store.terminal) {
-      this[$storeSubscriptions].push(store.onUpdate(({ type, id, value, field }) => {
-        this[$storage].forEach((storage) => {
-          if (field && field !== 'attributes') {
-            storage.writeHasMany(type, id, field, value.relationships[field]);
-          } else {
-            storage.write(type, value);
-          }
-          // storage.onCacheableRead(Type, Object.assign({}, u.value, { [Type.$id]: u.id }));
-        });
-        if (this[$subscriptions][type.$name] && this[$subscriptions][type.$name][id]) {
-          this[$subscriptions][type.$name][id].next({ field, value });
-        }
-      }));
-    }
+    this.types().forEach(t => store.addType(this.type(t)));
   }
 
   find(t, id) {
@@ -97,9 +94,7 @@ export class Plump {
   }
 
   teardown() {
-    this[$storeSubscriptions].forEach((s) => s.unsubscribe());
-    this[$subscriptions] = undefined;
-    this[$storeSubscriptions] = undefined;
+    this[$teardown].next(0);
   }
 
   get(type, id, opts) {
