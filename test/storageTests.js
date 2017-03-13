@@ -249,7 +249,7 @@ export function testSuite(mocha, storeOpts) {
               return new Bluebird((resolve) => setTimeout(resolve, 100));
             }).then(() => {
               return expect(memstore.read('tests', createdObject.id))
-              .to.eventually.have.deep.property('attributes').that.is.null;
+              .to.eventually.be.null;
             });
           });
         }).finally(() => {
@@ -306,7 +306,8 @@ export function testSuite(mocha, storeOpts) {
           .to.eventually.have.deep.property('attributes.name', 'potato');
         }).then(() => actualStore.add('tests', testItem.id, 'children', 100))
         .then(() => {
-          return expect(memstore.read('tests', testItem.id)).to.eventually.be.null;
+          return expect(memstore.read('tests', testItem.id))
+          .to.eventually.not.have.deep.property('relationships.children');
         }).then(() => {
           return actualStore.read('tests', testItem.id, 'children');
         }).then(() => {
@@ -323,8 +324,8 @@ export function testSuite(mocha, storeOpts) {
           });
         }).then(() => actualStore.add('tests', testItem.id, 'children', 101))
         .then(() => {
-          return expect(memstore.read('tests', testItem.id, 'children'))
-          .to.eventually.have.deep.property('relationships').that.is.null;
+          return expect(memstore.read('tests', testItem.id))
+          .to.eventually.not.have.deep.property('relationships.children');
         }).finally(() => testPlump.teardown());
       });
 
