@@ -60,17 +60,21 @@ function applyDelta(base, delta) {
   }
 }
 
-function resolveRelationship(deltas, maybeBase) {
+function resolveRelationship(children, maybeBase) {
   const base = maybeBase || [];
   // Index current relationships by ID for efficient modification
   const updates = base.map(rel => {
     return { [rel.id]: rel };
   }).reduce((acc, curr) => mergeOptions(acc, curr), {});
 
-  // Apply any deltas in dirty cache on top of updates
-  deltas.forEach(delta => {
-    const childId = delta.data.id;
-    updates[childId] = applyDelta(updates[childId], delta);
+  // Apply any children in dirty cache on top of updates
+  children.forEach(child => {
+    if (child.op) {
+      const childId = child.data.id;
+      updates[childId] = applyDelta(updates[childId], child);
+    } else {
+      updates[child.id] = child;
+    }
   });
 
   // Collapse updates back into list, omitting undefineds
@@ -107,7 +111,8 @@ export class KeyValueStore extends Storage {
     });
   }
 
-  write(t, v) {
+  write(type, v) {
+    const t = this.getType(type);
     const id = v.id || v[t.$schema.$id];
     if ((id === undefined) || (id === null)) {
       return this.createNew(t, v);
@@ -116,7 +121,8 @@ export class KeyValueStore extends Storage {
     }
   }
 
-  createNew(t, v) {
+  createNew(type, v) {
+    const t = this.getType(type);
     const toSave = mergeOptions({}, v);
     if (this.terminal) {
       return this.$$maxKey(t.$name)
@@ -140,7 +146,8 @@ export class KeyValueStore extends Storage {
     }
   }
 
-  overwrite(t, id, v) {
+  overwrite(type, id, v) {
+    const t = this.getType(type);
     return Bluebird.all([
       this._get(this.keyString(t.$name, id)),
       this.readRelationships(t, id, Object.keys(v.relationships)),
@@ -161,19 +168,30 @@ export class KeyValueStore extends Storage {
     });
   }
 
-  writeAttributes(t, id, attributes) {
+  writeAttributes(type, id, attributes) {
+    const t = this.getType(type);
     const $id = attributes.id ? 'id' : t.$schema.$id;
     const toWrite = mergeOptions({}, attributes, { [$id]: id });
-    return this._set(this.keyString(t.$name, id), JSON.stringify(toWrite));
+    return this._set(this.keyString(t.$name, id), JSON.stringify(toWrite))
+    .then((v) => {
+      this.fireWriteUpdate({
+        type: t.$name,
+        id: id,
+        invalidate: ['attributes'],
+      });
+      return v;
+    });
   }
 
-  writeRelationships(t, id, relationships) {
+  writeRelationships(type, id, relationships) {
+    const t = this.getType(type);
     return Object.keys(relationships).map(relName => {
       return this._set(this.keyString(t.$name, id, relName), JSON.stringify(relationships[relName]));
     }).reduce((thenable, curr) => thenable.then(() => curr), Bluebird.resolve());
   }
 
-  readAttributes(t, id) {
+  readAttributes(type, id) {
+    const t = this.getType(type);
     return this._get(this.keyString(t.$name, id))
     .then((d) => {
       const data = JSON.parse(d);
@@ -189,7 +207,8 @@ export class KeyValueStore extends Storage {
     });
   }
 
-  readRelationship(t, id, relationship) {
+  readRelationship(type, id, relationship) {
+    const t = this.getType(type);
     return this._get(this.keyString(t.$name, id, relationship))
     .then((arrayString) => {
       return {
@@ -200,11 +219,13 @@ export class KeyValueStore extends Storage {
     });
   }
 
-  delete(t, id) {
+  delete(type, id) {
+    const t = this.getType(type);
     return this._del(this.keyString(t.$name, id));
   }
 
-  wipe(t, id, field) {
+  wipe(type, id, field) {
+    const t = this.getType(type);
     if (field === 'attributes') {
       return this._del(this.keyString(t.$name, id));
     } else {
@@ -212,7 +233,8 @@ export class KeyValueStore extends Storage {
     }
   }
 
-  add(type, id, relName, childId, extras = {}) {
+  add(typeName, id, relName, childId, extras = {}) {
+    const type = this.getType(typeName);
     const relationshipBlock = type.$schema.relationships[relName].type;
     const thisType = type.$name;
     const otherType = relationshipBlock.$sides[relName].otherType;
@@ -244,13 +266,14 @@ export class KeyValueStore extends Storage {
         maybePush(thisArray, newChild, thisKeyString, this, thisIdx),
         maybePush(otherArray, newParent, otherKeyString, this, otherIdx),
       ])
-      .then(() => this.notifyUpdate(type, id, null, relName))
-      .then(() => this.notifyUpdate(type, childId, null, otherName))
+      .then((res) => this.fireWriteUpdate({ type: type.$name, id: id, invalidate: [relName] }).then(() => res))
+      .then((res) => this.fireWriteUpdate({ type: type.$name, id: childId, invalidate: [otherName] }).then(() => res))
       .then(() => thisArray);
     });
   }
 
-  modifyRelationship(type, id, relName, childId, extras) {
+  modifyRelationship(typeName, id, relName, childId, extras) {
+    const type = this.getType(typeName);
     const relationshipBlock = type.$schema.relationships[relName].type;
     const thisType = type.$name;
     const otherType = relationshipBlock.$sides[relName].otherType;
@@ -273,11 +296,12 @@ export class KeyValueStore extends Storage {
         maybeUpdate(otherArray, otherTarget, otherKeyString, this, extras, otherIdx),
       ]);
     })
-    .then((res) => this.notifyUpdate(type, id, null, relName).then(() => res))
-    .then((res) => this.notifyUpdate(type, childId, null, otherName).then(() => res));
+    .then((res) => this.fireWriteUpdate({ type: type.$name, id: id, invalidate: [relName] }).then(() => res))
+    .then((res) => this.fireWriteUpdate({ type: type.$name, id: childId, invalidate: [otherName] }).then(() => res));
   }
 
-  remove(type, id, relName, childId) {
+  remove(typeName, id, relName, childId) {
+    const type = this.getType(typeName);
     const relationshipBlock = type.$schema.relationships[relName].type;
     const thisType = type.$name;
     const otherType = relationshipBlock.$sides[relName].otherType;
@@ -298,8 +322,8 @@ export class KeyValueStore extends Storage {
         maybeDelete(otherArray, otherIdx, otherKeyString, this),
       ]);
     })
-    .then((res) => this.notifyUpdate(type, id, null, relName).then(() => res))
-    .then((res) => this.notifyUpdate(type, childId, null, otherName).then(() => res));
+    .then((res) => this.fireWriteUpdate({ type: type.$name, id: id, invalidate: [relName] }).then(() => res))
+    .then((res) => this.fireWriteUpdate({ type: type.$name, id: childId, invalidate: [otherName] }).then(() => res));
   }
 
   keyString(typeName, id, relationship) {
