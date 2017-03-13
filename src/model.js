@@ -226,10 +226,14 @@ export class Model {
         id = item[this.$schema.relationships[key].type.$sides[key].other.field];
       }
       if ((typeof id === 'number') && (id >= 1)) {
+        const data = { id };
+        if (extras) {
+          data.meta = extras;
+        }
         this[$dirty].relationships[key] = this[$dirty].relationships[key] || [];
         this[$dirty].relationships[key].push({
           op: 'add',
-          data: Object.assign({ id }, { meta: extras }),
+          data,
         });
         // this.$$fireUpdate();
         return this;
@@ -356,7 +360,8 @@ Model.applyDefaults = function applyDefaults(v) {
       retVal.attributes[attr] = this.$schema.attributes[attr].default;
     }
   }
-  Object.keys(this.$schema).filter(k => k !== '$id')
+  Object.keys(this.$schema)
+  .filter(k => k[0] !== '$')
   .forEach(schemaField => {
     for (const field in this.$schema[schemaField]) {
       if (!(field in retVal[schemaField])) {
@@ -383,7 +388,8 @@ Model.applyDelta = function applyDelta(current, delta) {
 Model.assign = function assign(opts) {
   const schematized = this.schematize(opts, { includeId: true });
   const retVal = this.applyDefaults(schematized);
-  Object.keys(this.$schema).filter(k => k !== '$id')
+  Object.keys(this.$schema)
+  .filter(k => k[0] !== '$')
   .forEach(schemaField => {
     for (const field in this.$schema[schemaField]) {
       if (!(field in retVal[schemaField])) {
@@ -449,7 +455,8 @@ Model.schematize = function schematize(v = {}, opts = { includeId: false }) {
   if (opts.includeId) {
     retVal.id = this.$id in v ? v[this.$id] : v.id;
   }
-  Object.keys(this.$schema).filter(k => k !== '$id')
+  Object.keys(this.$schema)
+  .filter(k => k[0] !== '$')
   .forEach(schemaField => {
     if (schemaField in v) {
       retVal[schemaField] = mergeOptions({}, v[schemaField]);
@@ -474,6 +481,7 @@ Model.$$storeCache = new Map();
 Model.$id = 'id';
 Model.$name = 'Base';
 Model.$schema = {
+  $name: 'base',
   $id: 'id',
   attributes: {},
   relationships: {},
