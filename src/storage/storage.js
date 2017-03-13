@@ -65,9 +65,12 @@ export class Storage {
         .then(relationships => {
           return {
             type: type.$name,
-            id: id,
-            attributes: attributes,
-            relationships: relationships,
+            id,
+            attributes: attributes.attributes || attributes,
+            relationships:
+              attributes.relationships
+                ? mergeOptions({}, attributes.relationships, relationships.relationships || relationships)
+                : relationships.relationships || relationships,
           };
         });
       } else {
