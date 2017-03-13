@@ -130,7 +130,7 @@ export class Model {
   $get(opts) {
     // If opts is falsy (i.e., undefined), get attributes
     // Otherwise, get what was requested,
-    // wrapping it in a Array if it wasn't already one
+    // wrapping the request in a Array if it wasn't already one
     let keys = opts && !Array.isArray(opts) ? [opts] : opts;
     if (keys && keys.indexOf($all) >= 0) {
       keys = Object.keys(this.$schema.relationships);
@@ -150,6 +150,10 @@ export class Model {
     });
   }
 
+  $bulkGet() {
+    return this[$plump].bulkGet(this.constructor, this.$id);
+  }
+
   // TODO: Should $save ultimately return this.$get()?
   $save(opts) {
     const options = opts || this.$fields;
@@ -162,7 +166,10 @@ export class Model {
         .map(key => ({ [key]: this[$dirty][schemaField][key] }))
         .reduce((acc, curr) => Object.assign(acc, curr), {});
       return { [schemaField]: value };
-    }).reduce((acc, curr) => Object.assign(acc, curr), {});
+    })
+    .reduce(
+      (acc, curr) => Object.assign(acc, curr),
+      { id: this.$id, type: this.constructor.$name });
 
     if (this.$id !== undefined) {
       update.id = this.$id;
@@ -176,20 +183,18 @@ export class Model {
         this[this.constructor.$id] = updated.id;
       }
       // this.$$fireUpdate(updated);
-      return this;
+      return this.$get();
     });
   }
 
   $set(update) {
+    const flat = update.attributes || update;
     // Filter out non-attribute keys
-    const sanitized = {};
-    for (const key in update) {
-      if (key in this.$schema.attributes) {
-        sanitized[key] = update[key];
-      } else {
-        throw new Error(`Key ${key} is not an attributes of ${this.$name}`);
-      }
-    }
+    const sanitized = Object.keys(flat)
+      .filter(k => k in this.$schema.attributes)
+      .map(k => { return { [k]: flat[k] }; })
+      .reduce((acc, curr) => mergeOptions(acc, curr), {});
+
     this.$$copyValuesFrom(sanitized);
     // this.$$fireUpdate(sanitized);
     return this;
@@ -216,18 +221,20 @@ export class Model {
       let id = 0;
       if (typeof item === 'number') {
         id = item;
-      } else if (item.$id) {
-        id = item.$id;
+      } else if (item.id) {
+        id = item.id;
       } else {
         id = item[this.$schema.relationships[key].type.$sides[key].other.field];
       }
       if ((typeof id === 'number') && (id >= 1)) {
-        if (!(key in this[$dirty].relationships)) {
-          this[$dirty].relationships[key] = [];
+        const data = { id };
+        if (extras) {
+          data.meta = extras;
         }
+        this[$dirty].relationships[key] = this[$dirty].relationships[key] || [];
         this[$dirty].relationships[key].push({
           op: 'add',
-          data: Object.assign({ id }, { meta: extras }),
+          data,
         });
         // this.$$fireUpdate();
         return this;
@@ -354,7 +361,8 @@ Model.applyDefaults = function applyDefaults(v) {
       retVal.attributes[attr] = this.$schema.attributes[attr].default;
     }
   }
-  Object.keys(this.$schema).filter(k => k !== '$id')
+  Object.keys(this.$schema)
+  .filter(k => k[0] !== '$')
   .forEach(schemaField => {
     for (const field in this.$schema[schemaField]) {
       if (!(field in retVal[schemaField])) {
@@ -381,7 +389,8 @@ Model.applyDelta = function applyDelta(current, delta) {
 Model.assign = function assign(opts) {
   const schematized = this.schematize(opts, { includeId: true });
   const retVal = this.applyDefaults(schematized);
-  Object.keys(this.$schema).filter(k => k !== '$id')
+  Object.keys(this.$schema)
+  .filter(k => k[0] !== '$')
   .forEach(schemaField => {
     for (const field in this.$schema[schemaField]) {
       if (!(field in retVal[schemaField])) {
@@ -391,6 +400,17 @@ Model.assign = function assign(opts) {
   });
   retVal.type = this.$name;
   return retVal;
+};
+
+Model.cacheGet = function cacheGet(store, key) {
+  return (this.$$storeCache.get(store) || {})[key];
+};
+
+Model.cacheSet = function cacheSet(store, key, value) {
+  if (this.$$storeCache.get(store) === undefined) {
+    this.$$storeCache.set(store, {});
+  }
+  this.$$storeCache.get(store)[key] = value;
 };
 
 Model.resolveAndOverlay = function resolveAndOverlay(update, base = { attributes: {}, relationships: {} }) {
@@ -431,30 +451,18 @@ Model.resolveRelationship = function resolveRelationship(deltas, base = []) {
     .reduce((acc, curr) => acc.concat(curr), []);
 };
 
-Model.cacheSet = function cacheSet(store, key, value) {
-  if (this.$$storeCache.get(store) === undefined) {
-    this.$$storeCache.set(store, {});
-  }
-  this.$$storeCache.get(store)[key] = value;
-};
-
-Model.cacheGet = function cacheGet(store, key) {
-  return (this.$$storeCache.get(store) || {})[key];
-};
-
 Model.schematize = function schematize(v = {}, opts = { includeId: false }) {
   const retVal = {};
   if (opts.includeId) {
     retVal.id = this.$id in v ? v[this.$id] : v.id;
   }
-  Object.keys(this.$schema).filter(k => k !== '$id')
+  Object.keys(this.$schema)
+  .filter(k => k[0] !== '$')
   .forEach(schemaField => {
     if (schemaField in v) {
       retVal[schemaField] = mergeOptions({}, v[schemaField]);
     } else {
-      if (!(schemaField in retVal)) {
-        retVal[schemaField] = {};
-      }
+      retVal[schemaField] = retVal[schemaField] || {};
       for (const field in this.$schema[schemaField]) {
         if (field in v) {
           retVal[schemaField][field] = schemaField === 'relationships' ? this.addDelta(field, v[field]) : v[field];
@@ -472,6 +480,7 @@ Model.$$storeCache = new Map();
 Model.$id = 'id';
 Model.$name = 'Base';
 Model.$schema = {
+  $name: 'base',
   $id: 'id',
   attributes: {},
   relationships: {},

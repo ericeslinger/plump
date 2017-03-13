@@ -103,15 +103,15 @@ export class Storage {
       if (attributes) {
         return this.readRelationships(type, id, keys)
         .then(relationships => {
-          return mergeOptions({
+          return {
             type: type.$name,
-            id: id,
-            attributes: {},
-            relationships: {},
-          },
-            attributes,
-            relationships
-          );
+            id,
+            attributes: attributes.attributes || attributes,
+            relationships:
+              attributes.relationships
+                ? mergeOptions({}, attributes.relationships, relationships.relationships || relationships)
+                : relationships.relationships || relationships,
+          };
         });
       } else {
         return null;
@@ -127,7 +127,9 @@ export class Storage {
   bulkRead(type, id) {
     // override this if you want to do any special pre-processing
     // for reading from the store prior to a REST service event
-    return this.readAttributes(type, id);
+    return this.read(type, id).then(data => {
+      return { data, included: [] };
+    });
   }
 
   readAttributes(type, id) {

@@ -155,29 +155,14 @@ export class KeyValueStore extends Storage {
   readAttributes(type, id) {
     const t = this.getType(type);
     return this._get(this.keyString(t.$name, id))
-    .then((d) => {
-      const data = JSON.parse(d);
-      if (data) {
-        return {
-          type: t.$name,
-          id: id,
-          attributes: data,
-        };
-      } else {
-        return null;
-      }
-    });
+    .then(d => JSON.parse(d));
   }
 
   readRelationship(type, id, relationship) {
     const t = this.getType(type);
     return this._get(this.keyString(t.$name, id, relationship))
     .then((arrayString) => {
-      return {
-        type: t.$name,
-        id: id,
-        relationships: { [relationship]: JSON.parse(arrayString) || [] },
-      };
+      return { [relationship]: JSON.parse(arrayString) || [] };
     });
   }
 

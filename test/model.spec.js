@@ -45,8 +45,8 @@ describe('model', () => {
 
     it('should create an id when one is unset', () => {
       const noID = new TestType({ name: 'potato' }, plump);
-      return noID.$save().then((m) => {
-        return expect(m.$get())
+      return noID.$save().then(() => {
+        return expect(noID.$get())
         .to.eventually.have.property(TestType.$schema.$id)
         .that.is.not.null;
       });
