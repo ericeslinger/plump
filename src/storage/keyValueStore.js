@@ -94,13 +94,7 @@ export class KeyValueStore extends Storage {
         return Bluebird.all([
           this.writeAttributes(v.type, id, toSave.attributes),
           this.writeRelationships(v.type, id, toSave.relationships),
-        ]).then(() => {
-          // return this.notifyUpdate(t, toSave[t.$id], {
-          //   [t.$schema.$id]: id,
-          //   attributes: toSave.attributes,
-          //   relationships: resolveRelationships(t.$schema, toSave.relationships),
-          // });
-        })
+        ])
         .then(() => toSave);
       });
     } else {

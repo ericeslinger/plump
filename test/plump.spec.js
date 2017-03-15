@@ -2,7 +2,7 @@
 
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
-import { Plump } from '../src/index';
+import { Plump, MemoryStore } from '../src/index';
 import { TestType } from './testType';
 import Bluebird from 'bluebird';
 
@@ -18,5 +18,78 @@ describe('Plump', () => {
     const p = new Plump();
     p.addTypesFromSchema({ tests: TestType.toJSON() });
     return expect(p.find('tests', 1).constructor.toJSON()).to.deep.equal(TestType.toJSON());
+  });
+
+  it('should properly use hot and cold caches', (done) => {
+    const DelayProxy = {
+      get: (target, name) => {
+        if (['read', 'write', 'add', 'remove'].indexOf(name) >= 0) {
+          return (...args) => {
+            return Bluebird.delay(200)
+            .then(() => target[name](...args));
+          };
+        } else {
+          return target[name];
+        }
+      },
+    };
+    const terminalStore = new MemoryStore({ terminal: true });
+    const delayedMemstore = new Proxy(terminalStore, DelayProxy);
+    const coldMemstore = new MemoryStore();
+    const hotMemstore = new MemoryStore();
+    hotMemstore.hot = () => true;
+    const otherPlump = new Plump({
+      storage: [hotMemstore, coldMemstore, delayedMemstore],
+      types: [TestType],
+    });
+    const invalidated = new TestType({ name: 'foo' }, otherPlump);
+    invalidated.$save()
+    .then(() => {
+      hotMemstore.logStore();
+      let phase = 0;
+      const subscription = invalidated.subscribe((v) => {
+        console.log('SUBSCRIPTION: ', v);
+        try {
+          if (phase === 0) {
+            if (v.attributes.name) {
+              expect(v).to.have.property('attributes').with.property('name', 'foo');
+              phase = 1;
+            }
+          }
+          if (phase === 1) {
+            if (v.attributes.name === 'slowtato') {
+              phase = 2;
+            } else if (v.attributes.name === 'grotato') {
+              subscription.unsubscribe();
+              done();
+            }
+          }
+          if (phase === 2) {
+            if (v.attributes.name !== 'slowtato') {
+              expect(v).to.have.property('attributes').with.property('name', 'grotato');
+              subscription.unsubscribe();
+              done();
+            }
+          }
+        } catch (err) {
+          subscription.unsubscribe();
+          done(err);
+        }
+      });
+      return coldMemstore._set(
+        coldMemstore.keyString(TestType.$name, invalidated.$id),
+        JSON.stringify({ id: invalidated.$id, attributes: { name: 'slowtato' }, relationships: {} })
+      );
+    })
+    .then(() => {
+      return terminalStore._set(
+        terminalStore.keyString(TestType.$name, invalidated.$id),
+        JSON.stringify({ id: invalidated.$id, attributes: { name: 'grotato' }, relationships: {} })
+      );
+    })
+    .then(() => {
+      return otherPlump.invalidate(TestType, invalidated.$id, ['attributes']);
+    })
+    .catch((err) => done(err));
   });
 });

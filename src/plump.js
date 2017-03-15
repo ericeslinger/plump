@@ -166,19 +166,8 @@ export class Plump {
     }
   }
 
-  // invalidate(type, id, field) {
-  //   const hots = this[$storage].filter((store) => store.hot(type, id));
-  //   if (this[$terminal].hot(type, id)) {
-  //     hots.push(this[$terminal]);
-  //   }
-  //   return Bluebird.all(hots.map((store) => {
-  //     return store.wipe(type, id, field);
-  //   })).then(() => {
-  //     if (this[$subscriptions][type.$name] && this[$subscriptions][type.$name][id]) {
-  //       return this[$terminal].read(type, id, field);
-  //     } else {
-  //       return null;
-  //     }
-  //   });
-  // }
+  invalidate(type, id, field) {
+    const fields = Array.isArray(field) ? field : [field];
+    this[$terminal].fireWriteUpdate({ type, id, invalidate: fields });
+  }
 }

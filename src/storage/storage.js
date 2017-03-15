@@ -64,6 +64,7 @@ export class Storage {
       });
       store.write$.takeUntil(shutdownSignal).subscribe((v) => {
         v.invalidate.forEach((invalid) => {
+          console.log('WIPING', v);
           this.wipe(v.type, v.id, invalid);
         });
       });

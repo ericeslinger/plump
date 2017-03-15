@@ -242,7 +242,7 @@ describe('model', () => {
         let phase = 0;
         one.$save()
         .then(() => {
-          const subscription = one.$subscribe((v) => {
+          const subscription = one.subscribe((v) => {
             try {
               if (phase === 0) {
                 if (v.attributes.name) {
@@ -259,11 +259,6 @@ describe('model', () => {
                 if (v.attributes.name !== 'potato') {
                   expect(v).to.have.deep.property('attributes.name', 'grotato');
                   phase = 3;
-                }
-              }
-              if (phase === 3) {
-                if ((v.relationships.children) && (v.relationships.children.length > 0)) {
-                  expect(v.relationships.children).to.deep.equal([{ id: 100 }]);
                   subscription.unsubscribe();
                   resolve();
                 }
@@ -273,8 +268,7 @@ describe('model', () => {
             }
           });
         })
-        .then(() => one.$set({ name: 'grotato' }))
-        .then(() => one.$add('children', 100));
+        .then(() => one.$set({ name: 'grotato' }).$save());
       });
     });
 
