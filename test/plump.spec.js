@@ -88,7 +88,7 @@ describe('Plump', () => {
       );
     })
     .then(() => {
-      return otherPlump.invalidate(TestType, invalidated.$id, ['attributes']);
+      return otherPlump.invalidate(TestType.$name, invalidated.$id, ['attributes']);
     })
     .catch((err) => done(err));
   });
