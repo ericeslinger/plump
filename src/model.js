@@ -1,5 +1,5 @@
 import mergeOptions from 'merge-options';
-import { BehaviorSubject } from 'rxjs/Rx';
+import Rx from 'rxjs/Rx';
 
 import { Relationship } from './relationship';
 const $dirty = Symbol('$dirty');
@@ -23,8 +23,6 @@ export class Model {
       attributes: {}, // Simple key-value
       relationships: {}, // relName: Delta[]
     };
-    this[$subject] = new BehaviorSubject();
-    this[$subject].next({});
     this.$$copyValuesFrom(opts);
     // this.$$fireUpdate(opts);
   }
@@ -198,6 +196,19 @@ export class Model {
     this.$$copyValuesFrom(sanitized);
     // this.$$fireUpdate(sanitized);
     return this;
+  }
+
+  subscribe(keys) {
+    const hots = this[$plump].stores.filter(s => s.hot(this.$name, this.$id));
+    const colds = this[$plump].stores.filter(s => !s.hot(this.$name, this.$id));
+    const terminal = this[$plump].stores.filter(s => s.terminal === true);
+    const cacheRace = Rx.Observable.from(hots)
+    .flatMap(s => Rx.Observable.fromPromise(s.read(this.$name, this.$id, keys)))
+    .concat(
+      Rx.Observable.from(colds)
+      .flatMap(s => Rx.Observable.fromPromise(s.read(this.$name, this.$id, keys)))
+    )
+
   }
 
   $delete() {

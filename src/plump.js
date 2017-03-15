@@ -1,5 +1,5 @@
 import { Model } from './model';
-import { Subject, Observable } from 'rxjs/Rx';
+import { Subject } from 'rxjs/Rx';
 import Bluebird from 'bluebird';
 
 const $types = Symbol('$types');
@@ -20,6 +20,7 @@ export class Plump {
     this[$subscriptions] = {};
     this[$storeSubscriptions] = [];
     this[$storage] = [];
+    this.stores = [];
     this[$types] = {};
     options.storage.forEach((s) => this.addStore(s));
     options.types.forEach((t) => this.addType(t));
@@ -69,6 +70,7 @@ export class Plump {
         store.wire(this[$terminal], this.destroy$);
       }
     }
+    this.stores.push(store);
     this.types().forEach(t => store.addType(this.type(t)));
   }
 
@@ -80,19 +82,6 @@ export class Plump {
   forge(t, val) {
     const Type = typeof t === 'string' ? this[$types][t] : t;
     return new Type(val, this);
-  }
-
-  // LOAD (type/id), SIDELOAD (type/id/side)? Or just LOADALL?
-  // LOAD needs to scrub through hot caches first
-
-  subscribe(typeName, id, handler) {
-    if (this[$subscriptions][typeName] === undefined) {
-      this[$subscriptions][typeName] = {};
-    }
-    if (this[$subscriptions][typeName][id] === undefined) {
-      this[$subscriptions][typeName][id] = new Subject();
-    }
-    return this[$subscriptions][typeName][id].subscribe(handler);
   }
 
   teardown() {
@@ -118,38 +107,6 @@ export class Plump {
       } else {
         return v;
       }
-    });
-  }
-
-  streamGet(type, id, opts) {
-    const keys = opts && !Array.isArray(opts) ? [opts] : opts;
-    return Observable.create((observer) => {
-      return Bluebird.all((this[$storage].map((store) => {
-        return store.read(type, id, keys)
-        .then((v) => {
-          observer.next(v);
-          if (store.hot(type, id)) {
-            return v;
-          } else {
-            return null;
-          }
-        });
-      })))
-      .then((valArray) => {
-        const possiVal = valArray.filter((v) => v !== null);
-        if ((possiVal.length === 0) && (this[$terminal])) {
-          return this[$terminal].read(type, id, keys)
-          .then((val) => {
-            observer.next(val);
-            return val;
-          });
-        } else {
-          return possiVal[0];
-        }
-      }).then((v) => {
-        observer.complete();
-        return v;
-      });
     });
   }
 
@@ -209,19 +166,19 @@ export class Plump {
     }
   }
 
-  invalidate(type, id, field) {
-    const hots = this[$storage].filter((store) => store.hot(type, id));
-    if (this[$terminal].hot(type, id)) {
-      hots.push(this[$terminal]);
-    }
-    return Bluebird.all(hots.map((store) => {
-      return store.wipe(type, id, field);
-    })).then(() => {
-      if (this[$subscriptions][type.$name] && this[$subscriptions][type.$name][id]) {
-        return this[$terminal].read(type, id, field);
-      } else {
-        return null;
-      }
-    });
-  }
+  // invalidate(type, id, field) {
+  //   const hots = this[$storage].filter((store) => store.hot(type, id));
+  //   if (this[$terminal].hot(type, id)) {
+  //     hots.push(this[$terminal]);
+  //   }
+  //   return Bluebird.all(hots.map((store) => {
+  //     return store.wipe(type, id, field);
+  //   })).then(() => {
+  //     if (this[$subscriptions][type.$name] && this[$subscriptions][type.$name][id]) {
+  //       return this[$terminal].read(type, id, field);
+  //     } else {
+  //       return null;
+  //     }
+  //   });
+  // }
 }
