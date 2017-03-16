@@ -60,42 +60,6 @@ function applyDelta(base, delta) {
   }
 }
 
-function resolveRelationship(children, maybeBase) {
-  const base = maybeBase || [];
-  // Index current relationships by ID for efficient modification
-  const updates = base.map(rel => {
-    return { [rel.id]: rel };
-  }).reduce((acc, curr) => mergeOptions(acc, curr), {});
-
-  // Apply any children in dirty cache on top of updates
-  children.forEach(child => {
-    if (child.op) {
-      const childId = child.data.id;
-      updates[childId] = applyDelta(updates[childId], child);
-    } else {
-      updates[child.id] = child;
-    }
-  });
-
-  // Collapse updates back into list, omitting undefineds
-  return Object.keys(updates)
-    .map(id => updates[id])
-    .filter(rel => rel !== undefined)
-    .reduce((acc, curr) => acc.concat(curr), []);
-}
-
-// TODO
-function resolveRelationships(schema, deltas, base = {}) {
-  const updates = {};
-  for (const relName in deltas) {
-    if (relName in schema.relationships) {
-      updates[relName] = resolveRelationship(deltas[relName], base[relName]);
-    }
-  }
-  return mergeOptions({}, base, updates);
-}
-
-
 export class KeyValueStore extends Storage {
   $$maxKey(t) {
     return this._keys(t)
@@ -111,34 +75,26 @@ export class KeyValueStore extends Storage {
     });
   }
 
-  write(type, v) {
-    const t = this.getType(type);
-    const id = v.id || v[t.$schema.$id];
-    if ((id === undefined) || (id === null)) {
-      return this.createNew(t, v);
+  write(v) {
+    if ((v.id === undefined) || (v.id === null)) {
+      return this.createNew(v);
     } else {
-      return this.overwrite(t, id, v);
+      return this.overwrite(v);
     }
   }
 
-  createNew(type, v) {
-    const t = this.getType(type);
+  createNew(v) {
+    // const t = this.getType(v.type);
     const toSave = mergeOptions({}, v);
     if (this.terminal) {
-      return this.$$maxKey(t.$name)
+      return this.$$maxKey(v.type)
       .then((n) => {
         const id = n + 1;
         toSave.id = id;
         return Bluebird.all([
-          this.writeAttributes(t, id, toSave.attributes),
-          this.writeRelationships(t, id, toSave.relationships),
-        ]).then(() => {
-          return this.notifyUpdate(t, toSave[t.$id], {
-            [t.$schema.$id]: id,
-            attributes: toSave.attributes,
-            relationships: resolveRelationships(t.$schema, toSave.relationships),
-          });
-        })
+          this.writeAttributes(v.type, id, toSave.attributes),
+          this.writeRelationships(v.type, id, toSave.relationships),
+        ])
         .then(() => toSave);
       });
     } else {
@@ -146,21 +102,21 @@ export class KeyValueStore extends Storage {
     }
   }
 
-  overwrite(type, id, v) {
-    const t = this.getType(type);
+  overwrite(v) {
+    // const t = this.getType(v.type);
     return Bluebird.all([
-      this._get(this.keyString(t.$name, id)),
-      this.readRelationships(t, id, Object.keys(v.relationships)),
+      this._get(this.keyString(v.type, v.id)),
+      this.readRelationships(v.type, v.id, Object.keys(v.relationships || {})),
     ]).then(([origAttributes, origRelationships]) => {
       const updatedAttributes = Object.assign({}, JSON.parse(origAttributes), v.attributes);
-      const updatedRelationships = resolveRelationships(t.$schema, v.relationships, origRelationships);
-      const updated = { id, attributes: updatedAttributes, relationships: updatedRelationships };
+      const updatedRelationships = this.resolveRelationships(v.type, v.relationships, origRelationships);
+      const updated = { id: v.id, attributes: updatedAttributes, relationships: updatedRelationships };
       return Bluebird.all([
-        this.writeAttributes(t, id, updatedAttributes),
-        this.writeRelationships(t, id, updatedRelationships),
+        this.writeAttributes(v.type, v.id, updatedAttributes),
+        this.writeRelationships(v.type, v.id, updatedRelationships),
       ])
       .then(() => {
-        return this.notifyUpdate(t, id, updated);
+        return this.notifyUpdate(v.type, v.id, updated);
       })
       .then(() => {
         return updated;
@@ -168,8 +124,8 @@ export class KeyValueStore extends Storage {
     });
   }
 
-  writeAttributes(type, id, attributes) {
-    const t = this.getType(type);
+  writeAttributes(typeName, id, attributes) {
+    const t = this.getType(typeName);
     const $id = attributes.id ? 'id' : t.$schema.$id;
     const toWrite = mergeOptions({}, attributes, { [$id]: id });
     return this._set(this.keyString(t.$name, id), JSON.stringify(toWrite))
@@ -183,8 +139,8 @@ export class KeyValueStore extends Storage {
     });
   }
 
-  writeRelationships(type, id, relationships) {
-    const t = this.getType(type);
+  writeRelationships(typeName, id, relationships) {
+    const t = this.getType(typeName);
     return Object.keys(relationships).map(relName => {
       return this._set(this.keyString(t.$name, id, relName), JSON.stringify(relationships[relName]));
     }).reduce((thenable, curr) => thenable.then(() => curr), Bluebird.resolve());
@@ -311,6 +267,40 @@ export class KeyValueStore extends Storage {
     .then((res) => this.fireWriteUpdate({ type: type.$name, id: childId, invalidate: [otherName] }).then(() => res));
   }
 
+  resolveRelationship(children, maybeBase) {
+    const base = maybeBase || [];
+    // Index current relationships by ID for efficient modification
+    const updates = base.map(rel => {
+      return { [rel.id]: rel };
+    }).reduce((acc, curr) => mergeOptions(acc, curr), {});
+
+    // Apply any children in dirty cache on top of updates
+    children.forEach(child => {
+      if (child.op) {
+        const childId = child.data.id;
+        updates[childId] = applyDelta(updates[childId], child);
+      } else {
+        updates[child.id] = child;
+      }
+    });
+
+    // Collapse updates back into list, omitting undefineds
+    return Object.keys(updates)
+      .map(id => updates[id])
+      .filter(rel => rel !== undefined)
+      .reduce((acc, curr) => acc.concat(curr), []);
+  }
+
+  resolveRelationships(typeName, deltas, base = {}) {
+    const updates = {};
+    const schema = this.getType(typeName).$schema;
+    for (const relName in deltas) {
+      if (relName in schema.relationships) {
+        updates[relName] = this.resolveRelationship(deltas[relName], base[relName]);
+      }
+    }
+    return mergeOptions({}, base, updates);
+  }
   keyString(typeName, id, relationship) {
     return `${typeName}:${relationship ? `rel.${relationship}` : 'attributes'}:${id}`;
   }

@@ -1,5 +1,5 @@
 import mergeOptions from 'merge-options';
-import { BehaviorSubject } from 'rxjs/Rx';
+import Rx from 'rxjs/Rx';
 
 import { Relationship } from './relationship';
 const $dirty = Symbol('$dirty');
@@ -23,8 +23,6 @@ export class Model {
       attributes: {}, // Simple key-value
       relationships: {}, // relName: Delta[]
     };
-    this[$subject] = new BehaviorSubject();
-    this[$subject].next({});
     this.$$copyValuesFrom(opts);
     // this.$$fireUpdate(opts);
   }
@@ -62,38 +60,6 @@ export class Model {
     const idField = this.constructor.$id in opts ? this.constructor.$id : 'id';
     this[this.constructor.$id] = opts[idField] || this.$id;
     this[$dirty] = this.constructor.schematize(opts);
-  }
-
-  $$hookToPlump() {
-    if (this[$unsubscribe] === undefined) {
-      this[$unsubscribe] = this[$plump].subscribe(this.constructor.$name, this.$id, ({ field, value }) => {
-        if (field === undefined) {
-          this.$$copyValuesFrom(value);
-        } else {
-          this.$$copyValuesFrom({ [field]: value });
-        }
-      });
-    }
-  }
-
-  $subscribe(...args) {
-    let fields = ['attributes'];
-    let cb;
-    if (args.length === 2) {
-      fields = args[0];
-      if (!Array.isArray(fields)) {
-        fields = [fields];
-      }
-      cb = args[1];
-    } else {
-      cb = args[0];
-    }
-    this.$$hookToPlump();
-    this[$plump].streamGet(this.constructor, this.$id, fields)
-    .subscribe((v) => {
-      this.$$fireUpdate(v);
-    });
-    return this[$subject].subscribeOn(cb);
   }
 
   $$resetDirty(opts) {
@@ -163,18 +129,20 @@ export class Model {
     const update = Object.keys(this[$dirty]).map(schemaField => {
       const value = Object.keys(this[$dirty][schemaField])
         .filter(key => keys.indexOf(key) >= 0)
-        .map(key => {
-          return { [key]: this[$dirty][schemaField][key] };
-        })
+        .map(key => ({ [key]: this[$dirty][schemaField][key] }))
         .reduce((acc, curr) => Object.assign(acc, curr), {});
-
       return { [schemaField]: value };
     })
     .reduce(
       (acc, curr) => mergeOptions(acc, curr),
       { id: this.$id, type: this.constructor.$name });
 
-    return this[$plump].save(this.constructor, update)
+    if (this.$id !== undefined) {
+      update.id = this.$id;
+    }
+    update.type = this.$name;
+
+    return this[$plump].save(update)
     .then((updated) => {
       this.$$resetDirty(opts);
       if (updated.id) {
@@ -196,6 +164,66 @@ export class Model {
     this.$$copyValuesFrom(sanitized);
     // this.$$fireUpdate(sanitized);
     return this;
+  }
+
+  subscribe(...args) {
+    let fields = ['attributes'];
+    let cb;
+    if (args.length === 2) {
+      fields = args[0];
+      if (!Array.isArray(fields)) {
+        fields = [fields];
+      }
+      cb = args[1];
+    } else {
+      cb = args[0];
+    }
+
+    if (fields.indexOf($all) >= 0) {
+      fields = Object.keys(this.$schema.relationships).concat('attributes');
+    }
+
+    const hots = this[$plump].stores.filter(s => s.hot(this.$name, this.$id));
+    const colds = this[$plump].stores.filter(s => !s.hot(this.$name, this.$id));
+    const terminal = this[$plump].stores.filter(s => s.terminal === true);
+
+    const preload$ = Rx.Observable.from(hots)
+    .flatMap(s => Rx.Observable.fromPromise(s.read(this.$name, this.$id, fields)))
+    .defaultIfEmpty(null)
+    .flatMap((v) => {
+      if (v !== null) {
+        return Rx.Observable.of(v);
+      } else {
+        const terminal$ = Rx.Observable.from(terminal)
+        .flatMap(s => Rx.Observable.fromPromise(s.read(this.$name, this.$id, fields)))
+        .share();
+        const cold$ = Rx.Observable.from(colds)
+        .flatMap(s => Rx.Observable.fromPromise(s.read(this.$name, this.$id, fields)));
+        return Rx.Observable.merge(
+          terminal$,
+          cold$.takeUntil(terminal$)
+        );
+      }
+    });
+    // TODO: cacheable reads
+    // const watchRead$ = Rx.Observable.from(terminal)
+    // .flatMap(s => s.read$.filter(v => v.type === this.$name && v.id === this.$id));
+    const watchWrite$ = Rx.Observable.from(terminal)
+    .flatMap(s => s.write$)
+    .filter(v => {
+      return (
+        (v.type === this.$name) &&
+        (v.id === this.$id) &&
+        (v.invalidate.some(i => fields.indexOf(i) >= 0))
+      );
+    })
+    .flatMapTo(
+      Rx.Observable.from(terminal)
+      .flatMap(s => Rx.Observable.fromPromise(s.read(this.$name, this.$id, fields)))
+    );
+    // );
+    return preload$.merge(watchWrite$)
+    .subscribe(cb);
   }
 
   $delete() {

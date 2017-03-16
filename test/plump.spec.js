@@ -2,7 +2,7 @@
 
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
-import { Plump, MemoryStore, $self } from '../src/index';
+import { Plump, MemoryStore } from '../src/index';
 import { TestType } from './testType';
 import Bluebird from 'bluebird';
 
@@ -20,7 +20,7 @@ describe('Plump', () => {
     return expect(p.find('tests', 1).constructor.toJSON()).to.deep.equal(TestType.toJSON());
   });
 
-  it('should refresh contents on an invalidation event', (done) => {
+  it('should properly use hot and cold caches', (done) => {
     const DelayProxy = {
       get: (target, name) => {
         if (['read', 'write', 'add', 'remove'].indexOf(name) >= 0) {
@@ -46,7 +46,8 @@ describe('Plump', () => {
     invalidated.$save()
     .then(() => {
       let phase = 0;
-      const subscription = invalidated.$subscribe((v) => {
+      const newOne = otherPlump.find('tests', invalidated.id);
+      const subscription = newOne.subscribe((v) => {
         try {
           if (phase === 0) {
             if (v.attributes.name) {
@@ -76,17 +77,17 @@ describe('Plump', () => {
       });
       return coldMemstore._set(
         coldMemstore.keyString(TestType.$name, invalidated.$id),
-        JSON.stringify({ id: invalidated.$id, name: 'slowtato' })
+        JSON.stringify({ id: invalidated.$id, attributes: { name: 'slowtato' }, relationships: {} })
       );
     })
     .then(() => {
       return terminalStore._set(
         terminalStore.keyString(TestType.$name, invalidated.$id),
-        JSON.stringify({ id: invalidated.$id, name: 'grotato' })
+        JSON.stringify({ id: invalidated.$id, attributes: { name: 'grotato' }, relationships: {} })
       );
     })
     .then(() => {
-      return otherPlump.invalidate(TestType, invalidated.$id, $self);
+      return otherPlump.invalidate(TestType.$name, invalidated.$id, ['attributes']);
     })
     .catch((err) => done(err));
   });

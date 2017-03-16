@@ -36,7 +36,7 @@ describe('model', () => {
     });
 
     it('should load data from datastores', () => {
-      return memstore2.write(TestType, { attributes: { name: 'potato' }, relationships: {} })
+      return memstore2.write({ type: 'tests', attributes: { name: 'potato' }, relationships: {} })
       .then(createdObject => {
         const two = plump.find('tests', createdObject.id);
         return expect(two.$get()).to.eventually.have.deep.property('attributes.name', 'potato');
@@ -242,7 +242,7 @@ describe('model', () => {
         let phase = 0;
         one.$save()
         .then(() => {
-          const subscription = one.$subscribe((v) => {
+          const subscription = one.subscribe((v) => {
             try {
               if (phase === 0) {
                 if (v.attributes.name) {
@@ -259,11 +259,6 @@ describe('model', () => {
                 if (v.attributes.name !== 'potato') {
                   expect(v).to.have.deep.property('attributes.name', 'grotato');
                   phase = 3;
-                }
-              }
-              if (phase === 3) {
-                if ((v.relationships.children) && (v.relationships.children.length > 0)) {
-                  expect(v.relationships.children).to.deep.equal([{ id: 100 }]);
                   subscription.unsubscribe();
                   resolve();
                 }
@@ -273,8 +268,7 @@ describe('model', () => {
             }
           });
         })
-        .then(() => one.$set({ name: 'grotato' }))
-        .then(() => one.$add('children', 100));
+        .then(() => one.$set({ name: 'grotato' }).$save());
       });
     });
 
@@ -285,15 +279,15 @@ describe('model', () => {
         one.$save()
         .then(() => one.$add('children', 100).$save())
         .then(() => {
-          const subscription = one.$subscribe([$all], (v) => {
+          const subscription = one.subscribe([$all], (v) => {
             try {
               if (phase === 0) {
                 if (v.attributes) {
-                  expect(v).to.have.property('attributes').that.is.empty; // eslint-disable-line no-unused-expressions
+                  expect(v).to.have.property('attributes');
                   phase = 1;
                 }
               }
-              if (phase === 1) {
+              if (phase === 1 && v.relationships && v.relationships.children) {
                 expect(v.relationships.children).to.deep.equal([{ id: 100 }]);
                 phase = 2;
               }
@@ -340,8 +334,9 @@ describe('model', () => {
         one.$save()
         .then(() => one.$get())
         .then((val) => {
-          return coldMemstore.write(TestType, {
+          return coldMemstore.write({
             id: val.id,
+            type: 'tests',
             attributes: {
               name: 'potato',
               id: val.id,
@@ -350,7 +345,7 @@ describe('model', () => {
           .then(() => {
             let phase = 0;
             const two = otherPlump.find('tests', val.id);
-            const subscription = two.$subscribe((v) => {
+            const subscription = two.subscribe((v) => {
               try {
                 if (phase === 0) {
                   if (v.attributes.name) {

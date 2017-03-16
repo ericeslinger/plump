@@ -1,5 +1,5 @@
 import { Model } from './model';
-import { Subject, Observable } from 'rxjs/Rx';
+import { Subject } from 'rxjs/Rx';
 import Bluebird from 'bluebird';
 
 const $types = Symbol('$types');
@@ -16,10 +16,11 @@ export class Plump {
       types: [],
     }, opts);
     this[$teardown] = new Subject();
-    this.destroy = this[$teardown].asObservable();
+    this.destroy$ = this[$teardown].asObservable();
     this[$subscriptions] = {};
     this[$storeSubscriptions] = [];
     this[$storage] = [];
+    this.stores = [];
     this[$types] = {};
     options.storage.forEach((s) => this.addStore(s));
     options.types.forEach((t) => this.addType(t));
@@ -37,7 +38,9 @@ export class Plump {
     if (this[$types][T.$name] === undefined) {
       this[$types][T.$name] = T;
       this[$storage].forEach(s => s.addType(T));
-      this[$terminal].addType(T);
+      if (this[$terminal]) {
+        this[$terminal].addType(T);
+      }
     } else {
       throw new Error(`Duplicate Type registered: ${T.$name}`);
     }
@@ -58,15 +61,16 @@ export class Plump {
       } else {
         this[$terminal] = store;
         this[$storage].forEach((cacheStore) => {
-          store.observable.takeUntil(this.destroy).subscribe((val) => cacheStore.write(val));
+          cacheStore.wire(store, this.destroy$);
         });
       }
     } else {
       this[$storage].push(store);
       if (this[$terminal] !== undefined) {
-        this[$terminal].observable.takeUntil(this.destroy).subscribe((val) => store.write(val));
+        store.wire(this[$terminal], this.destroy$);
       }
     }
+    this.stores.push(store);
     this.types().forEach(t => store.addType(this.type(t)));
   }
 
@@ -78,19 +82,6 @@ export class Plump {
   forge(t, val) {
     const Type = typeof t === 'string' ? this[$types][t] : t;
     return new Type(val, this);
-  }
-
-  // LOAD (type/id), SIDELOAD (type/id/side)? Or just LOADALL?
-  // LOAD needs to scrub through hot caches first
-
-  subscribe(typeName, id, handler) {
-    if (this[$subscriptions][typeName] === undefined) {
-      this[$subscriptions][typeName] = {};
-    }
-    if (this[$subscriptions][typeName][id] === undefined) {
-      this[$subscriptions][typeName][id] = new Subject();
-    }
-    return this[$subscriptions][typeName][id].subscribe(handler);
   }
 
   teardown() {
@@ -116,38 +107,6 @@ export class Plump {
       } else {
         return v;
       }
-    });
-  }
-
-  streamGet(type, id, opts) {
-    const keys = opts && !Array.isArray(opts) ? [opts] : opts;
-    return Observable.create((observer) => {
-      return Bluebird.all((this[$storage].map((store) => {
-        return store.read(type, id, keys)
-        .then((v) => {
-          observer.next(v);
-          if (store.hot(type, id)) {
-            return v;
-          } else {
-            return null;
-          }
-        });
-      })))
-      .then((valArray) => {
-        const possiVal = valArray.filter((v) => v !== null);
-        if ((possiVal.length === 0) && (this[$terminal])) {
-          return this[$terminal].read(type, id, keys)
-          .then((val) => {
-            observer.next(val);
-            return val;
-          });
-        } else {
-          return possiVal[0];
-        }
-      }).then((v) => {
-        observer.complete();
-        return v;
-      });
     });
   }
 
@@ -208,18 +167,7 @@ export class Plump {
   }
 
   invalidate(type, id, field) {
-    const hots = this[$storage].filter((store) => store.hot(type, id));
-    if (this[$terminal].hot(type, id)) {
-      hots.push(this[$terminal]);
-    }
-    return Bluebird.all(hots.map((store) => {
-      return store.wipe(type, id, field);
-    })).then(() => {
-      if (this[$subscriptions][type.$name] && this[$subscriptions][type.$name][id]) {
-        return this[$terminal].read(type, id, field);
-      } else {
-        return null;
-      }
-    });
+    const fields = Array.isArray(field) ? field : [field];
+    this[$terminal].fireWriteUpdate({ type, id, invalidate: fields });
   }
 }

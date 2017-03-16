@@ -59,7 +59,9 @@ export class Storage {
       throw new Error('Cannot wire a terminal store into another store');
     } else {
       // TODO: figure out where the type data comes from.
-      store.read$.takeUntil(shutdownSignal).subscribe((v) => this.write(v));
+      store.read$.takeUntil(shutdownSignal).subscribe((v) => {
+        this.write(v);
+      });
       store.write$.takeUntil(shutdownSignal).subscribe((v) => {
         v.invalidate.forEach((invalid) => {
           this.wipe(v.type, v.id, invalid);
