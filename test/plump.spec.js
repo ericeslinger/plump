@@ -45,10 +45,9 @@ describe('Plump', () => {
     const invalidated = new TestType({ name: 'foo' }, otherPlump);
     invalidated.$save()
     .then(() => {
-      hotMemstore.logStore();
       let phase = 0;
-      const subscription = invalidated.subscribe((v) => {
-        console.log('SUBSCRIPTION: ', v);
+      const newOne = otherPlump.find('tests', invalidated.id);
+      const subscription = newOne.subscribe((v) => {
         try {
           if (phase === 0) {
             if (v.attributes.name) {

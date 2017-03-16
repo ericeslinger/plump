@@ -279,15 +279,15 @@ describe('model', () => {
         one.$save()
         .then(() => one.$add('children', 100).$save())
         .then(() => {
-          const subscription = one.$subscribe([$all], (v) => {
+          const subscription = one.subscribe([$all], (v) => {
             try {
               if (phase === 0) {
                 if (v.attributes) {
-                  expect(v).to.have.property('attributes').that.is.empty; // eslint-disable-line no-unused-expressions
+                  expect(v).to.have.property('attributes');
                   phase = 1;
                 }
               }
-              if (phase === 1) {
+              if (phase === 1 && v.relationships && v.relationships.children) {
                 expect(v.relationships.children).to.deep.equal([{ id: 100 }]);
                 phase = 2;
               }
@@ -334,8 +334,9 @@ describe('model', () => {
         one.$save()
         .then(() => one.$get())
         .then((val) => {
-          return coldMemstore.write(TestType, {
+          return coldMemstore.write({
             id: val.id,
+            type: 'tests',
             attributes: {
               name: 'potato',
               id: val.id,
@@ -344,7 +345,7 @@ describe('model', () => {
           .then(() => {
             let phase = 0;
             const two = otherPlump.find('tests', val.id);
-            const subscription = two.$subscribe((v) => {
+            const subscription = two.subscribe((v) => {
               try {
                 if (phase === 0) {
                   if (v.attributes.name) {

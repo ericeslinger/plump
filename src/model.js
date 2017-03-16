@@ -62,38 +62,6 @@ export class Model {
     this[$dirty] = this.constructor.schematize(opts);
   }
 
-  $$hookToPlump() {
-    if (this[$unsubscribe] === undefined) {
-      this[$unsubscribe] = this[$plump].subscribe(this.constructor.$name, this.$id, ({ field, value }) => {
-        if (field === undefined) {
-          this.$$copyValuesFrom(value);
-        } else {
-          this.$$copyValuesFrom({ [field]: value });
-        }
-      });
-    }
-  }
-
-  $subscribe(...args) {
-    let fields = ['attributes'];
-    let cb;
-    if (args.length === 2) {
-      fields = args[0];
-      if (!Array.isArray(fields)) {
-        fields = [fields];
-      }
-      cb = args[1];
-    } else {
-      cb = args[0];
-    }
-    this.$$hookToPlump();
-    this[$plump].streamGet(this.constructor, this.$id, fields)
-    .subscribe((v) => {
-      this.$$fireUpdate(v);
-    });
-    return this[$subject].subscribeOn(cb);
-  }
-
   $$resetDirty(opts) {
     const key = opts || this.$dirtyFields;
     const newDirty = { attributes: {}, relationships: {} };
@@ -211,6 +179,10 @@ export class Model {
       cb = args[0];
     }
 
+    if (fields.indexOf($all) >= 0) {
+      fields = Object.keys(this.$schema.relationships).concat('attributes');
+    }
+
     const hots = this[$plump].stores.filter(s => s.hot(this.$name, this.$id));
     const colds = this[$plump].stores.filter(s => !s.hot(this.$name, this.$id));
     const terminal = this[$plump].stores.filter(s => s.terminal === true);
@@ -232,7 +204,7 @@ export class Model {
           cold$.takeUntil(terminal$)
         );
       }
-    }).do(v => console.log('PRELOAD', v));
+    });
     // TODO: cacheable reads
     // const watchRead$ = Rx.Observable.from(terminal)
     // .flatMap(s => s.read$.filter(v => v.type === this.$name && v.id === this.$id));
@@ -246,9 +218,9 @@ export class Model {
       );
     })
     .flatMapTo(
-       Rx.Observable.from(terminal)
-       .flatMap(s => Rx.Observable.fromPromise(s.read(this.$name, this.$id, fields)))
-    ).do(v => console.log('WATCH', v));
+      Rx.Observable.from(terminal)
+      .flatMap(s => Rx.Observable.fromPromise(s.read(this.$name, this.$id, fields)))
+    );
     // );
     return preload$.merge(watchWrite$)
     .subscribe(cb);
