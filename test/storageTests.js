@@ -105,38 +105,6 @@ export function testSuite(mocha, storeOpts) {
         });
       });
 
-      mocha.it('can write to relationships and attributes', () => {
-        const deltaItem = Object.assign({}, sampleObject, {
-          relationships: {
-            children: [
-              { op: 'add', data: { id: 101 } },
-            ],
-          },
-        });
-        const rawItem = Object.assign({}, sampleObject, {
-          relationships: {
-            children: [
-              { id: 101 },
-            ],
-          },
-        });
-        return Bluebird.all([
-          actualStore.write(deltaItem),
-          actualStore.write(rawItem),
-        ]).then((items) => {
-          return Bluebird.all(items.map((it) => {
-            return expect(actualStore.read('tests', it.id, ['children']))
-            .to.eventually.deep.containSubset({
-              relationships: {
-                children: [
-                  { id: 101 },
-                ],
-              },
-            });
-          }));
-        });
-      });
-
       mocha.it('can add to a hasMany relationship', () => {
         return actualStore.write(sampleObject)
         .then((createdObject) => {

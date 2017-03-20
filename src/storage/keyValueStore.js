@@ -91,34 +91,21 @@ export class KeyValueStore extends Storage {
       .then((n) => {
         const id = n + 1;
         toSave.id = id;
-        return Bluebird.all([
-          this.writeAttributes(v.type, id, toSave.attributes),
-          this.writeRelationships(v.type, id, toSave.relationships),
-        ])
-        .then(() => toSave);
-      });
+        return this.writeAttributes(v.type, id, toSave.attributes);
+      })
+      .then(() => toSave);
     } else {
       throw new Error('Cannot create new content in a non-terminal store');
     }
   }
 
   overwrite(v) {
-    return Bluebird.all([
-      this._get(this.keyString(v.type, v.id)),
-      this.readRelationships(v.type, v.id, Object.keys(v.relationships || {})),
-    ]).then(([origAttributes, origRelationships]) => {
+    return this._get(this.keyString(v.type, v.id))
+    .then((origAttributes) => {
       const updatedAttributes = Object.assign({}, JSON.parse(origAttributes), v.attributes);
-      const updatedRelationships = this.resolveRelationships(v.type, v.relationships, origRelationships);
-      const updated = { id: v.id, type: v.type, attributes: updatedAttributes, relationships: updatedRelationships };
-      return Bluebird.all([
-        this.writeAttributes(v.type, v.id, updatedAttributes),
-        this.writeRelationships(v.type, v.id, updatedRelationships),
-      ])
+      return this.writeAttributes(v.type, v.id, updatedAttributes)
       .then(() => {
-        return this.notifyUpdate(v.type, v.id, updated);
-      })
-      .then(() => {
-        return updated;
+        return Object.assign({}, v, { attributes: updatedAttributes });
       });
     });
   }
@@ -136,13 +123,6 @@ export class KeyValueStore extends Storage {
       });
       return v;
     });
-  }
-
-  writeRelationships(typeName, id, relationships) {
-    const t = this.getType(typeName);
-    return Object.keys(relationships).map(relName => {
-      return this._set(this.keyString(t.$name, id, relName), JSON.stringify(relationships[relName]));
-    }).reduce((thenable, curr) => thenable.then(() => curr), Bluebird.resolve());
   }
 
   readAttributes(type, id) {

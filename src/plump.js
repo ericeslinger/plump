@@ -114,9 +114,35 @@ export class Plump {
     return this[$terminal].bulkRead(type, id);
   }
 
-  save(...args) {
+  save(value) {
     if (this[$terminal]) {
-      return this[$terminal].write(...args);
+      return Bluebird.resolve()
+      .then(() => {
+        if (Object.keys(value.attributes).length > 0) {
+          return this[$terminal].write(value);
+        } else {
+          return null;
+        }
+      })
+      .then((updated) => {
+        if (value.relationships && Object.keys(value.relationships).length > 0) {
+          return Bluebird.all(Object.keys(value.relationships).map((relName) => {
+            return Bluebird.all(value.relationships[relName].map((delta) => {
+              if (delta.op === 'add') {
+                return this[$terminal].add(value.type, updated.id, relName, delta.id, delta.meta);
+              } else if (delta.op === 'remove') {
+                return this[$terminal].remove(value.type, updated.id, relName, delta.id);
+              } else if (delta.op === 'modify') {
+                return this[$terminal].modifyRelationship(value.type, updated.id, relName, delta.id, delta.meta);
+              } else {
+                throw new Error(`Unknown relationship delta ${JSON.stringify(delta)}`);
+              }
+            }));
+          })).then(() => updated);
+        } else {
+          return updated;
+        }
+      });
     } else {
       return Promise.reject(new Error('Plump has no terminal store'));
     }
