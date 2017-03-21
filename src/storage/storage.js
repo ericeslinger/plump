@@ -1,6 +1,6 @@
 /* eslint no-unused-vars: 0 */
 
-import * as Bluebird from 'bluebird';
+import Bluebird from 'bluebird';
 import mergeOptions from 'merge-options';
 import { Subject } from 'rxjs/Rx';
 
@@ -40,6 +40,112 @@ export class Storage {
     this[$types] = {};
   }
 
+  // Abstract - all stores must provide below:
+
+  writeAttributes(value) {
+    // if value.id exists, this is an update. If it doesn't, it is an
+    // insert. In the case of an update, it should merge down the tree.
+    return Bluebird.reject(new Error('writeAttributes not implemented'));
+  }
+
+  readAttributes(value) {
+    return Bluebird.reject(new Error('readAttributes not implemented'));
+  }
+
+  cacheAttributes(value) {
+    return Bluebird.reject(new Error('cacheAttributes not implemented'));
+  }
+
+  readRelationship(value, key) {
+    return Bluebird.reject(new Error('readRelationship not implemented'));
+  }
+
+  // wipe should quietly erase a value from the store. This is used during
+  // cache invalidation events when the current value is known to be incorrect.
+  // it is not a delete (which is a user-initiated, event-causing thing), but
+  // should result in this value not stored in storage anymore.
+
+  wipe(type, id, field) {
+    return Bluebird.reject(new Error('Wipe not implemented'));
+  }
+
+  delete(value) {
+    return Bluebird.reject(new Error('Delete not implemented'));
+  }
+
+  writeRelationshipItem(value, relationshipTitle, child) {
+    // add to a hasMany relationship
+    // note that hasMany fields can have (impl-specific) valence data (now renamed extras)
+    // example: membership between profile and community can have perm 1, 2, 3
+    return Bluebird.reject(new Error('write relationship item not implemented'));
+  }
+
+  removeRelationshipItem(value, relationshipTitle, childId) {
+    // remove from a hasMany relationship
+    return Bluebird.reject(new Error('remove not implemented'));
+  }
+
+  query(q) {
+    // q: {type: string, query: any}
+    // q.query is impl defined - a string for sql (raw sql)
+    return Bluebird.reject(new Error('Query not implemented'));
+  }
+
+  // convenience function used internally
+  // read a bunch of relationships and merge them together.
+  readRelationships(item, relationships) {
+    return Bluebird.all(relationships.map(r => this.readRelationship(r)))
+    .then(
+      rA => rA.reduce((a, r) => mergeOptions(a, r), { type: item.type, id: item.id, attributes: {}, relationships: {} })
+    );
+  }
+
+  // read a value from the store.
+  // opts is an array of attributes to read - syntax is:
+  // 'attributes' (to read the attributes, at least, and is the default)
+  // 'relationships' to read all relationships
+  // 'relationships.relationshipname' to read a certain relationship only
+
+  read(item, opts = ['attributes']) {
+    const type = this.getType(item.type);
+    const keys = opts && !Array.isArray(opts) ? [opts] : opts;
+
+    return this.readAttributes(item)
+    .then(attributes => {
+      if (!attributes) {
+        return null;
+      } else {
+        const relsWanted = (keys.indexOf('relationships') >= 0)
+          ? Object.keys(type.$schema.relationships)
+          : keys.map(k => k.split('.'))
+            .filter(ka => ka[0] === 'relationships')
+            .map(ka => ka[1]);
+        const relsToFetch = relsWanted.filter(relName => !attributes.relationships[relName]);
+        // readAttributes can return relationship data, so don't fetch those
+        if (relsToFetch.length > 0) {
+          return this.readRelationships(type, relsToFetch)
+          .then(rels => mergeOptions(attributes, rels));
+        } else {
+          return attributes;
+        }
+      }
+    }).then((result) => {
+      if (result) {
+        this.fireReadUpdate(result);
+      }
+      return result;
+    });
+  }
+
+  bulkRead(type, id) {
+    // override this if you want to do any special pre-processing
+    // for reading from the store prior to a REST service event
+    return this.read(type, id).then(data => {
+      return { data, included: [] };
+    });
+  }
+
+
   hot(type, id) {
     // t: type, id: id (integer).
     // if hot, then consider this value authoritative, no need to go down
@@ -70,11 +176,47 @@ export class Storage {
     }
   }
 
-  write(value, opts) {
-    // if value.id exists, this is an update. If it doesn't, it is an
-    // insert. In the case of an update, it should merge down the tree.
-    return Bluebird.reject(new Error('Write not implemented'));
+  validateInput(value, opts = {}) {
+    const type = this.getType(value.type);
+    const retVal = { type: value.type, id: value.id, attributes: {}, relationships: {} };
+    const typeAttrs = Object.keys(type.$schema.attributes);
+    const valAttrs = Object.keys(value.attributes);
+    const typeRels = Object.keys(type.$schema.relationships);
+    const valRels = Object.keys(value.relationships);
+
+    const invalidAttrs = valAttrs.filter(item => typeAttrs.indexOf(item) < 0);
+    const invalidRels = valRels.filter(item => typeRels.indexOf(item) < 0);
+
+    if (invalidAttrs.length > 0) {
+      throw new Error(`Invalid attributes on value object: ${JSON.stringify(invalidAttrs)}`);
+    }
+
+    if (invalidRels.length > 0) {
+      throw new Error(`Invalid relationships on value object: ${JSON.stringify(invalidRels)}`);
+    }
+
+
+    for (const attrName in type.$schema.attributes) {
+      if (!value.attributes[attrName] && (type.$schema.attributes[attrName].default !== undefined)) {
+        if (Array.isArray(type.$schema.attributes[attrName].default)) {
+          retVal.attributes[attrName] = type.$schema.attributes[attrName].default.concat();
+        } else if (typeof type.$schema.attributes[attrName].default === 'object') {
+          retVal.attributes[attrName] = Object.assign(type.$schema.attributes[attrName].default);
+        } else {
+          retVal.attributes[attrName] = type.$schema.attributes[attrName].default;
+        }
+      }
+    }
+
+    for (const relName in type.$schema.relationships) {
+      if (value.relationships[relName] && !Array.isArray(value.relationships[relName])) {
+        throw new Error(`relation ${relName} is not an array`);
+      }
+    }
+    return mergeOptions({}, value, retVal);
   }
+
+  // store type info data on the store itself
 
   getType(t) {
     if (typeof t === 'string') {
@@ -92,104 +234,6 @@ export class Storage {
     a.forEach(t => this.addType(t));
   }
 
-  // TODO: write the two-way has/get logic into this method
-  // and provide override hooks for readAttributes readRelationship
-
-  read(typeName, id, opts) {
-    const type = this.getType(typeName);
-    const keys = opts && !Array.isArray(opts) ? [opts] : opts;
-    return this.readAttributes(type, id)
-    .then(attributes => {
-      if (attributes) {
-        return this.readRelationships(type, id, keys)
-        .then(relationships => {
-          return {
-            type: type.$name,
-            id,
-            attributes: attributes.attributes || attributes,
-            relationships:
-              attributes.relationships
-                ? mergeOptions({}, attributes.relationships, relationships.relationships || relationships)
-                : relationships.relationships || relationships,
-          };
-        });
-      } else {
-        return null;
-      }
-    }).then((result) => {
-      if (result) {
-        this.fireReadUpdate(result);
-      }
-      return result;
-    });
-  }
-
-  bulkRead(type, id) {
-    // override this if you want to do any special pre-processing
-    // for reading from the store prior to a REST service event
-    return this.read(type, id).then(data => {
-      return { data, included: [] };
-    });
-  }
-
-  readAttributes(type, id) {
-    return Bluebird.reject(new Error('readAttributes not implemented'));
-  }
-
-  readRelationship(type, id, key) {
-    return Bluebird.reject(new Error('readRelationship not implemented'));
-  }
-
-  readRelationships(type, id, key, attributes) {
-    const t = this.getType(type);
-    // If there is no key, it defaults to all relationships
-    // Otherwise, it wraps it in an Array if it isn't already one
-    const keys = key && !Array.isArray(key) ? [key] : key || [];
-    return keys.filter(k => k in t.$schema.relationships).map(relName => {
-      return this.readRelationship(t, id, relName, attributes);
-    }).reduce((thenableAcc, thenableCurr) => {
-      return Bluebird.all([thenableAcc, thenableCurr])
-      .then(([acc, curr]) => {
-        return mergeOptions(acc, curr);
-      });
-    }, Bluebird.resolve({}));
-  }
-
-  // wipe should quietly erase a value from the store. This is used during
-  // cache invalidation events when the current value is known to be incorrect.
-  // it is not a delete (which is a user-initiated, event-causing thing), but
-  // should result in this value not stored in storage anymore.
-
-  wipe(type, id, field) {
-    return Bluebird.reject(new Error('Wipe not implemented'));
-  }
-
-  delete(type, id) {
-    return Bluebird.reject(new Error('Delete not implemented'));
-  }
-
-  add(type, id, relationshipTitle, childId, extras = {}) {
-    // add to a hasMany relationship
-    // note that hasMany fields can have (impl-specific) valence data (now renamed extras)
-    // example: membership between profile and community can have perm 1, 2, 3
-    return Bluebird.reject(new Error('Add not implemented'));
-  }
-
-  remove(type, id, relationshipTitle, childId) {
-    // remove from a hasMany relationship
-    return Bluebird.reject(new Error('remove not implemented'));
-  }
-
-  modifyRelationship(type, id, relationshipTitle, childId, extras = {}) {
-    // should modify an existing hasMany valence data. Throw if not existing.
-    return Bluebird.reject(new Error('modifyRelationship not implemented'));
-  }
-
-  query(q) {
-    // q: {type: string, query: any}
-    // q.query is impl defined - a string for sql (raw sql)
-    return Bluebird.reject(new Error('Query not implemented'));
-  }
 
   fireWriteUpdate(val) {
     this[$writeSubject].next(val);
