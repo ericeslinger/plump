@@ -2,9 +2,7 @@
 // Project: https://github.com/kstf/plump
 // Definitions by: Nate Pinsky <github.com/mrpinsky>
 
-import { Plump } from './plump.d';
-import { Model } from './model.d';
-import { Relationship } from './relationship.d';
-import { Storage, KeyValueStore } from './storage/index.d';
-
-export { Plump, Model, Relationship, Storage, KeyValueStore };
+export { Plump } from './plump.d';
+export { Model } from './model.d';
+export { Relationship } from './relationship.d';
+export { Storage, KeyValueStore, MemoryStore } from './storage/index.d';
