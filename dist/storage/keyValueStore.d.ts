@@ -7,7 +7,7 @@ import { Storage } from './storage.d';
 import { Model } from '../model.d';
 import { Relationship } from '../relationship.d';
 
-export as namespace keyValueStorage;
+export as namespace KeyValueStore;
 
 declare abstract class KeyValueStore extends Storage {
   abstract logStore(): void;

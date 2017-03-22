@@ -1,6 +1,5 @@
 import * as Rx from 'rxjs/Rx';
 import * as Bluebird from 'bluebird';
-import * as Axios from 'axios';
 
 import { StringIndexed, NumericIDed} from './util';
 import { Plump } from './plump.d';
@@ -24,7 +23,11 @@ declare abstract class Model {
   // TODO: Figure out shape of opts
   static $rest(
     plump: Plump,
-    opts?: Axios.AxiosRequestConfig
+    opts?: {
+      url?: string,
+      method?: string,
+      payload?: any,
+    }
   ): Bluebird<any>;
 
   // The keys of opts here should be a subset of the keys of Model.$fields
@@ -34,7 +37,7 @@ declare abstract class Model {
   static schematize(v: StringIndexed<any>, opts: { includeId: boolean }): Model.Data;
 
 
-  constructor(opts: StringIndexed<any>, plump: Plump);
+  constructor(opts: Model.Data, plump: Plump);
 
   $subscribe(callback: () => void): Rx.Subscription;
   $subscribe(fields: string | string[], callback: () => void): Rx.Subscription;
@@ -116,8 +119,8 @@ declare namespace Model {
   interface Data {
     type?: string,
     id?: number,
-    attributes: StringIndexed<Attribute>,
-    relationships: StringIndexed<Model.Relationship[]>,
+    attributes?: StringIndexed<Attribute>,
+    relationships?: StringIndexed<Model.Relationship[]>,
   }
 }
 

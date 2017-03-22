@@ -7,9 +7,13 @@ import { KeyValueStore } from './keyValueStore.d';
 import { Model } from '../model.d';
 import { Relationship } from '../relationship.d';
 
-export as namespace keyValueStorage;
+export as namespace MemoryStore;
 
 declare class MemoryStore extends KeyValueStore {
+  constructor(opts?: {
+    terminal?: boolean,
+  });
+
   logStore(): void;
   _keys(typeName: string): Bluebird<PropertyKey[]>;
   _get(k: string): Bluebird<Model.Attributes | Relationship.Data[] | null>;

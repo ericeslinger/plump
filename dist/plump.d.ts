@@ -5,12 +5,12 @@ import { StringIndexed, NumericIDed } from './util.d';
 
 import { Model } from './model.d';
 import * as Relationship from './relationship.d';
-import { Storage, KeyValueStore } from './storage/index.d';
+import { Storage } from './storage/index.d';
 
 export as namespace plump;
 
 declare class Plump {
-    new (opts?: {
+    constructor(opts?: {
       storage?: Storage[],
       types?: Model[],
     });
@@ -35,7 +35,7 @@ declare class Plump {
 
     forge(
       t: string | Model,
-      val: Model.Schema
+      val: Model.Data
     ): Model;
 
     subscribe(
