@@ -119,8 +119,8 @@ declare namespace Model {
   interface Data {
     type?: string,
     id?: number,
-    attributes: StringIndexed<Attribute>,
-    relationships: StringIndexed<Model.Relationship[]>,
+    attributes?: StringIndexed<Attribute>,
+    relationships?: StringIndexed<Model.Relationship[]>,
   }
 }
 
