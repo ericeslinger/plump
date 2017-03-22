@@ -11,7 +11,7 @@ export as namespace keyValueStorage;
 
 declare abstract class KeyValueStore extends Storage {
   abstract logStore(): void;
-  abstract _keys(typeName: string): Bluebird<PropertyKey[]>;
+  abstract _keys(typeName: string): Bluebird<string[]>;
   abstract _get(k: string): Bluebird<Model.Attributes | Relationship.Data[] | null>;
   abstract _set(k: string, v: any): Bluebird<any>;
   abstract _del(k: string): Bluebird<any>;

@@ -2,6 +2,7 @@
 
 import Bluebird from 'bluebird';
 import mergeOptions from 'merge-options';
+import { validateInput } from '../util';
 import { Subject } from 'rxjs/Rx';
 
 import { $self, $all } from '../model';
@@ -80,7 +81,7 @@ export class Storage {
     return Bluebird.reject(new Error('write relationship item not implemented'));
   }
 
-  removeRelationshipItem(value, relationshipTitle, childId) {
+  removeRelationshipItem(value, relationshipTitle, child) {
     // remove from a hasMany relationship
     return Bluebird.reject(new Error('remove not implemented'));
   }
@@ -94,9 +95,9 @@ export class Storage {
   // convenience function used internally
   // read a bunch of relationships and merge them together.
   readRelationships(item, relationships) {
-    return Bluebird.all(relationships.map(r => this.readRelationship(r)))
+    return Bluebird.all(relationships.map(r => this.readRelationship(item, r)))
     .then(
-      rA => rA.reduce((a, r) => mergeOptions(a, r), { type: item.type, id: item.id, attributes: {}, relationships: {} })
+      rA => rA.reduce((a, r) => mergeOptions(a, r || {}), { type: item.type, id: item.id, attributes: {}, relationships: {} })
     );
   }
 
@@ -115,6 +116,9 @@ export class Storage {
       if (!attributes) {
         return null;
       } else {
+        if (attributes.id && attributes.attributes && !attributes.attributes[type.$id]) {
+          attributes.attributes[type.$id] = attributes.id;
+        }
         const relsWanted = (keys.indexOf('relationships') >= 0)
           ? Object.keys(type.$schema.relationships)
           : keys.map(k => k.split('.'))
@@ -123,8 +127,10 @@ export class Storage {
         const relsToFetch = relsWanted.filter(relName => !attributes.relationships[relName]);
         // readAttributes can return relationship data, so don't fetch those
         if (relsToFetch.length > 0) {
-          return this.readRelationships(type, relsToFetch)
-          .then(rels => mergeOptions(attributes, rels));
+          return this.readRelationships(item, relsToFetch)
+          .then(rels => {
+            return mergeOptions(attributes, rels);
+          });
         } else {
           return attributes;
         }
@@ -166,11 +172,11 @@ export class Storage {
     } else {
       // TODO: figure out where the type data comes from.
       store.read$.takeUntil(shutdownSignal).subscribe((v) => {
-        this.write(v);
+        this.cache(v);
       });
       store.write$.takeUntil(shutdownSignal).subscribe((v) => {
         v.invalidate.forEach((invalid) => {
-          this.wipe(v.type, v.id, invalid);
+          this.wipe(v, invalid);
         });
       });
     }
@@ -178,42 +184,7 @@ export class Storage {
 
   validateInput(value, opts = {}) {
     const type = this.getType(value.type);
-    const retVal = { type: value.type, id: value.id, attributes: {}, relationships: {} };
-    const typeAttrs = Object.keys(type.$schema.attributes);
-    const valAttrs = Object.keys(value.attributes);
-    const typeRels = Object.keys(type.$schema.relationships);
-    const valRels = Object.keys(value.relationships);
-
-    const invalidAttrs = valAttrs.filter(item => typeAttrs.indexOf(item) < 0);
-    const invalidRels = valRels.filter(item => typeRels.indexOf(item) < 0);
-
-    if (invalidAttrs.length > 0) {
-      throw new Error(`Invalid attributes on value object: ${JSON.stringify(invalidAttrs)}`);
-    }
-
-    if (invalidRels.length > 0) {
-      throw new Error(`Invalid relationships on value object: ${JSON.stringify(invalidRels)}`);
-    }
-
-
-    for (const attrName in type.$schema.attributes) {
-      if (!value.attributes[attrName] && (type.$schema.attributes[attrName].default !== undefined)) {
-        if (Array.isArray(type.$schema.attributes[attrName].default)) {
-          retVal.attributes[attrName] = type.$schema.attributes[attrName].default.concat();
-        } else if (typeof type.$schema.attributes[attrName].default === 'object') {
-          retVal.attributes[attrName] = Object.assign(type.$schema.attributes[attrName].default);
-        } else {
-          retVal.attributes[attrName] = type.$schema.attributes[attrName].default;
-        }
-      }
-    }
-
-    for (const relName in type.$schema.relationships) {
-      if (value.relationships[relName] && !Array.isArray(value.relationships[relName])) {
-        throw new Error(`relation ${relName} is not an array`);
-      }
-    }
-    return mergeOptions({}, value, retVal);
+    return validateInput(type, value);
   }
 
   // store type info data on the store itself
@@ -227,7 +198,7 @@ export class Storage {
   }
 
   addType(t) {
-    this[$types][t.$name] = t;
+    this[$types][t.type] = t;
   }
 
   addTypes(a) {

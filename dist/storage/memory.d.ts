@@ -11,7 +11,7 @@ export as namespace keyValueStorage;
 
 declare class MemoryStore extends KeyValueStore {
   logStore(): void;
-  _keys(typeName: string): Bluebird<PropertyKey[]>;
+  _keys(typeName: string): Bluebird<string[]>;
   _get(k: string): Bluebird<Model.Attributes | Relationship.Data[] | null>;
   _set(k: string, v: any): Bluebird<any>;
   _del(k: string): Bluebird<any>;

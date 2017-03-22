@@ -27,11 +27,11 @@ declare abstract class Storage {
 
   hot(type: Model, id: number): boolean;
 
-  write(
-    type: Model,
+  writeAttributes(
     value: {
       [index: string]: any,
-      id?: number
+      id?: number,
+      type: string
     }
   ): Bluebird<Model.Data>;
 

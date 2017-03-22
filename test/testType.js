@@ -71,7 +71,7 @@ QueryChildren.$extras = {
 QueryChildren.$name = 'query_children';
 
 
-TestType.$name = 'tests';
+TestType.type = 'tests';
 TestType.$id = 'id';
 TestType.$packageIncludes = ['children'];
 TestType.$storeData = {
@@ -80,8 +80,7 @@ TestType.$storeData = {
   },
 };
 TestType.$schema = {
-  $name: 'tests',
-  $id: 'id',
+  type: 'tests',
   attributes: {
     id: { type: 'number' },
     name: { type: 'string' },

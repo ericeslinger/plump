@@ -1,12 +1,11 @@
 import mergeOptions from 'merge-options';
 import Rx from 'rxjs/Rx';
 
-import { Relationship } from './relationship';
+import { validateInput } from './util';
 const $dirty = Symbol('$dirty');
 const $plump = Symbol('$plump');
 const $unsubscribe = Symbol('$unsubscribe');
 const $subject = Symbol('$subject');
-export const $all = Symbol('$all');
 
 // TODO: figure out where error events originate (storage or model)
 // and who keeps a roll-backable delta
@@ -29,12 +28,8 @@ export class Model {
 
   // CONVENIENCE ACCESSORS
 
-  get $name() {
-    return this.constructor.$name;
-  }
-
-  get $id() {
-    return this[this.constructor.$id];
+  get type() {
+    return this.constructor.type;
   }
 
   get $fields() {
@@ -57,9 +52,12 @@ export class Model {
   // WIRING
 
   $$copyValuesFrom(opts = {}) {
-    const idField = this.constructor.$id in opts ? this.constructor.$id : 'id';
-    this[this.constructor.$id] = opts[idField] || this.$id;
-    this[$dirty] = this.constructor.schematize(opts);
+    // const idField = this.constructor.$id in opts ? this.constructor.$id : 'id';
+    // this[this.constructor.$id] = opts[idField] || this.$id;
+    if ((this.id === undefined) && (opts[this.constructor.$id])) {
+      this.id = opts[this.constructor.$id];
+    }
+    this[$dirty] = mergeOptions(this[$dirty], { attributes: opts });
   }
 
   $$resetDirty(opts) {
@@ -93,35 +91,30 @@ export class Model {
 
   // API METHODS
 
-  $get(opts) {
+  get(opts = 'attributes') {
     // If opts is falsy (i.e., undefined), get attributes
     // Otherwise, get what was requested,
     // wrapping the request in a Array if it wasn't already one
-    let keys = opts && !Array.isArray(opts) ? [opts] : opts;
-    if (keys && keys.indexOf($all) >= 0) {
-      keys = Object.keys(this.$schema.relationships);
-    }
-    return this[$plump].get(this.constructor, this.$id, keys)
+    const keys = opts && !Array.isArray(opts) ? [opts] : opts;
+    return this[$plump].get(this, keys)
     .then(self => {
       if (!self && this.$dirtyFields.length === 0) {
         return null;
+      } else if (this.$dirtyFields.length === 0) {
+        return self;
       } else {
-        const schematized = this.constructor.schematize(self || {});
-        const withDirty = this.constructor.resolveAndOverlay(this[$dirty], schematized);
-        const retVal = this.constructor.applyDefaults(withDirty);
-        retVal.type = this.$name;
-        retVal.id = this.$id;
-        return retVal;
+        const resolved = this.constructor.resolveAndOverlay(this[$dirty], self || undefined);
+        return mergeOptions({}, self || { id: this.id, type: this.type }, resolved);
       }
     });
   }
 
-  $bulkGet() {
+  bulkGet() {
     return this[$plump].bulkGet(this.constructor, this.$id);
   }
 
-  // TODO: Should $save ultimately return this.$get()?
-  $save(opts) {
+  // TODO: Should $save ultimately return this.get()?
+  save(opts) {
     const options = opts || this.$fields;
     const keys = Array.isArray(options) ? options : [options];
 
@@ -135,25 +128,26 @@ export class Model {
     })
     .reduce(
       (acc, curr) => mergeOptions(acc, curr),
-      { id: this.$id, type: this.constructor.$name });
+      { id: this.$id, type: this.constructor.type });
 
     if (this.$id !== undefined) {
       update.id = this.$id;
     }
-    update.type = this.$name;
+    update.type = this.type;
 
     return this[$plump].save(update)
     .then((updated) => {
       this.$$resetDirty(opts);
       if (updated.id) {
         this[this.constructor.$id] = updated.id;
+        this.id = updated.id;
       }
       // this.$$fireUpdate(updated);
-      return this.$get();
+      return this.get();
     });
   }
 
-  $set(update) {
+  set(update) {
     const flat = update.attributes || update;
     // Filter out non-attribute keys
     const sanitized = Object.keys(flat)
@@ -179,26 +173,22 @@ export class Model {
       cb = args[0];
     }
 
-    if (fields.indexOf($all) >= 0) {
-      fields = Object.keys(this.$schema.relationships).concat('attributes');
-    }
-
-    const hots = this[$plump].stores.filter(s => s.hot(this.$name, this.$id));
-    const colds = this[$plump].stores.filter(s => !s.hot(this.$name, this.$id));
+    const hots = this[$plump].stores.filter(s => s.hot(this.type, this.$id));
+    const colds = this[$plump].stores.filter(s => !s.hot(this.type, this.$id));
     const terminal = this[$plump].stores.filter(s => s.terminal === true);
 
     const preload$ = Rx.Observable.from(hots)
-    .flatMap(s => Rx.Observable.fromPromise(s.read(this.$name, this.$id, fields)))
+    .flatMap(s => Rx.Observable.fromPromise(s.read(this.type, this.$id, fields)))
     .defaultIfEmpty(null)
     .flatMap((v) => {
       if (v !== null) {
         return Rx.Observable.of(v);
       } else {
         const terminal$ = Rx.Observable.from(terminal)
-        .flatMap(s => Rx.Observable.fromPromise(s.read(this.$name, this.$id, fields)))
+        .flatMap(s => Rx.Observable.fromPromise(s.read(this.type, this.$id, fields)))
         .share();
         const cold$ = Rx.Observable.from(colds)
-        .flatMap(s => Rx.Observable.fromPromise(s.read(this.$name, this.$id, fields)));
+        .flatMap(s => Rx.Observable.fromPromise(s.read(this.type, this.$id, fields)));
         return Rx.Observable.merge(
           terminal$,
           cold$.takeUntil(terminal$)
@@ -207,28 +197,27 @@ export class Model {
     });
     // TODO: cacheable reads
     // const watchRead$ = Rx.Observable.from(terminal)
-    // .flatMap(s => s.read$.filter(v => v.type === this.$name && v.id === this.$id));
+    // .flatMap(s => s.read$.filter(v => v.type === this.type && v.id === this.$id));
     const watchWrite$ = Rx.Observable.from(terminal)
     .flatMap(s => s.write$)
     .filter(v => {
       return (
-        (v.type === this.$name) &&
+        (v.type === this.type) &&
         (v.id === this.$id) &&
         (v.invalidate.some(i => fields.indexOf(i) >= 0))
       );
     })
     .flatMapTo(
       Rx.Observable.from(terminal)
-      .flatMap(s => Rx.Observable.fromPromise(s.read(this.$name, this.$id, fields)))
+      .flatMap(s => Rx.Observable.fromPromise(s.read(this.type, this.$id, fields)))
     );
     // );
     return preload$.merge(watchWrite$)
     .subscribe(cb);
   }
 
-  $delete() {
-    return this[$plump].delete(this.constructor, this.$id)
-    .then(data => data.map(this.constructor.schematize));
+  delete() {
+    return this[$plump].delete(this);
   }
 
   $rest(opts) {
@@ -236,28 +225,19 @@ export class Model {
       {},
       opts,
       {
-        url: `/${this.constructor.$name}/${this.$id}/${opts.url}`,
+        url: `/${this.constructor.type}/${this.$id}/${opts.url}`,
       }
     );
     return this[$plump].restRequest(restOpts).then(data => this.constructor.schematize(data));
   }
 
-  $add(key, item, extras) {
-    if (this.$schema.relationships[key]) {
-      let id = 0;
-      if (typeof item === 'number') {
-        id = item;
-      } else if (item.id) {
-        id = item.id;
-      } else {
-        id = item[this.$schema.relationships[key].type.$sides[key].other.field];
-      }
-      if ((typeof id === 'number') && (id >= 1)) {
-        const data = { id, meta: extras || item.meta };
+  add(key, item) {
+    if (key in this.$schema.relationships) {
+      if (item.id >= 1) {
         this[$dirty].relationships[key] = this[$dirty].relationships[key] || [];
         this[$dirty].relationships[key].push({
           op: 'add',
-          data,
+          data: item,
         });
         // this.$$fireUpdate();
         return this;
@@ -269,21 +249,13 @@ export class Model {
     }
   }
 
-  $modifyRelationship(key, item, extras) {
+  modifyRelationship(key, item) {
     if (key in this.$schema.relationships) {
-      let id = 0;
-      if (typeof item === 'number') {
-        id = item;
-      } else {
-        id = item.$id;
-      }
-      if ((typeof id === 'number') && (id >= 1)) {
-        if (!(key in this[$dirty].relationships)) {
-          this[$dirty].relationships[key] = [];
-        }
+      if (item.id >= 1) {
+        this[$dirty].relationships[key] = this[$dirty].relationships[key] || [];
         this[$dirty].relationships[key].push({
           op: 'modify',
-          data: Object.assign({ id }, { meta: extras || item.meta }),
+          data: item,
         });
         // this.$$fireUpdate();
         return this;
@@ -295,21 +267,15 @@ export class Model {
     }
   }
 
-  $remove(key, item) {
+  remove(key, item) {
     if (key in this.$schema.relationships) {
-      let id = 0;
-      if (typeof item === 'number') {
-        id = item;
-      } else {
-        id = item.$id;
-      }
-      if ((typeof id === 'number') && (id >= 1)) {
+      if (item.id >= 1) {
         if (!(key in this[$dirty].relationships)) {
           this[$dirty].relationships[key] = [];
         }
         this[$dirty].relationships[key].push({
           op: 'remove',
-          data: { id },
+          data: item,
         });
         // this.$$fireUpdate();
         return this;
@@ -322,41 +288,12 @@ export class Model {
   }
 }
 
-Model.fromJSON = function fromJSON(json) {
-  this.$id = json.$id || 'id';
-  this.$name = json.$name;
-  this.$include = json.$include;
-  this.$schema = {
-    attributes: mergeOptions(json.$schema.attributes),
-    relationships: {},
-  };
-  for (const rel in json.$schema.relationships) { // eslint-disable-line guard-for-in
-    this.$schema.relationships[rel] = {};
-    class DynamicRelationship extends Relationship {}
-    DynamicRelationship.fromJSON(json.$schema.relationships[rel]);
-    this.$schema.relationships[rel].type = DynamicRelationship;
-  }
-};
-
-Model.toJSON = function toJSON() {
-  const retVal = {
-    $id: this.$id,
-    $name: this.$name,
-    $include: this.$include,
-    $schema: { attributes: this.$schema.attributes, relationships: {} },
-  };
-  for (const rel in this.$schema.relationships) { // eslint-disable-line guard-for-in
-    retVal.$schema.relationships[rel] = this.$schema.relationships[rel].type.toJSON();
-  }
-  return retVal;
-};
-
 Model.$rest = function $rest(plump, opts) {
   const restOpts = Object.assign(
     {},
     opts,
     {
-      url: `/${this.$name}/${opts.url}`,
+      url: `/${this.type}/${opts.url}`,
     }
   );
   return plump.restRequest(restOpts);
@@ -378,24 +315,7 @@ Model.addDelta = function addDelta(relName, relationship) {
 };
 
 Model.applyDefaults = function applyDefaults(v) {
-  const retVal = mergeOptions({}, v);
-  for (const attr in this.$schema.attributes) {
-    if ('default' in this.$schema.attributes[attr] && !(attr in retVal.attributes)) {
-      retVal.attributes[attr] = this.$schema.attributes[attr].default;
-    }
-  }
-  Object.keys(this.$schema)
-  .filter(k => k[0] !== '$')
-  .forEach(schemaField => {
-    for (const field in this.$schema[schemaField]) {
-      if (!(field in retVal[schemaField])) {
-        if ('default' in this.$schema[schemaField][field]) {
-          retVal[schemaField][field] = this.$schema[schemaField][field].default;
-        }
-      }
-    }
-  });
-  return retVal;
+  return validateInput(this, v);
 };
 
 Model.applyDelta = function applyDelta(current, delta) {
@@ -409,21 +329,21 @@ Model.applyDelta = function applyDelta(current, delta) {
   }
 };
 
-Model.assign = function assign(opts) {
-  const schematized = this.schematize(opts, { includeId: true });
-  const retVal = this.applyDefaults(schematized);
-  Object.keys(this.$schema)
-  .filter(k => k[0] !== '$')
-  .forEach(schemaField => {
-    for (const field in this.$schema[schemaField]) {
-      if (!(field in retVal[schemaField])) {
-        retVal[schemaField][field] = schemaField === 'relationships' ? [] : null;
-      }
-    }
-  });
-  retVal.type = this.$name;
-  return retVal;
-};
+// Model.assign = function assign(opts) {
+//   // const schematized = this.schematize(opts, { includeId: true });
+//   const retVal = this.applyDefaults(opts);
+//   Object.keys(this.$schema)
+//   .filter(k => k[0] !== '$')
+//   .forEach(schemaField => {
+//     for (const field in this.$schema[schemaField]) {
+//       if (!(field in retVal[schemaField])) {
+//         retVal[schemaField][field] = schemaField === 'relationships' ? [] : null;
+//       }
+//     }
+//   });
+//   retVal.type = this.type;
+//   return retVal;
+// };
 
 Model.cacheGet = function cacheGet(store, key) {
   return (this.$$storeCache.get(store) || {})[key];
@@ -438,11 +358,11 @@ Model.cacheSet = function cacheSet(store, key, value) {
 
 Model.resolveAndOverlay = function resolveAndOverlay(update, base = { attributes: {}, relationships: {} }) {
   const attributes = mergeOptions({}, base.attributes, update.attributes);
-  const baseIsResolved = Object.keys(base.relationships).map(relName => {
-    return base.relationships[relName].map(rel => !('op' in rel)).reduce((acc, curr) => acc && curr, true);
-  }).reduce((acc, curr) => acc && curr, true);
-  const resolvedBaseRels = baseIsResolved ? base.relationships : this.resolveRelationships(base.relationships);
-  const resolvedRelationships = this.resolveRelationships(update.relationships, resolvedBaseRels);
+  // const baseIsResolved = Object.keys(base.relationships).map(relName => {
+  //   return base.relationships[relName].map(rel => !('op' in rel)).reduce((acc, curr) => acc && curr, true);
+  // }).reduce((acc, curr) => acc && curr, true);
+  // const resolvedBaseRels = baseIsResolved ? base.relationships : this.resolveRelationships(base.relationships);
+  const resolvedRelationships = this.resolveRelationships(update.relationships, base.relationships);
   return { attributes, relationships: resolvedRelationships };
 };
 
@@ -474,34 +394,34 @@ Model.resolveRelationship = function resolveRelationship(deltas, base = []) {
     .reduce((acc, curr) => acc.concat(curr), []);
 };
 
-Model.schematize = function schematize(v = {}, opts = { includeId: false }) {
-  const retVal = {};
-  if (opts.includeId) {
-    retVal.id = this.$id in v ? v[this.$id] : v.id;
-  }
-  Object.keys(this.$schema)
-  .filter(k => k[0] !== '$')
-  .forEach(schemaField => {
-    if (schemaField in v) {
-      retVal[schemaField] = mergeOptions({}, v[schemaField]);
-    } else {
-      retVal[schemaField] = retVal[schemaField] || {};
-      for (const field in this.$schema[schemaField]) {
-        if (field in v) {
-          retVal[schemaField][field] = schemaField === 'relationships' ? this.addDelta(field, v[field]) : v[field];
-        }
-      }
-    }
-  });
-  return retVal;
-};
-
+// Model.schematize = function schematize(v = {}, opts = { includeId: false }) {
+//   const retVal = {};
+//   if (opts.includeId) {
+//     retVal.id = this.$id in v ? v[this.$id] : v.id;
+//   }
+//   Object.keys(this.$schema)
+//   .filter(k => k[0] !== '$')
+//   .forEach(schemaField => {
+//     if (schemaField in v) {
+//       retVal[schemaField] = mergeOptions({}, v[schemaField]);
+//     } else {
+//       retVal[schemaField] = retVal[schemaField] || {};
+//       for (const field in this.$schema[schemaField]) {
+//         if (field in v) {
+//           retVal[schemaField][field] = schemaField === 'relationships' ? this.addDelta(field, v[field]) : v[field];
+//         }
+//       }
+//     }
+//   });
+//   return retVal;
+// };
+//
 // METADATA
 
 Model.$$storeCache = new Map();
 
 Model.$id = 'id';
-Model.$name = 'Base';
+Model.type = 'Base';
 Model.$schema = {
   $name: 'base',
   $id: 'id',

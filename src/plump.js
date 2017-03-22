@@ -35,14 +35,14 @@ export class Plump {
   }
 
   addType(T) {
-    if (this[$types][T.$name] === undefined) {
-      this[$types][T.$name] = T;
+    if (this[$types][T.type] === undefined) {
+      this[$types][T.type] = T;
       this[$storage].forEach(s => s.addType(T));
       if (this[$terminal]) {
         this[$terminal].addType(T);
       }
     } else {
-      throw new Error(`Duplicate Type registered: ${T.$name}`);
+      throw new Error(`Duplicate Type registered: ${T.type}`);
     }
   }
 
@@ -88,14 +88,14 @@ export class Plump {
     this[$teardown].next(0);
   }
 
-  get(type, id, opts) {
+  get(value, opts = ['attributes']) {
     const keys = opts && !Array.isArray(opts) ? [opts] : opts;
     return this[$storage].reduce((thenable, storage) => {
       return thenable.then((v) => {
         if (v !== null) {
           return v;
-        } else if (storage.hot(type, id)) {
-          return storage.read(type, id, keys);
+        } else if (storage.hot(value)) {
+          return storage.read(value, keys);
         } else {
           return null;
         }
@@ -103,7 +103,7 @@ export class Plump {
     }, Promise.resolve(null))
     .then((v) => {
       if (((v === null) || (v.attributes === null)) && (this[$terminal])) {
-        return this[$terminal].read(type, id, keys);
+        return this[$terminal].read(value, keys);
       } else {
         return v;
       }
@@ -119,7 +119,7 @@ export class Plump {
       return Bluebird.resolve()
       .then(() => {
         if (Object.keys(value.attributes).length > 0) {
-          return this[$terminal].write(value);
+          return this[$terminal].writeAttributes(value);
         } else {
           return null;
         }
@@ -129,11 +129,11 @@ export class Plump {
           return Bluebird.all(Object.keys(value.relationships).map((relName) => {
             return Bluebird.all(value.relationships[relName].map((delta) => {
               if (delta.op === 'add') {
-                return this[$terminal].add(value.type, updated.id, relName, delta.id, delta.meta);
+                return this[$terminal].writeRelationshipItem(value, relName, delta);
               } else if (delta.op === 'remove') {
-                return this[$terminal].remove(value.type, updated.id, relName, delta.id);
+                return this[$terminal].deleteRelationshipItem(value, relName, delta);
               } else if (delta.op === 'modify') {
-                return this[$terminal].modifyRelationship(value.type, updated.id, relName, delta.id, delta.meta);
+                return this[$terminal].writeRelationshipItem(value, relName, delta);
               } else {
                 throw new Error(`Unknown relationship delta ${JSON.stringify(delta)}`);
               }
