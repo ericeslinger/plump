@@ -2,23 +2,19 @@ import * as Bluebird from 'bluebird';
 import mergeOptions from 'merge-options';
 
 import { Storage } from './storage';
+import { Relationship } from '../relationship';
+import { Model } from '../model';
 
 function saneNumber(i) {
-  return ((typeof i === 'number') && (!isNaN(i)) && (i !== Infinity) & (i !== -Infinity));
+  return ((typeof i === 'number') && (!isNaN(i)) && (i !== Infinity) && (i !== -Infinity));
 }
 
-// function applyDelta(base, delta) {
-//   if (delta.op === 'add' || delta.op === 'modify') {
-//     const retVal = mergeOptions({}, base, delta.data);
-//     return retVal;
-//   } else if (delta.op === 'remove') {
-//     return undefined;
-//   } else {
-//     return base;
-//   }
-// }
+export abstract class KeyValueStore extends Storage {
+  abstract _keys(typeName: string): Bluebird<string[]>;
+  abstract _get(k: string): Bluebird<any | null>;
+  abstract _set(k: string, v: any): Bluebird<any>;
+  abstract _del(k: string): Bluebird<any>;
 
-export class KeyValueStore extends Storage {
   $$maxKey(t) {
     return this._keys(t)
     .then((keyArray) => {
@@ -205,8 +201,8 @@ export class KeyValueStore extends Storage {
           relationships: {},
         };
       }
-      const newChild = { id: child.id };
-      const newParent = { id: value.id };
+      const newChild : Relationship.Data = { id: child.id };
+      const newParent : Relationship.Data = { id: value.id };
       if (!thisItem.relationships[relName]) {
         thisItem.relationships[relName] = [];
       }
@@ -291,10 +287,7 @@ export class KeyValueStore extends Storage {
     });
   }
 
-  keyString(value) {
-    if (value.type === undefined) {
-      throw new Error('Bad ARGS to keyString');
-    }
+  keyString(value: Model.Reference) {
     return `${value.type}:${value.id}`;
   }
 }

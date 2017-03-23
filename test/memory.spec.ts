@@ -3,9 +3,13 @@
 
 import { MemoryStore } from '../src/index';
 import { testSuite } from './storageTests';
+import 'mocha';
 
 testSuite({
-  describe, it, before, after,
+  describe: describe,
+  it: it,
+  before: before,
+  after: after,
 }, {
   ctor: MemoryStore,
   name: 'Plump Memory Storage',

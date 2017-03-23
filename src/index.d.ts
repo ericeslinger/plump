@@ -5,4 +5,6 @@
 export { Plump } from './plump.d';
 export { Model } from './model.d';
 export { Relationship } from './relationship.d';
-export { Storage, KeyValueStore, MemoryStore } from './storage/index.d';
+export { Storage } from './storage/storage';
+export { KeyValueStore} from './storage/keyValueStore';
+export { MemoryStore } from './storage/memory';
