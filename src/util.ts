@@ -1,13 +1,4 @@
-import mergeOptions from 'merge-options';
-
-export interface StringIndexed<T> {
-  [index: string]: T,
-}
-
-export interface NumericIDed {
-  $id: number,
-}
-
+import * as mergeOptions from 'merge-options';
 
 export function validateInput(type, value) {
   const retVal = { type: value.type, id: value.id, attributes: {}, relationships: {} };

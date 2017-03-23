@@ -1,9 +1,9 @@
 /* eslint-env node, mocha*/
 /* eslint no-shadow: 0 */
 
-import { MemoryStore } from '../src/index';
+import { MemoryStore } from '../src/storage/memory';
 import { testSuite } from './storageTests';
-import 'mocha';
+// import 'mocha';
 
 testSuite({
   describe: describe,

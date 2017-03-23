@@ -1,9 +1,8 @@
 import * as Bluebird from 'bluebird';
-import mergeOptions from 'merge-options';
+import * as mergeOptions from 'merge-options';
 
 import { Storage } from './storage';
-import { Relationship } from '../relationship';
-import { Model } from '../model';
+import * as Interfaces from '../dataTypes';
 
 function saneNumber(i) {
   return ((typeof i === 'number') && (!isNaN(i)) && (i !== Infinity) && (i !== -Infinity));
@@ -201,8 +200,8 @@ export abstract class KeyValueStore extends Storage {
           relationships: {},
         };
       }
-      const newChild : Relationship.Data = { id: child.id };
-      const newParent : Relationship.Data = { id: value.id };
+      const newChild : Interfaces.RelationshipItem = { id: child.id };
+      const newParent : Interfaces.RelationshipItem = { id: value.id };
       if (!thisItem.relationships[relName]) {
         thisItem.relationships[relName] = [];
       }
@@ -287,7 +286,7 @@ export abstract class KeyValueStore extends Storage {
     });
   }
 
-  keyString(value: Model.Reference) {
+  keyString(value: Interfaces.ModelReference) {
     return `${value.type}:${value.id}`;
   }
 }
