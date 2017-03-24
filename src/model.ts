@@ -1,13 +1,11 @@
 import * as mergeOptions from 'merge-options';
-import { Observable } from 'rxjs/Rx';
+import { Observable, Subscription } from 'rxjs/Rx';
 
 import { validateInput } from './util';
-import * as Interfaces from './dataTypes';
+import { Interfaces } from './dataTypes';
 
 // TODO: figure out where error events originate (storage or model)
 // and who keeps a roll-backable delta
-
-
 
 export class Model {
   id: string | number;
@@ -134,7 +132,7 @@ export class Model {
     return this;
   }
 
-  subscribe(...args) {
+  subscribe(...args): Subscription {
     let fields = ['attributes'];
     let cb;
     if (args.length === 2) {

@@ -14,7 +14,7 @@ function build() {
   .pipe(sourcemaps.init())
   .pipe(ts({
     allowSyntheticDefaultImports: true,
-    declaration: false,
+    declaration: true,
     lib: [
       'dom',
       'es2015',

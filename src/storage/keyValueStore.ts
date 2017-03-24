@@ -2,7 +2,7 @@ import * as Bluebird from 'bluebird';
 import * as mergeOptions from 'merge-options';
 
 import { Storage } from './storage';
-import * as Interfaces from '../dataTypes';
+import { Interfaces } from '../dataTypes';
 
 function saneNumber(i) {
   return ((typeof i === 'number') && (!isNaN(i)) && (i !== Infinity) && (i !== -Infinity));

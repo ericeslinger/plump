@@ -1,7 +1,7 @@
 import { Model } from './model';
 import { Subject, Observable } from 'rxjs/Rx';
 import * as Bluebird from 'bluebird';
-import {StringIndexed} from './dataTypes';
+import { Interfaces } from './dataTypes';
 
 export class Plump {
 
@@ -9,7 +9,7 @@ export class Plump {
 
   private teardownSubject: Subject<string>;
   private storage: Storage[];
-  private types: StringIndexed<Model>;
+  private types: Interfaces.StringIndexed<Model>;
   private terminal: Storage;
 
   constructor(opts = {}) {

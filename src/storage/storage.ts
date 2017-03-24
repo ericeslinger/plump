@@ -4,7 +4,7 @@ import * as Bluebird from 'bluebird';
 import * as mergeOptions from 'merge-options';
 import { validateInput } from '../util';
 import { Subject, Observable } from 'rxjs/Rx';
-import * as Interfaces from '../dataTypes';
+import { Interfaces } from '../dataTypes';
 
 // type: an object that defines the type. typically this will be
 // part of the Model class hierarchy, but Storage objects call no methods

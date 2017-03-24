@@ -1,8 +1,8 @@
-import { RelationshipSchema } from './dataTypes';
+import { Interfaces } from './dataTypes';
 
 export abstract class Relationship {
 
-  static schema: RelationshipSchema;
+  static schema: Interfaces.RelationshipSchema;
 
   constructor() {
     // this.plump = plump;
