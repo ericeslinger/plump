@@ -4,8 +4,8 @@ import { KeyValueStore } from './keyValueStore';
 const $store = Symbol('$store');
 
 export class MemoryStore extends KeyValueStore {
-  constructor(...args) {
-    super(...args);
+  constructor(opts: any = {}) {
+    super(opts);
     this[$store] = {};
   }
 
