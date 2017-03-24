@@ -23,7 +23,7 @@ export abstract class Model {
   private dirty: Interfaces.DirtyValues;
 
   get typeName() {
-    return this.constructor['type'];
+    return this.constructor['typeName'];
   }
 
   get schema() {
@@ -32,6 +32,7 @@ export abstract class Model {
 
   dirtyFields() {
     return Object.keys(this.dirty.attributes)
+    .filter(k => k !== this.schema.idAttribute)
     .concat(Object.keys(this.dirty.relationships));
   }
 
@@ -48,8 +49,8 @@ export abstract class Model {
   $$copyValuesFrom(opts = {}) {
     // const idField = this.constructor.$id in opts ? this.constructor.$id : 'id';
     // this[this.constructor.$id] = opts[idField] || this.id;
-    if ((this.id === undefined) && (opts[this.constructor['$id']])) {
-      this.id = opts[this.constructor['$id']];
+    if ((this.id === undefined) && (opts[this.schema.idAttribute])) {
+      this.id = opts[this.schema.idAttribute];
     }
     this.dirty = mergeOptions(this.dirty, { attributes: opts });
   }
@@ -95,29 +96,16 @@ export abstract class Model {
 
   // TODO: Should $save ultimately return this.get()?
   save() {
-    const update = Object.keys(this.dirty).map(schemaField => {
-      const value = Object.keys(this.dirty[schemaField])
-        // .filter(key => keys.indexOf(key) >= 0)
-        .map(key => ({ [key]: this.dirty[schemaField][key] }))
-        .reduce((acc, curr) => Object.assign(acc, curr), {});
-      return { [schemaField]: value };
-    })
-    .reduce(
-      (acc, curr) => mergeOptions(acc, curr),
-      { id: this.id, type: this.typeName });
-
-    if (this.id !== undefined) {
-      update.id = this.id;
-    }
-    update.type = this.typeName;
-
+    const update: Interfaces.DirtyModel = mergeOptions(
+      { id: this.id, typeName: this.typeName },
+      this.dirty
+    );
     return this.plump.save(update)
     .then((updated) => {
       this.$$resetDirty();
       if (updated.id) {
         this.id = updated.id;
       }
-      // this.$$fireUpdate(updated);
       return this.get();
     });
   }
@@ -148,22 +136,28 @@ export abstract class Model {
       cb = args[0];
     }
 
-    const hots = this.plump.stores.filter(s => s.hot(this.typeName, this.id));
-    const colds = this.plump.stores.filter(s => !s.hot(this.typeName, this.id));
-    const terminal = this.plump.stores.filter(s => s.terminal === true);
+    if (fields.indexOf('relationships') >= 0) {
+      fields = fields.concat(
+        Object.keys(this.schema.relationships).map(k => `relationships.${k}`)
+      );
+    }
+
+    const hots = this.plump.storage.filter(s => s.hot(this.typeName, this.id));
+    const colds = this.plump.storage.filter(s => !s.hot(this.typeName, this.id));
+    const terminal = this.plump.terminal;
 
     const preload$ = Observable.from(hots)
-    .flatMap((s: Storage) => Observable.fromPromise(s.read(this.typeName, this.id, fields)))
+    .flatMap((s: Storage) => Observable.fromPromise(s.read(this, fields)))
     .defaultIfEmpty(null)
     .flatMap((v) => {
       if (v !== null) {
         return Observable.of(v);
       } else {
-        const terminal$ = Observable.from(terminal)
-        .flatMap((s: Storage) => Observable.fromPromise(s.read(this.typeName, this.id, fields)))
+        const terminal$ = Observable.of(terminal)
+        .flatMap((s: Storage) => Observable.fromPromise(s.read(this, fields)))
         .share();
         const cold$ = Observable.from(colds)
-        .flatMap((s: Storage) => Observable.fromPromise(s.read(this.typeName, this.id, fields)));
+        .flatMap((s: Storage) => Observable.fromPromise(s.read(this, fields)));
         return Observable.merge(
           terminal$,
           cold$.takeUntil(terminal$)
@@ -173,8 +167,7 @@ export abstract class Model {
     // TODO: cacheable reads
     // const watchRead$ = Observable.from(terminal)
     // .flatMap(s => s.read$.filter(v => v.type === this.typeName && v.id === this.id));
-    const watchWrite$ = Observable.from(terminal)
-    .flatMap((s: Storage) => s.write$)
+    const watchWrite$ = terminal.write$
     .filter((v: Interfaces.ModelDelta) => {
       return (
         (v.typeName === this.typeName) &&
@@ -183,8 +176,8 @@ export abstract class Model {
       );
     })
     .flatMapTo(
-      Observable.from(terminal)
-      .flatMap((s: Storage) => Observable.fromPromise(s.read(this.typeName, this.id, fields)))
+      Observable.of(terminal)
+      .flatMap((s: Storage) => Observable.fromPromise(s.read(this, fields)))
     );
     // );
     return preload$.merge(watchWrite$)
@@ -206,7 +199,7 @@ export abstract class Model {
     return this.plump.restRequest(restOpts).then(res => res.data);
   }
 
-  add(key, item) {
+  add(key: string, item: Interfaces.RelationshipItem) {
     if (key in this.schema.relationships) {
       if (item.id >= 1) {
         if (this.dirty.relationships[key] === undefined) {
@@ -227,7 +220,7 @@ export abstract class Model {
     }
   }
 
-  modifyRelationship(key, item) {
+  modifyRelationship(key: string, item: Interfaces.RelationshipItem) {
     if (key in this.schema.relationships) {
       if (item.id >= 1) {
         this.dirty.relationships[key] = this.dirty.relationships[key] || [];
@@ -245,7 +238,7 @@ export abstract class Model {
     }
   }
 
-  remove(key, item) {
+  remove(key: string, item: Interfaces.RelationshipItem) {
     if (key in this.schema.relationships) {
       if (item.id >= 1) {
         if (!(key in this.dirty.relationships)) {
@@ -266,16 +259,16 @@ export abstract class Model {
   }
 
 
-  static rest(plump, opts) {
-    const restOpts = Object.assign(
-      {},
-      opts,
-      {
-        url: `/${this.schema.name}/${opts.url}`,
-      }
-    );
-    return plump.restRequest(restOpts);
-  }
+  // static rest(plump, opts) {
+  //   const restOpts = Object.assign(
+  //     {},
+  //     opts,
+  //     {
+  //       url: `/${this.schema.name}/${opts.url}`,
+  //     }
+  //   );
+  //   return plump.restRequest(restOpts);
+  // }
 
   static applyDefaults(v) {
     return validateInput(this.schema, v);

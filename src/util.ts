@@ -1,8 +1,8 @@
 import * as mergeOptions from 'merge-options';
 
-import { ModelData, ModelSchema } from './dataTypes';
+import { ModelData, IndefiniteModelData, ModelSchema } from './dataTypes';
 
-export function validateInput(schema: ModelSchema, value: ModelData): ModelData {
+export function validateInput(schema: ModelSchema, value: IndefiniteModelData): ModelData {
   const retVal = { typeName: value.typeName, id: value.id, attributes: {}, relationships: {} };
   const typeAttrs = Object.keys(schema.attributes || {});
   const valAttrs = Object.keys(value.attributes || {});

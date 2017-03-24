@@ -18,7 +18,7 @@ chai.use(chaiAsPromised);
 const expect = chai.expect;
 
 const sampleObject = {
-  type: 'tests',
+  typeName: 'tests',
   attributes: {
     name: 'potato',
     extended: {
@@ -52,7 +52,7 @@ export function testSuite(mocha, storeOpts) {
       mocha.it('supports creating values with no id field, and retrieving values', () => {
         return actualStore.writeAttributes(sampleObject)
         .then((createdObject) => {
-          return actualStore.read({ type: 'tests', id: createdObject.id }, ['attributes', 'relationships'])
+          return actualStore.read({ typeName: 'tests', id: createdObject.id }, ['attributes', 'relationships'])
           .then((v) => {
             return expect(v)
             .to.deep.equal(
@@ -82,7 +82,7 @@ export function testSuite(mocha, storeOpts) {
           const modObject = mergeOptions({}, createdObject, { attributes: { name: 'carrot' } });
           return actualStore.writeAttributes(modObject)
           .then((updatedObject) => {
-            return expect(actualStore.read({ type: 'tests', id: updatedObject.id }, 'attributes'))
+            return expect(actualStore.read({ typeName: 'tests', id: updatedObject.id }, 'attributes'))
               .to.eventually.deep.equal(
               mergeOptions({}, modObject, {
                 id: createdObject.id,
@@ -100,10 +100,10 @@ export function testSuite(mocha, storeOpts) {
       mocha.it('allows for deletion of objects by id', () => {
         return actualStore.writeAttributes(sampleObject)
         .then((createdObject) => {
-          return expect(actualStore.read({ type: 'tests', id: createdObject.id }))
+          return expect(actualStore.read({ typeName: 'tests', id: createdObject.id }))
           .to.eventually.have.deep.property('attributes.name', 'potato')
-          .then(() => actualStore.delete({ type: 'tests', id: createdObject.id }))
-          .then(() => expect(actualStore.read({ type: 'tests', id: createdObject.id })).to.eventually.be.null);
+          .then(() => actualStore.delete({ typeName: 'tests', id: createdObject.id }))
+          .then(() => expect(actualStore.read({ typeName: 'tests', id: createdObject.id })).to.eventually.be.null);
         });
       });
     });
@@ -112,12 +112,12 @@ export function testSuite(mocha, storeOpts) {
       mocha.it('can fetch a base and hasmany in one read', () => {
         return actualStore.writeAttributes(sampleObject)
         .then((createdObject) => {
-          return actualStore.writeRelationshipItem({ type: 'tests', id: createdObject.id }, 'children', { id: 200 })
-          .then(() => actualStore.writeRelationshipItem({ type: 'tests', id: createdObject.id }, 'children', { id: 201 }))
-          .then(() => actualStore.writeRelationshipItem({ type: 'tests', id: createdObject.id }, 'children', { id: 202 }))
-          .then(() => actualStore.writeRelationshipItem({ type: 'tests', id: createdObject.id }, 'children', { id: 203 }))
+          return actualStore.writeRelationshipItem({ typeName: 'tests', id: createdObject.id }, 'children', { id: 200 })
+          .then(() => actualStore.writeRelationshipItem({ typeName: 'tests', id: createdObject.id }, 'children', { id: 201 }))
+          .then(() => actualStore.writeRelationshipItem({ typeName: 'tests', id: createdObject.id }, 'children', { id: 202 }))
+          .then(() => actualStore.writeRelationshipItem({ typeName: 'tests', id: createdObject.id }, 'children', { id: 203 }))
           .then(() => {
-            return actualStore.read({ type: 'tests', id: createdObject.id }, ['attributes', 'relationships.children']);
+            return actualStore.read({ typeName: 'tests', id: createdObject.id }, ['attributes', 'relationships.children']);
           })
           .then((v) => {
             expect(v).to.have.deep.property('attributes.name', 'potato');
@@ -129,12 +129,12 @@ export function testSuite(mocha, storeOpts) {
       mocha.it('can add to a hasMany relationship', () => {
         return actualStore.writeAttributes(sampleObject)
         .then((createdObject) => {
-          return actualStore.writeRelationshipItem({ type: 'tests', id: createdObject.id }, 'children', { id: 100 })
-          .then(() => actualStore.writeRelationshipItem({ type: 'tests', id: createdObject.id }, 'children', { id: 101 }))
-          .then(() => actualStore.writeRelationshipItem({ type: 'tests', id: createdObject.id }, 'children', { id: 102 }))
-          .then(() => actualStore.writeRelationshipItem({ type: 'tests', id: createdObject.id }, 'children', { id: 103 }))
-          .then(() => actualStore.writeRelationshipItem({ type: 'tests', id: 100 }, 'children', { id: createdObject.id }))
-          .then(() => actualStore.read({ type: 'tests', id: createdObject.id }, ['relationships.children']))
+          return actualStore.writeRelationshipItem({ typeName: 'tests', id: createdObject.id }, 'children', { id: 100 })
+          .then(() => actualStore.writeRelationshipItem({ typeName: 'tests', id: createdObject.id }, 'children', { id: 101 }))
+          .then(() => actualStore.writeRelationshipItem({ typeName: 'tests', id: createdObject.id }, 'children', { id: 102 }))
+          .then(() => actualStore.writeRelationshipItem({ typeName: 'tests', id: createdObject.id }, 'children', { id: 103 }))
+          .then(() => actualStore.writeRelationshipItem({ typeName: 'tests', id: 100 }, 'children', { id: createdObject.id }))
+          .then(() => actualStore.read({ typeName: 'tests', id: createdObject.id }, ['relationships.children']))
           .then((v) => {
             expect(v.relationships.children).to.deep.equal([
               { id: 100 },
@@ -142,7 +142,7 @@ export function testSuite(mocha, storeOpts) {
               { id: 102 },
               { id: 103 },
             ]);
-            return actualStore.read({ type: 'tests', id: createdObject.id }, ['relationships.parents']);
+            return actualStore.read({ typeName: 'tests', id: createdObject.id }, ['relationships.parents']);
           })
           .then((v: Interfaces.ModelData) => expect(v.relationships.parents).to.deep.equal([{ id: 100 }]));
         });
@@ -152,11 +152,11 @@ export function testSuite(mocha, storeOpts) {
         return actualStore.writeAttributes(sampleObject)
         .then((createdObject) => {
           return actualStore.writeRelationshipItem(
-            { type: 'tests', id: createdObject.id },
+            { typeName: 'tests', id: createdObject.id },
             'valenceChildren',
             { id: 100, meta: { perm: 1 } }
           )
-          .then(() => actualStore.read({ type: 'tests', id: createdObject.id }, 'relationships.valenceChildren'))
+          .then(() => actualStore.read({ typeName: 'tests', id: createdObject.id }, 'relationships.valenceChildren'))
           .then((v) => expect(v.relationships.valenceChildren).to.deep.equal([{ id: 100, meta: { perm: 1 } }]));
         });
       });
@@ -165,19 +165,19 @@ export function testSuite(mocha, storeOpts) {
         return actualStore.writeAttributes(sampleObject)
         .then((createdObject) => {
           return actualStore.writeRelationshipItem(
-            { type: 'tests', id: createdObject.id },
+            { typeName: 'tests', id: createdObject.id },
             'valenceChildren',
             { id: 100, meta: { perm: 1 } }
           )
-          .then(() => actualStore.read({ type: 'tests', id: createdObject.id }, 'relationships.valenceChildren'))
+          .then(() => actualStore.read({ typeName: 'tests', id: createdObject.id }, 'relationships.valenceChildren'))
           .then((v) => expect(v.relationships.valenceChildren).to.deep.equal([{ id: 100, meta: { perm: 1 } }]))
           .then(() =>
             actualStore.writeRelationshipItem(
-              { type: 'tests', id: createdObject.id },
+              { typeName: 'tests', id: createdObject.id },
               'valenceChildren', { id: 100, meta: { perm: 2 } }
             )
           )
-          .then(() => actualStore.read({ type: 'tests', id: createdObject.id }, 'relationships.valenceChildren'))
+          .then(() => actualStore.read({ typeName: 'tests', id: createdObject.id }, 'relationships.valenceChildren'))
           .then((v) => expect(v.relationships.valenceChildren).to.deep.equal([{ id: 100, meta: { perm: 2 } }]));
         });
       });
@@ -185,11 +185,11 @@ export function testSuite(mocha, storeOpts) {
       mocha.it('can remove from a hasMany relationship', () => {
         return actualStore.writeAttributes(sampleObject)
         .then((createdObject) => {
-          return actualStore.writeRelationshipItem({ type: 'tests', id: createdObject.id }, 'children', { id: 100 })
-          .then(() => actualStore.read({ type: 'tests', id: createdObject.id }, 'relationships.children'))
+          return actualStore.writeRelationshipItem({ typeName: 'tests', id: createdObject.id }, 'children', { id: 100 })
+          .then(() => actualStore.read({ typeName: 'tests', id: createdObject.id }, 'relationships.children'))
           .then((v) => expect(v.relationships.children).to.deep.equal([{ id: 100 }]))
-          .then(() => actualStore.deleteRelationshipItem({ type: 'tests', id: createdObject.id }, 'children', { id: 100 }))
-          .then(() => actualStore.read({ type: 'tests', id: createdObject.id }, 'relationships.children'))
+          .then(() => actualStore.deleteRelationshipItem({ typeName: 'tests', id: createdObject.id }, 'children', { id: 100 }))
+          .then(() => actualStore.read({ typeName: 'tests', id: createdObject.id }, 'relationships.children'))
           .then((v) => expect(v.relationships.children).to.deep.equal([]));
         });
       });
@@ -203,18 +203,18 @@ export function testSuite(mocha, storeOpts) {
           types: [TestType],
         });
         return actualStore.writeAttributes({
-          type: 'tests',
+          typeName: 'tests',
           attributes: { name: 'potato' },
         }).then((createdObject) => {
-          return actualStore.read({ type: 'tests', id: createdObject.id })
+          return actualStore.read({ typeName: 'tests', id: createdObject.id })
           .then(() => {
             return new Bluebird((resolve) => setTimeout(resolve, 100))
             .then(() => {
-              return expect(memstore.read({ type: 'tests', id: createdObject.id }))
+              return expect(memstore.read({ typeName: 'tests', id: createdObject.id }))
               .to.eventually.have.deep.property('attributes.name', 'potato');
             }).then(() => {
               return actualStore.writeAttributes({
-                type: 'tests',
+                typeName: 'tests',
                 id: createdObject.id,
                 attributes: {
                   name: 'grotato',
@@ -223,7 +223,7 @@ export function testSuite(mocha, storeOpts) {
             }).then(() => {
               return new Bluebird((resolve) => setTimeout(resolve, 100));
             }).then(() => {
-              return expect(memstore.read({ type: 'tests', id: createdObject.id }))
+              return expect(memstore.read({ typeName: 'tests', id: createdObject.id }))
               .to.eventually.be.null;
             });
           });
@@ -237,19 +237,19 @@ export function testSuite(mocha, storeOpts) {
         let testItem;
         let memstore;
         return actualStore.writeAttributes({
-          type: 'tests',
+          typeName: 'tests',
           attributes: { name: 'potato' },
         }).then((createdObject) => {
           testItem = createdObject;
-          return expect(actualStore.read({ type: 'tests', id: testItem.id }))
+          return expect(actualStore.read({ typeName: 'tests', id: testItem.id }))
           .to.eventually.have.deep.property('attributes.name', 'potato');
         }).then(() => {
           memstore = new MemoryStore();
           testPlump.addStore(memstore);
           testPlump.addStore(actualStore);
-          return expect(memstore.read({ type: 'tests', id: testItem.id })).to.eventually.be.null;
+          return expect(memstore.read({ typeName: 'tests', id: testItem.id })).to.eventually.be.null;
         }).then(() => {
-          return actualStore.read({ type: 'tests', id: testItem.id });
+          return actualStore.read({ typeName: 'tests', id: testItem.id });
         })
         .then(() => {
           // NOTE: this timeout is a hack, it is because
@@ -258,7 +258,7 @@ export function testSuite(mocha, storeOpts) {
           return new Bluebird((resolve) => setTimeout(resolve, 100));
         })
         .then(() => {
-          return expect(memstore.read({ type: 'tests', id: testItem.id }))
+          return expect(memstore.read({ typeName: 'tests', id: testItem.id }))
           .to.eventually.have.deep.property('attributes.name', 'potato');
         }).finally(() => testPlump.teardown());
       });
@@ -271,29 +271,29 @@ export function testSuite(mocha, storeOpts) {
           types: [TestType],
         });
         return actualStore.writeAttributes({
-          type: 'tests',
+          typeName: 'tests',
           attributes: { name: 'potato' },
         }).then((createdObject) => {
           testItem = createdObject;
-          return expect(actualStore.read({ type: 'tests', id: testItem.id }))
+          return expect(actualStore.read({ typeName: 'tests', id: testItem.id }))
           .to.eventually.have.deep.property('attributes.name', 'potato');
-        }).then(() => actualStore.writeRelationshipItem({ type: 'tests', id: testItem.id }, 'children', { id: 100 }))
+        }).then(() => actualStore.writeRelationshipItem({ typeName: 'tests', id: testItem.id }, 'children', { id: 100 }))
         .then(() => {
-          return expect(memstore.read({ type: 'tests', id: testItem.id }))
+          return expect(memstore.read({ typeName: 'tests', id: testItem.id }))
           .to.eventually.not.have.deep.property('relationships.children');
         }).then(() => {
-          return actualStore.read({ type: 'tests', id: testItem.id }, 'children');
+          return actualStore.read({ typeName: 'tests', id: testItem.id }, 'children');
         }).then(() => {
           // NOTE: this timeout is a hack, it is because
           // cacheable read events trigger multiple async things, but don't block
           // the promise from returning
           return new Bluebird((resolve) => setTimeout(resolve, 100));
         })
-        .then(() => memstore.read({ type: 'tests', id: testItem.id }, 'children'))
+        .then(() => memstore.read({ typeName: 'tests', id: testItem.id }, 'children'))
         .then((v) => expect(v.relationships.children).to.deep.equal([{id: 100}]))
-        .then(() => actualStore.writeRelationshipItem({ type: 'tests', id: testItem.id }, 'children', { id: 101 }))
+        .then(() => actualStore.writeRelationshipItem({ typeName: 'tests', id: testItem.id }, 'children', { id: 101 }))
         .then(() => new Bluebird((resolve) => setTimeout(resolve, 100)))
-        .then(() => memstore.read({ type: 'tests', id: testItem.id }))
+        .then(() => memstore.read({ typeName: 'tests', id: testItem.id }))
         .then((v) => expect(v).to.not.have.deep.property('relationships.children'))
         .finally(() => testPlump.teardown());
       });
@@ -303,22 +303,22 @@ export function testSuite(mocha, storeOpts) {
         let testItem;
         let memstore;
         return actualStore.writeAttributes({
-          type: 'tests',
+          typeName: 'tests',
           attributes: { name: 'potato' },
         }).then((createdObject) => {
           testItem = createdObject;
-          return expect(actualStore.read({ type: 'tests', id: testItem.id }))
+          return expect(actualStore.read({ typeName: 'tests', id: testItem.id }))
           .to.eventually.have.deep.property('attributes.name', 'potato');
-        }).then(() => actualStore.writeRelationshipItem({ type: 'tests', id: testItem.id }, 'children', { id: 100 }))
+        }).then(() => actualStore.writeRelationshipItem({ typeName: 'tests', id: testItem.id }, 'children', { id: 100 }))
         .then(() => {
           memstore = new MemoryStore();
           testPlump.addStore(actualStore);
           testPlump.addStore(memstore);
-          return expect(memstore.read({ type: 'tests', id: testItem.id })).to.eventually.be.null;
+          return expect(memstore.read({ typeName: 'tests', id: testItem.id })).to.eventually.be.null;
         }).then(() => {
-          return actualStore.read({ type: 'tests', id: testItem.id }, 'children');
+          return actualStore.read({ typeName: 'tests', id: testItem.id }, 'children');
         }).then(() => new Bluebird((resolve) => setTimeout(resolve, 100)))
-        .then(() => memstore.read({ type: 'tests', id: testItem.id }, 'children'))
+        .then(() => memstore.read({ typeName: 'tests', id: testItem.id }, 'children'))
         .then((v) => expect(v.relationships.children).to.deep.equal([{id: 100}]))
         .finally(() => testPlump.teardown());
       });

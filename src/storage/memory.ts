@@ -1,9 +1,9 @@
-import * as Promise from 'bluebird';
+import * as Bluebird from 'bluebird';
 import { KeyValueStore } from './keyValueStore';
 
 export class MemoryStore extends KeyValueStore {
 
-  private store = {};
+  private store: {[index: string]: string} = {};
 
   constructor(opts = {}) {
     super(opts);
@@ -14,24 +14,29 @@ export class MemoryStore extends KeyValueStore {
   }
 
   _keys(typeName) {
-    return Promise.resolve(Object.keys(this.store).filter((k) => k.indexOf(`${typeName}:attributes:`) === 0));
+    return Bluebird.resolve(Object.keys(this.store).filter((k) => k.indexOf(`${typeName}:attributes:`) === 0));
   }
 
   _get(k) {
-    return Promise.resolve(this.store[k] || null);
+    if (this.store[k]) {
+      return Bluebird.resolve(JSON.parse(this.store[k]));
+    } else {
+      return Bluebird.resolve(null);
+    }
   }
 
   _set(k, v) {
-    return Promise.resolve()
+    return Bluebird.resolve()
     .then(() => {
-      this.store[k] = v;
+      this.store[k] = JSON.stringify(v);
+      return v;
     });
   }
 
   _del(k) {
-    return Promise.resolve()
+    return Bluebird.resolve()
     .then(() => {
-      const retVal = this.store[k];
+      const retVal = JSON.parse(this.store[k]);
       delete this.store[k];
       return retVal;
     });

@@ -1,11 +1,11 @@
 {
   "name": "plump",
-  "version": "0.8.0",
+  "version": "0.10.0",
   "description": "Pluggable Datastore",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "test": "mocha --compilers js:babel-core/register test/*.spec.js --require test/helper.js"
+    "test": "mocha  --require ts-node/register test/*.spec.ts"
   },
   "repository": {
     "type": "git",
@@ -45,6 +45,7 @@
     "gulp-sourcemaps": "^1.6.0",
     "mocha": "^3.0.2",
     "ts-node": "^3.0.2",
+    "tslint": "^4.5.1",
     "tslint-eslint-rules": "^3.5.1",
     "typescript": "^2.2.1"
   },

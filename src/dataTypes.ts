@@ -28,10 +28,7 @@ export interface RelationshipItem {
 
 export interface RelationshipDelta {
   op: 'add' | 'modify' | 'remove';
-  data: {
-    id: number | string,
-    meta: StringIndexed<number | string>,
-  };
+  data: RelationshipItem;
 }
 
 export interface FieldMeta {
@@ -66,16 +63,26 @@ export interface ModelSchema {
   };
 }
 
+export interface ModelConstructor {
+  readonly schema: ModelSchema;
+  readonly typeName: string;
+  new(opts: any);
+}
+
 export interface ModelReference {
   typeName: string;
   id: number | string;
 }
 
-export interface ModelData {
+export interface IndefiniteModelData {
   typeName: string;
   id?: number | string;
   attributes?: StringIndexed<Attribute>;
   relationships?: StringIndexed<RelationshipItem[]>;
+}
+
+export interface ModelData extends IndefiniteModelData {
+  id: number | string;
 }
 
 export interface ModelDelta extends ModelData {
@@ -85,4 +92,9 @@ export interface ModelDelta extends ModelData {
 export interface DirtyValues {
   attributes?: StringIndexed<Attribute>;
   relationships?: StringIndexed<RelationshipDelta[]>;
+}
+
+export interface DirtyModel extends DirtyValues {
+  id?: string | number;
+  typeName: string;
 }

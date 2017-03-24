@@ -1,10 +1,13 @@
 /* eslint-env node, mocha*/
 
-import chai from 'chai';
-import chaiAsPromised from 'chai-as-promised';
+
+import 'mocha';
+import * as Bluebird from 'bluebird';
+import * as chai from 'chai';
+import * as chaiAsPromised from 'chai-as-promised';
+
 import { Plump, MemoryStore } from '../src/index';
 import { TestType } from './testType';
-import Bluebird from 'bluebird';
 
 Bluebird.config({
   longStackTraces: true,
@@ -14,12 +17,6 @@ chai.use(chaiAsPromised);
 const expect = chai.expect;
 
 describe('Plump', () => {
-  it('should allow dynamic creation of models from a schema', () => {
-    const p = new Plump();
-    p.addTypesFromSchema({ tests: TestType.toJSON() });
-    return expect(p.find('tests', 1).constructor.toJSON()).to.deep.equal(TestType.toJSON());
-  });
-
   it('should properly use hot and cold caches', (done) => {
     const DelayProxy = {
       get: (target, name) => {
@@ -43,7 +40,7 @@ describe('Plump', () => {
       types: [TestType],
     });
     const invalidated = new TestType({ name: 'foo' }, otherPlump);
-    invalidated.$save()
+    invalidated.save()
     .then(() => {
       let phase = 0;
       const newOne = otherPlump.find('tests', invalidated.id);
@@ -76,18 +73,18 @@ describe('Plump', () => {
         }
       });
       return coldMemstore._set(
-        coldMemstore.keyString(TestType.$name, invalidated.$id),
-        JSON.stringify({ id: invalidated.$id, attributes: { name: 'slowtato' }, relationships: {} })
+        coldMemstore.keyString(invalidated),
+        { id: invalidated.id, attributes: { name: 'slowtato' }, relationships: {} }
       );
     })
     .then(() => {
       return terminalStore._set(
-        terminalStore.keyString(TestType.$name, invalidated.$id),
-        JSON.stringify({ id: invalidated.$id, attributes: { name: 'grotato' }, relationships: {} })
+        terminalStore.keyString(invalidated),
+        { id: invalidated.id, attributes: { name: 'grotato' }, relationships: {} }
       );
     })
     .then(() => {
-      return otherPlump.invalidate(TestType.$name, invalidated.$id, ['attributes']);
+      return otherPlump.invalidate(invalidated, ['attributes']);
     })
     .catch((err) => done(err));
   });

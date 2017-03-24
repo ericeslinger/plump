@@ -43,7 +43,7 @@ export abstract class Storage {
 
   // Abstract - all stores must provide below:
 
-  abstract writeAttributes(value: Interfaces.ModelData): Bluebird<Interfaces.ModelData>;
+  abstract writeAttributes(value: Interfaces.IndefiniteModelData): Bluebird<Interfaces.ModelData>;
   abstract readAttributes(value: Interfaces.ModelReference): Bluebird<Interfaces.ModelData>;
   abstract cache(value: Interfaces.ModelData): Bluebird<Interfaces.ModelData>;
   abstract cacheAttributes(value: Interfaces.ModelData): Bluebird<Interfaces.ModelData>;
@@ -76,7 +76,7 @@ export abstract class Storage {
     .then(rA =>
       rA.reduce(
         (a, r) => mergeOptions(a, r || {}),
-        { type: item.typeName, id: item.id, attributes: {}, relationships: {} }
+        { typeName: item.typeName, id: item.id, attributes: {}, relationships: {} }
       )
     );
   }
@@ -155,7 +155,7 @@ export abstract class Storage {
     }
   }
 
-  validateInput(value: Interfaces.ModelData, opts = {}) {
+  validateInput(value: Interfaces.IndefiniteModelData, opts = {}) {
     const type = this.getSchema(value.typeName);
     return validateInput(type, value);
   }
@@ -181,7 +181,7 @@ export abstract class Storage {
   }
 
 
-  fireWriteUpdate(val: Interfaces.ModelData & {invalidate: string[]}) {
+  fireWriteUpdate(val: Interfaces.ModelDelta) {
     this.writeSubject.next(val);
     return Bluebird.resolve(val);
   }

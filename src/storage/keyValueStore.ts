@@ -10,11 +10,11 @@ function saneNumber(i) {
 
 export abstract class KeyValueStore extends Storage {
   abstract _keys(typeName: string): Bluebird<string[]>;
-  abstract _get(k: string): Bluebird<any | null>;
-  abstract _set(k: string, v: any): Bluebird<any>;
-  abstract _del(k: string): Bluebird<any>;
+  abstract _get(k: string): Bluebird<Interfaces.ModelData | null>;
+  abstract _set(k: string, v: Interfaces.ModelData): Bluebird<Interfaces.ModelData>;
+  abstract _del(k: string): Bluebird<Interfaces.ModelData>;
 
-  $$maxKey(t) {
+  $$maxKey(t: string): Bluebird<number> {
     return this._keys(t)
     .then((keyArray) => {
       if (keyArray.length === 0) {
@@ -28,7 +28,7 @@ export abstract class KeyValueStore extends Storage {
     });
   }
 
-  writeAttributes(inputValue) {
+  writeAttributes(inputValue: Interfaces.IndefiniteModelData) {
     const value = this.validateInput(inputValue);
     delete value.relationships;
     // trim out relationships for a direct write.
@@ -47,11 +47,11 @@ export abstract class KeyValueStore extends Storage {
         });
       } else {
         // if not new, get current (including relationships) and merge
-        return this._get(this.keyString(value)).then(current => mergeOptions({}, JSON.parse(current), value));
+        return this._get(this.keyString(value as Interfaces.ModelReference)).then(current => mergeOptions({}, current, value));
       }
     })
     .then((toSave) => {
-      return this._set(this.keyString(toSave), JSON.stringify(toSave))
+      return this._set(this.keyString(toSave), toSave)
       .then(() => {
         this.fireWriteUpdate(Object.assign({}, toSave, { invalidate: ['attributes'] }));
         return toSave;
@@ -59,69 +59,68 @@ export abstract class KeyValueStore extends Storage {
     });
   }
 
-  readAttributes(value) {
+  readAttributes(value: Interfaces.ModelReference): Bluebird<Interfaces.ModelData> {
     return this._get(this.keyString(value))
     .then(d => {
-      const rV = JSON.parse(d);
-      if (rV && rV.attributes && Object.keys(rV.attributes).length > 0) {
-        return rV;
+      if (d && d.attributes && Object.keys(d.attributes).length > 0) {
+        return d;
       } else {
         return null;
       }
     });
   }
 
-  cache(value) {
+  cache(value: Interfaces.ModelData) {
     if ((value.id === undefined) || (value.id === null)) {
       return Bluebird.reject('Cannot cache data without an id - write it to a terminal first');
     } else {
       return this._get(this.keyString(value))
       .then((current) => {
-        const newVal = mergeOptions(JSON.parse(current) || {}, value);
-        return this._set(this.keyString(value), JSON.stringify(newVal));
+        const newVal = mergeOptions(current || {}, value);
+        return this._set(this.keyString(value), newVal);
       });
     }
   }
 
-  cacheAttributes(value) {
+  cacheAttributes(value: Interfaces.ModelData) {
     if ((value.id === undefined) || (value.id === null)) {
       return Bluebird.reject('Cannot cache data without an id - write it to a terminal first');
     } else {
       return this._get(this.keyString(value))
       .then((current) => {
-        return this._set(this.keyString(value), JSON.stringify({
-          type: value.type,
+        return this._set(this.keyString(value), {
+          typeName: value.typeName,
           id: value.id,
-          atttributes: value.attributes,
+          attributes: value.attributes,
           relationships: current.relationships || {},
-        }));
+        });
       });
     }
   }
 
-  cacheRelationship(value) {
+  cacheRelationship(value: Interfaces.ModelData) {
     if ((value.id === undefined) || (value.id === null)) {
       return Bluebird.reject('Cannot cache data without an id - write it to a terminal first');
     } else {
       return this._get(this.keyString(value))
       .then((current) => {
-        return this._set(this.keyString(value), JSON.stringify({
-          type: value.type,
+        return this._set(this.keyString(value), {
+          typeName: value.typeName,
           id: value.id,
-          atttributes: current.attributes || {},
+          attributes: current.attributes || {},
           relationships: value.relationships,
-        }));
+        });
       });
     }
   }
 
-  readRelationship(value, relName) {
+  readRelationship(value: Interfaces.ModelReference, relName: string): Bluebird<Interfaces.ModelData> {
     return this._get(this.keyString(value))
     .then((v) => {
-      const retVal = JSON.parse(v);
+      const retVal = Object.assign({}, v);
       if (!v) {
         if (this.terminal) {
-          return { type: value.type, id: value.id, relationships: { [relName]: [] } };
+          return { typeName: value.typeName, id: value.id, relationships: { [relName]: [] } };
         } else {
           return null;
         }
@@ -134,23 +133,23 @@ export abstract class KeyValueStore extends Storage {
     });
   }
 
-  delete(value) {
+  delete(value: Interfaces.ModelReference) {
     return this._del(this.keyString(value))
     .then(() => {
       if (this.terminal) {
-        this.fireWriteUpdate({ id: value.id, type: value.type, invalidate: ['attributes', 'relationships'] });
+        this.fireWriteUpdate({ id: value.id, typeName: value.typeName, invalidate: ['attributes', 'relationships'] });
       }
     });
   }
 
-  wipe(value, field) {
+  wipe(value: Interfaces.ModelReference, field: string) {
     const ks = this.keyString(value);
     return this._get(ks)
     .then((val) => {
-      const newVal = JSON.parse(val);
-      if (newVal === null) {
+      if (val === null) {
         return null;
       }
+      const newVal = Object.assign({}, val);
       if (field === 'attributes') {
         delete newVal.attributes;
       } else if (field === 'relationships') {
@@ -163,39 +162,36 @@ export abstract class KeyValueStore extends Storage {
       } else {
         throw new Error(`Cannot delete field ${field} - unknown format`);
       }
-      return this._set(ks, JSON.stringify(newVal));
+      return this._set(ks, newVal);
     });
   }
 
-  writeRelationshipItem(value, relName, child) {
-    if (child.id === undefined || value.type === undefined || value.id === undefined) {
-      throw new Error('Invalid arguments to writeRelationshipItem');
-    }
-    const schema = this.getSchema(value.type);
+  writeRelationshipItem(value: Interfaces.ModelReference, relName: string, child: Interfaces.RelationshipItem) {
+    const schema = this.getSchema(value.typeName);
     const relSchema = schema.relationships[relName].type.schema;
     const otherRelType = relSchema.sides[relName].otherType;
     const otherRelName = relSchema.sides[relName].otherName;
     const thisKeyString = this.keyString(value);
-    const otherKeyString = this.keyString({ type: otherRelType, id: child.id });
+    const otherKeyString = this.keyString({ typeName: otherRelType, id: child.id });
     return Bluebird.all([
       this._get(thisKeyString),
       this._get(otherKeyString),
     ])
-    .then(([thisItemString, otherItemString]) => {
-      let thisItem = JSON.parse(thisItemString);
+    .then(([thisItemResolved, otherItemResolved]) => {
+      let thisItem = thisItemResolved;
       if (!thisItem) {
         thisItem = {
           id: child.id,
-          type: otherRelType,
+          typeName: otherRelType,
           attributes: {},
           relationships: {},
         };
       }
-      let otherItem = JSON.parse(otherItemString);
+      let otherItem = otherItemResolved;
       if (!otherItem) {
         otherItem = {
           id: child.id,
-          type: otherRelType,
+          typeName: otherRelType,
           attributes: {},
           relationships: {},
         };
@@ -233,8 +229,8 @@ export abstract class KeyValueStore extends Storage {
       }
 
       return Bluebird.all([
-        this._set(this.keyString(thisItem), JSON.stringify(thisItem)),
-        this._set(this.keyString(otherItem), JSON.stringify(otherItem)),
+        this._set(this.keyString(thisItem), thisItem),
+        this._set(this.keyString(otherItem), otherItem),
       ]).then(() => {
         this.fireWriteUpdate(Object.assign(thisItem, { invalidate: [`relationships.${relName}`] }));
         this.fireWriteUpdate(Object.assign(otherItem, { invalidate: [`relationships.${otherRelName}`] }));
@@ -243,23 +239,18 @@ export abstract class KeyValueStore extends Storage {
     });
   }
 
-  deleteRelationshipItem(value, relName, child) {
-    if (child.id === undefined) {
-      throw new Error('incorrect call signature on deleteRelationshipItem');
-    }
-    const schema = this.getSchema(value.type);
+  deleteRelationshipItem(value: Interfaces.ModelReference, relName: string, child: Interfaces.RelationshipItem) {
+    const schema = this.getSchema(value.typeName);
     const relSchema = schema.relationships[relName].type.schema;
     const otherRelType = relSchema.sides[relName].otherType;
     const otherRelName = relSchema.sides[relName].otherName;
     const thisKeyString = this.keyString(value);
-    const otherKeyString = this.keyString({ type: otherRelType, id: child.id });
+    const otherKeyString = this.keyString({ typeName: otherRelType, id: child.id });
     return Bluebird.all([
       this._get(thisKeyString),
       this._get(otherKeyString),
     ])
-    .then(([thisItemString, otherItemString]) => {
-      const thisItem = JSON.parse(thisItemString);
-      const otherItem = JSON.parse(otherItemString);
+    .then(([thisItem, otherItem]) => {
       if (!thisItem.relationships[relName]) {
         thisItem.relationships[relName] = [];
       }
@@ -276,8 +267,8 @@ export abstract class KeyValueStore extends Storage {
       }
 
       return Bluebird.all([
-        this._set(this.keyString(thisItem), JSON.stringify(thisItem)),
-        this._set(this.keyString(otherItem), JSON.stringify(otherItem)),
+        this._set(this.keyString(thisItem), thisItem),
+        this._set(this.keyString(otherItem), otherItem),
       ]).then(() => {
         this.fireWriteUpdate(Object.assign(thisItem, { invalidate: [`relationships.${relName}`] }));
         this.fireWriteUpdate(Object.assign(otherItem, { invalidate: [`relationships.${otherRelName}`] }));
@@ -287,6 +278,6 @@ export abstract class KeyValueStore extends Storage {
   }
 
   keyString(value: Interfaces.ModelReference) {
-    return `${value.type}:${value.id}`;
+    return `${value.typeName}:${value.id}`;
   }
 }

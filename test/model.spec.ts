@@ -36,7 +36,7 @@ describe('model', () => {
     // });
 
     it('should load data from datastores', () => {
-      return memstore2.writeAttributes({ type: 'tests', attributes: { name: 'potato' }, relationships: {} })
+      return memstore2.writeAttributes({ typeName: 'tests', attributes: { name: 'potato' } })
       .then(createdObject => {
         const two = plump.find('tests', createdObject.id);
         return expect(two.get()).to.eventually.have.deep.property('attributes.name', 'potato');
@@ -60,7 +60,8 @@ describe('model', () => {
         .to.eventually.have.deep.property('attributes.name', 'potato');
       })
       .then(() => one.delete())
-      .then(() => expect(plump.find('tests', one.id).get()).to.eventually.be.null);
+      .then(() => plump.find('tests', one.id).get())
+      .then((v) => expect(v).to.be.null);
     });
 
     it('should allow fields to be loaded', () => {
@@ -74,7 +75,7 @@ describe('model', () => {
         return expect(plump.find('tests', one.id).get(['attributes', 'relationships']))
         .to.eventually.deep.equal(
           {
-            type: 'tests',
+            typeName: 'tests',
             id: one.id,
             attributes: { name: 'p', otherName: 'q', id: one.id, extended: {} },
             relationships: {
@@ -162,7 +163,7 @@ describe('model', () => {
       .then(() => one.add('children', { id: 100 }).save())
       .then(() => one.get('relationships.children'))
       .then((v) => expect(v.relationships.children).to.deep.equal([{ id: 100 }]))
-      .then(() => one.remove('children', 100).save())
+      .then(() => one.remove('children', { id: 100 }).save())
       .then(() => one.get('relationships.children'))
       .then((v) => expect(v.relationships.children).to.deep.equal([]));
     });
@@ -170,12 +171,12 @@ describe('model', () => {
     it('should include valence in hasMany operations', () => {
       const one = new TestType({ name: 'grotato' }, plump);
       return one.save()
-      .then(() => one.add('valenceChildren', {id: 100, meta: {perm: 1 }}).save())
-      .then(() => one.get('relationships.children'))
-      .then((v) => expect(v.relationships.children).to.deep.equal([{ id: 100, meta: {perm: 1 } }]))
-      .then(() => one.add('valenceChildren', {id: 100, meta: {perm: 2 }}).save())
-      .then(() => one.get('relationships.children'))
-      .then((v) => expect(v.relationships.children).to.deep.equal([{ id: 100, meta: {perm: 1 } }]));
+      .then(() => one.add('valenceChildren', { id: 100, meta: { perm: 1 } }).save())
+      .then(() => one.get('relationships.valenceChildren'))
+      .then((v) => expect(v.relationships.valenceChildren).to.deep.equal([{ id: 100, meta: { perm: 1 } }]))
+      .then(() => one.modifyRelationship('valenceChildren', { id: 100, meta: { perm: 2 } }).save())
+      .then(() => one.get('relationships.valenceChildren'))
+      .then((v) => expect(v.relationships.valenceChildren).to.deep.equal([{ id: 100, meta: { perm: 2 } }]));
     });
   });
 
@@ -288,7 +289,7 @@ describe('model', () => {
             }
           });
         })
-        .then(() => one.add('children', 101).save());
+        .then(() => one.add('children', { id: 101 }).save());
       });
     });
 
@@ -316,9 +317,9 @@ describe('model', () => {
         one.save()
         .then(() => one.get())
         .then((val) => {
-          return coldMemstore.writeAttributes({
+          return coldMemstore.cache({
             id: val.id,
-            type: 'tests',
+            typeName: 'tests',
             attributes: {
               name: 'potato',
               id: val.id,
