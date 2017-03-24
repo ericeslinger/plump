@@ -8,9 +8,12 @@ export declare class Plump {
     private storage;
     private types;
     private terminal;
-    constructor(opts?: {});
+    constructor(opts?: {
+        storage?: Storage[];
+        types?: (typeof Model)[];
+    });
     addType(T: any): void;
-    type(T: any): Model;
+    type(T: any): typeof Model;
     addStore(store: any): void;
     find(t: any, id: any): any;
     forge(t: any, val: any): any;

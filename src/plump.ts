@@ -9,10 +9,10 @@ export class Plump {
 
   private teardownSubject: Subject<string>;
   private storage: Storage[];
-  private types: Interfaces.StringIndexed<Model>;
+  private types: Interfaces.StringIndexed<typeof Model>;
   private terminal: Storage;
 
-  constructor(opts = {}) {
+  constructor(opts: { storage?: Storage[], types?: (typeof Model)[]} = {}) {
     const options = Object.assign({}, {
       storage: [],
       types: [],

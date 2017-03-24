@@ -1,13 +1,25 @@
 import { Interfaces } from './dataTypes';
+import { Plump } from './plump';
+import { Model } from './model';
 
 export abstract class Relationship {
+  static sides: Interfaces.StringIndexed<{otherType: string, otherName: string}>
+  static extras?: Interfaces.StringIndexed<any>;
+  static storeData?: {
+    sql?: {
+      tableName: string;
+      joinFields: Interfaces.StringIndexed<string>,
+    },
+  } & Interfaces.StringIndexed<any>;
 
-  static schema: Interfaces.RelationshipSchema;
+  plump: Plump;
+  for: typeof Model;
+  title: string;
 
-  constructor() {
-    // this.plump = plump;
-    // this.for = model;
-    // this.title = title;
+  constructor(plump: Plump, model: typeof Model, title: string) {
+    this.plump = plump;
+    this.for = model;
+    this.title = title;
   }
 
   // $otherItem(childId) {
