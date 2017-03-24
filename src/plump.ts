@@ -1,7 +1,8 @@
 import { Model } from './model';
 import { Subject, Observable } from 'rxjs/Rx';
 import * as Bluebird from 'bluebird';
-import {StringIndexed} from './dataTypes';
+import {StringIndexed, ModelReference, RelationshipItem} from './dataTypes';
+import { Storage } from './storage/storage';
 
 export class Plump {
 
@@ -28,9 +29,9 @@ export class Plump {
   addType(T) {
     if (this.types[T.type] === undefined) {
       this.types[T.type] = T;
-      this.storage.forEach(s => s.addType(T));
+      this.storage.forEach(s => s.addSchema(T));
       if (this.terminal) {
-        this.terminal.addType(T);
+        this.terminal.addSchema(T);
       }
     } else {
       throw new Error(`Duplicate Type registered: ${T.type}`);
@@ -41,7 +42,7 @@ export class Plump {
     return this.types[T];
   }
 
-  addStore(store) {
+  addStore(store: Storage) {
     if (store.terminal) {
       if (this.terminal !== undefined) {
         throw new Error('cannot have more than one terminal store');
@@ -58,7 +59,7 @@ export class Plump {
       }
     }
     for (const typeName in this.types) {
-      store.addType(this.types[typeName]);
+      store.addSchema(this.types[typeName]);
     }
   }
 
@@ -76,7 +77,7 @@ export class Plump {
     this.teardownSubject.next('done');
   }
 
-  get(value, opts = ['attributes']) {
+  get(value: ModelReference, opts = ['attributes']) {
     const keys = opts && !Array.isArray(opts) ? [opts] : opts;
     return this.storage.reduce((thenable, storage) => {
       return thenable.then((v) => {
@@ -98,9 +99,9 @@ export class Plump {
     });
   }
 
-  bulkGet(type, id) {
-    return this.terminal.bulkRead(type, id);
-  }
+  // bulkGet(type, id) {
+  //   return this.terminal.bulkRead(type, id);
+  // }
 
   save(value) {
     if (this.terminal) {
@@ -136,11 +137,11 @@ export class Plump {
     }
   }
 
-  delete(...args) {
+  delete(item: ModelReference) {
     if (this.terminal) {
-      return this.terminal.delete(...args).then(() => {
+      return this.terminal.delete(item).then(() => {
         return Bluebird.all(this.storage.map((store) => {
-          return store.delete(...args);
+          return store.delete(item);
         }));
       });
     } else {
@@ -148,40 +149,36 @@ export class Plump {
     }
   }
 
-  add(...args) {
+  add(item: ModelReference, relName: string, child: RelationshipItem) {
     if (this.terminal) {
-      return this.terminal.add(...args);
+      return this.terminal.writeRelationshipItem(item, relName, child);
     } else {
       return Promise.reject(new Error('Plump has no terminal store'));
     }
   }
 
-  restRequest(opts) {
-    if (this.terminal && this.terminal.rest) {
-      return this.terminal.rest(opts);
-    } else {
-      return Promise.reject(new Error('No Rest terminal store'));
-    }
+  // restRequest(opts) {
+  //   if (this.terminal && this.terminal.rest) {
+  //     return this.terminal.rest(opts);
+  //   } else {
+  //     return Promise.reject(new Error('No Rest terminal store'));
+  //   }
+  // }
+
+  modifyRelationship(item: ModelReference, relName: string, child: RelationshipItem) {
+    return this.add(item, relName, child);
   }
 
-  modifyRelationship(...args) {
+  deleteRelationshipItem(item: ModelReference, relName: string, child: RelationshipItem) {
     if (this.terminal) {
-      return this.terminal.modifyRelationship(...args);
+      return this.terminal.deleteRelationshipItem(item, relName, child);
     } else {
       return Promise.reject(new Error('Plump has no terminal store'));
     }
   }
 
-  remove(...args) {
-    if (this.terminal) {
-      return this.terminal.remove(...args);
-    } else {
-      return Promise.reject(new Error('Plump has no terminal store'));
-    }
-  }
-
-  invalidate(type, id, field) {
+  invalidate(typeName, id, field) {
     const fields = Array.isArray(field) ? field : [field];
-    this.terminal.fireWriteUpdate({ type, id, invalidate: fields });
+    this.terminal.fireWriteUpdate({ typeName, id, invalidate: fields });
   }
 }

@@ -67,12 +67,12 @@ export interface ModelSchema {
 }
 
 export interface ModelReference {
-  type: string;
+  typeName: string;
   id: number | string;
 }
 
 export interface ModelData {
-  type: string;
+  typeName: string;
   id?: number | string;
   attributes?: StringIndexed<Attribute>;
   relationships?: StringIndexed<RelationshipItem[]>;

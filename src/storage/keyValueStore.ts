@@ -40,7 +40,7 @@ export abstract class KeyValueStore extends Storage {
     })
     .then(() => {
       if ((value.id === undefined) || (value.id === null)) {
-        return this.$$maxKey(value.type)
+        return this.$$maxKey(value.typeName)
         .then((n) => {
           const id = n + 1;
           return mergeOptions({}, value, { id: id, relationships: {} }); // if new.
@@ -171,10 +171,10 @@ export abstract class KeyValueStore extends Storage {
     if (child.id === undefined || value.type === undefined || value.id === undefined) {
       throw new Error('Invalid arguments to writeRelationshipItem');
     }
-    const type = this.getType(value.type);
-    const relSchema = type.$schema.relationships[relName].type;
-    const otherRelType = relSchema.$sides[relName].otherType;
-    const otherRelName = relSchema.$sides[relName].otherName;
+    const schema = this.getSchema(value.type);
+    const relSchema = schema.relationships[relName].type.schema;
+    const otherRelType = relSchema.sides[relName].otherType;
+    const otherRelName = relSchema.sides[relName].otherName;
     const thisKeyString = this.keyString(value);
     const otherKeyString = this.keyString({ type: otherRelType, id: child.id });
     return Bluebird.all([
@@ -200,19 +200,19 @@ export abstract class KeyValueStore extends Storage {
           relationships: {},
         };
       }
-      const newChild : Interfaces.RelationshipItem = { id: child.id };
-      const newParent : Interfaces.RelationshipItem = { id: value.id };
+      const newChild: Interfaces.RelationshipItem = { id: child.id };
+      const newParent: Interfaces.RelationshipItem = { id: value.id };
       if (!thisItem.relationships[relName]) {
         thisItem.relationships[relName] = [];
       }
       if (!otherItem.relationships[otherRelName]) {
         otherItem.relationships[otherRelName] = [];
       }
-      if (relSchema.$extras && child.meta) {
+      if (relSchema.extras && child.meta) {
         newParent.meta = {};
         newChild.meta = {};
         for (const extra in child.meta) {
-          if (extra in relSchema.$extras) {
+          if (extra in relSchema.extras) {
             newChild.meta[extra] = child.meta[extra];
             newParent.meta[extra] = child.meta[extra];
           }
@@ -247,10 +247,10 @@ export abstract class KeyValueStore extends Storage {
     if (child.id === undefined) {
       throw new Error('incorrect call signature on deleteRelationshipItem');
     }
-    const type = this.getType(value.type);
-    const relSchema = type.$schema.relationships[relName].type;
-    const otherRelType = relSchema.$sides[relName].otherType;
-    const otherRelName = relSchema.$sides[relName].otherSide;
+    const schema = this.getSchema(value.type);
+    const relSchema = schema.relationships[relName].type.schema;
+    const otherRelType = relSchema.sides[relName].otherType;
+    const otherRelName = relSchema.sides[relName].otherName;
     const thisKeyString = this.keyString(value);
     const otherKeyString = this.keyString({ type: otherRelType, id: child.id });
     return Bluebird.all([

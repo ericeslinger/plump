@@ -3,7 +3,8 @@
 
 import { MemoryStore } from '../src/storage/memory';
 import { testSuite } from './storageTests';
-// import 'mocha';
+
+import 'mocha';
 
 testSuite({
   describe: describe,

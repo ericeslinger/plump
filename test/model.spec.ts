@@ -1,12 +1,9 @@
 /* eslint-env node, mocha*/
 
-import chai from 'chai';
-import chaiAsPromised from 'chai-as-promised';
-import Bluebird from 'bluebird';
-
-Bluebird.config({
-  longStackTraces: true,
-});
+import 'mocha';
+import * as Bluebird from 'bluebird';
+import * as chai from 'chai';
+import * as chaiAsPromised from 'chai-as-promised';
 
 import { Plump, MemoryStore } from '../src/index';
 import { TestType } from './testType';
@@ -18,6 +15,9 @@ const plump = new Plump({
   types: [TestType],
 });
 
+Bluebird.config({
+  longStackTraces: true
+});
 
 chai.use(chaiAsPromised);
 const expect = chai.expect;
@@ -115,7 +115,7 @@ describe('model', () => {
 
         return plump.find('tests', one.id).get();
       }).then(data => {
-        const baseFields = Object.keys(TestType.$schema.attributes);
+        const baseFields = Object.keys(TestType.schema.attributes);
 
         // NOTE: .have.all requires list length equality
         expect(data).to.have.property('attributes')
@@ -136,77 +136,46 @@ describe('model', () => {
     it('should show empty hasMany lists as {key: []}', () => {
       const one = new TestType({ name: 'frotato' }, plump);
       return one.save()
-      .then(() => {
-        return expect(one.get('relationships.children')).to.eventually.have.property('relationships')
-        .that.deep.equals({ children: [] });
-      });
+      .then(() => one.get('relationships.children'))
+      .then((v) => expect(v.relationships.children).to.deep.equal([]));
     });
 
     it('should add hasMany elements', () => {
       const one = new TestType({ name: 'frotato' }, plump);
       return one.save()
       .then(() => one.add('children', { id: 100 }).save())
-      .then(() => {
-        return expect(one.get('relationships.children'))
-        .to.eventually.have.property('relationships')
-        .that.deep.equals({ children: [{ id: 100 }] });
-      });
+      .then(() => one.get('relationships.children'))
+      .then((v) => expect(v.relationships.children).to.deep.equal([{ id: 100 }]));
     });
 
     it('should add hasMany elements by child field', () => {
       const one = new TestType({ name: 'frotato' }, plump);
       return one.save()
       .then(() => one.add('children', { id: 100 }).save())
-      .then(() => {
-        return expect(one.get('relationships.children'))
-        .to.eventually.have.property('relationships')
-        .that.deep.equals({ children: [{ id: 100 }] });
-      });
+      .then(() => one.get('relationships.children'))
+      .then((v) => expect(v.relationships.children).to.deep.equal([{ id: 100 }]));
     });
 
     it('should remove hasMany elements', () => {
       const one = new TestType({ name: 'frotato' }, plump);
       return one.save()
       .then(() => one.add('children', { id: 100 }).save())
-      .then(() => {
-        return expect(one.get('relationships.children'))
-        .to.eventually.have.property('relationships')
-        .that.deep.equals({ children: [{ id: 100 }] });
-      })
-      .then(() => one.$remove('children', 100).save())
-      .then(() => {
-        return expect(one.get('relationships.children')).to.eventually.have.property('relationships')
-        .that.deep.equals({ children: [] });
-      });
+      .then(() => one.get('relationships.children'))
+      .then((v) => expect(v.relationships.children).to.deep.equal([{ id: 100 }]))
+      .then(() => one.remove('children', 100).save())
+      .then(() => one.get('relationships.children'))
+      .then((v) => expect(v.relationships.children).to.deep.equal([]));
     });
 
     it('should include valence in hasMany operations', () => {
       const one = new TestType({ name: 'grotato' }, plump);
       return one.save()
-      .then(() => one.add('valenceChildren', 100, { perm: 1 }).save())
-      .then(() => {
-        return expect(one.get('valenceChildren'))
-        .to.eventually.have.property('relationships')
-        .that.deep.equals({ valenceChildren: [{
-          id: 100,
-          meta: {
-            perm: 1,
-          },
-        }] });
-      })
-      .then(() => one.$modifyRelationship('valenceChildren', 100, { perm: 2 }).save())
-      .then(() => {
-        return expect(one.get('valenceChildren'))
-        .to.eventually.have.property('relationships')
-        .that.deep.equals({
-          valenceChildren: [{
-            id: 100,
-            meta: {
-              perm: 2,
-            },
-          }],
-        });
-      });
+      .then(() => one.add('valenceChildren', {id: 100, meta: {perm: 1 }}).save())
+      .then(() => one.get('relationships.children'))
+      .then((v) => expect(v.relationships.children).to.deep.equal([{ id: 100, meta: {perm: 1 } }]))
+      .then(() => one.add('valenceChildren', {id: 100, meta: {perm: 2 }}).save())
+      .then(() => one.get('relationships.children'))
+      .then((v) => expect(v.relationships.children).to.deep.equal([{ id: 100, meta: {perm: 1 } }]));
     });
   });
 
@@ -215,7 +184,7 @@ describe('model', () => {
       const one = new TestType({ name: 'potato' }, plump);
       return one.save()
       .then(() => {
-        const onePrime = plump.find(TestType.type, one.id);
+        const onePrime = plump.find(TestType.typeName, one.id);
         return one.get('relationships.children')
         .then((res) => expect(res).to.have.property('relationships')
         .that.deep.equals({ children: [] }))
@@ -236,7 +205,7 @@ describe('model', () => {
       const one = new TestType({ name: 'potato' }, plump);
       return one.save()
       .then(() => {
-        const onePrime = plump.find(TestType.type, one.id);
+        const onePrime = plump.find(TestType.typeName, one.id);
         return one.get()
         .then((res) => expect(res).have.deep.property('attributes.name', 'potato'))
         .then(() => onePrime.get())
@@ -347,7 +316,7 @@ describe('model', () => {
         one.save()
         .then(() => one.get())
         .then((val) => {
-          return coldMemstore.write({
+          return coldMemstore.writeAttributes({
             id: val.id,
             type: 'tests',
             attributes: {

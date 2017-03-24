@@ -22,12 +22,12 @@ export abstract class Storage {
   terminal: boolean;
   read$: Observable<Interfaces.ModelData>;
   write$: Observable<Interfaces.ModelDelta>;
+  protected types: Interfaces.StringIndexed<Interfaces.ModelSchema> = {};
   private readSubject = new Subject();
   private writeSubject = new Subject();
-  protected types: Interfaces.StringIndexed<{$schema: Interfaces.ModelSchema, type: string}> = {};
   // protected types: Model[]; TODO: figure this out
 
-  constructor(opts:any = {}) {
+  constructor(opts: any = {}) {
     // a "terminal" storage facility is the end of the storage chain.
     // usually sql on the server side and rest on the client side, it *must*
     // receive the writes, and is the final authoritative answer on whether
@@ -50,9 +50,19 @@ export abstract class Storage {
   abstract cacheRelationship(value: Interfaces.ModelData): Bluebird<Interfaces.ModelData>;
   abstract readRelationship(value: Interfaces.ModelReference, key?: string | string[]): Bluebird<Interfaces.ModelData>;
   abstract wipe(value: Interfaces.ModelReference, key?: string | string[]): void;
-  abstract delete(value: Interfaces.ModelReference): void;
-  abstract writeRelationshipItem(value: Interfaces.ModelReference, relationshipTitle: string, child: {id: string | number}): Bluebird<Interfaces.ModelData>;
-  abstract deleteRelationshipItem(value: Interfaces.ModelReference, relationshipTitle: string, child: {id: string | number}): Bluebird<Interfaces.ModelData>;
+  abstract delete(value: Interfaces.ModelReference): Bluebird<void>;
+  abstract writeRelationshipItem(
+    value: Interfaces.ModelReference,
+    relationshipTitle: string,
+    child: {id: string | number}
+  ): Bluebird<Interfaces.ModelData>;
+  abstract deleteRelationshipItem(
+    value: Interfaces.ModelReference,
+    relationshipTitle: string,
+    child: {id: string | number}
+  ): Bluebird<Interfaces.ModelData>;
+
+
   query(q) {
     // q: {type: string, query: any}
     // q.query is impl defined - a string for sql (raw sql)
@@ -66,24 +76,24 @@ export abstract class Storage {
     .then(rA =>
       rA.reduce(
         (a, r) => mergeOptions(a, r || {}),
-        { type: item.type, id: item.id, attributes: {}, relationships: {} }
+        { type: item.typeName, id: item.id, attributes: {}, relationships: {} }
       )
     );
   }
 
   read(item: Interfaces.ModelReference, opts: string | string[] = ['attributes']) {
-    const type = this.getType(item.type);
+    const schema = this.getSchema(item.typeName);
     const keys = (opts && !Array.isArray(opts) ? [opts] : opts) as string[];
     return this.readAttributes(item)
     .then(attributes => {
       if (!attributes) {
         return null;
       } else {
-        if (attributes.id && attributes.attributes && !attributes.attributes[type.$id]) {
-          attributes.attributes[type.$id] = attributes.id; // eslint-disable-line no-param-reassign
+        if (attributes.id && attributes.attributes && !attributes.attributes[schema.idAttribute]) {
+          attributes.attributes[schema.idAttribute] = attributes.id; // eslint-disable-line no-param-reassign
         }
         const relsWanted = (keys.indexOf('relationships') >= 0)
-          ? Object.keys(type.$schema.relationships)
+          ? Object.keys(schema.relationships)
           : keys.map(k => k.split('.'))
             .filter(ka => ka[0] === 'relationships')
             .map(ka => ka[1]);
@@ -115,7 +125,7 @@ export abstract class Storage {
   }
 
 
-  hot(item: Interfaces.ModelReference) : boolean {
+  hot(item: Interfaces.ModelReference): boolean {
     // t: type, id: id (integer).
     // if hot, then consider this value authoritative, no need to go down
     // the datastore chain. Consider a memorystorage used as a top-level cache.
@@ -134,7 +144,6 @@ export abstract class Storage {
       throw new Error('Cannot wire a terminal store into another store');
     } else {
       // TODO: figure out where the type data comes from.
-      debugger;
       store.read$.takeUntil(shutdownSignal).subscribe((v) => {
         this.cache(v);
       });
@@ -146,27 +155,29 @@ export abstract class Storage {
     }
   }
 
-  validateInput(value, opts = {}) {
-    const type = this.getType(value.type);
+  validateInput(value: Interfaces.ModelData, opts = {}) {
+    const type = this.getSchema(value.typeName);
     return validateInput(type, value);
   }
 
   // store type info data on the store itself
 
-  getType(t) {
+  getSchema(t: {schema: Interfaces.ModelSchema} | Interfaces.ModelSchema | string): Interfaces.ModelSchema {
     if (typeof t === 'string') {
       return this.types[t];
+    } else if (t['schema']) {
+      return (t as {schema: Interfaces.ModelSchema}).schema;
     } else {
-      return t;
+      return t as Interfaces.ModelSchema;
     }
   }
 
-  addType(t) {
-    this.types[t.type] = t;
+  addSchema(t: {typeName: string, schema: Interfaces.ModelSchema}) {
+    this.types[t.typeName] = t.schema;
   }
 
   addTypes(a) {
-    a.forEach(t => this.addType(t));
+    a.forEach(t => this.addSchema(t));
   }
 
 

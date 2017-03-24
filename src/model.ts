@@ -9,8 +9,9 @@ import * as Interfaces from './dataTypes';
 
 
 
-export class Model {
+export abstract class Model {
   id: string | number;
+  static typeName = 'BASE';
   static schema: Interfaces.ModelSchema = {
     idAttribute: 'id',
     name: 'BASE',
@@ -21,7 +22,7 @@ export class Model {
 
   private dirty: Interfaces.DirtyValues;
 
-  get type() {
+  get typeName() {
     return this.constructor['type'];
   }
 
@@ -83,7 +84,7 @@ export class Model {
         return self;
       } else {
         const resolved = Model.resolveAndOverlay(this.dirty, self || undefined);
-        return mergeOptions({}, self || { id: this.id, type: this.type }, resolved);
+        return mergeOptions({}, self || { id: this.id, type: this.typeName }, resolved);
       }
     });
   }
@@ -103,12 +104,12 @@ export class Model {
     })
     .reduce(
       (acc, curr) => mergeOptions(acc, curr),
-      { id: this.id, type: this.type });
+      { id: this.id, type: this.typeName });
 
     if (this.id !== undefined) {
       update.id = this.id;
     }
-    update.type = this.type;
+    update.type = this.typeName;
 
     return this.plump.save(update)
     .then((updated) => {
@@ -147,22 +148,22 @@ export class Model {
       cb = args[0];
     }
 
-    const hots = this.plump.stores.filter(s => s.hot(this.type, this.id));
-    const colds = this.plump.stores.filter(s => !s.hot(this.type, this.id));
+    const hots = this.plump.stores.filter(s => s.hot(this.typeName, this.id));
+    const colds = this.plump.stores.filter(s => !s.hot(this.typeName, this.id));
     const terminal = this.plump.stores.filter(s => s.terminal === true);
 
     const preload$ = Observable.from(hots)
-    .flatMap((s: Storage) => Observable.fromPromise(s.read(this.type, this.id, fields)))
+    .flatMap((s: Storage) => Observable.fromPromise(s.read(this.typeName, this.id, fields)))
     .defaultIfEmpty(null)
     .flatMap((v) => {
       if (v !== null) {
         return Observable.of(v);
       } else {
         const terminal$ = Observable.from(terminal)
-        .flatMap((s: Storage) => Observable.fromPromise(s.read(this.type, this.id, fields)))
+        .flatMap((s: Storage) => Observable.fromPromise(s.read(this.typeName, this.id, fields)))
         .share();
         const cold$ = Observable.from(colds)
-        .flatMap((s: Storage) => Observable.fromPromise(s.read(this.type, this.id, fields)));
+        .flatMap((s: Storage) => Observable.fromPromise(s.read(this.typeName, this.id, fields)));
         return Observable.merge(
           terminal$,
           cold$.takeUntil(terminal$)
@@ -171,19 +172,19 @@ export class Model {
     });
     // TODO: cacheable reads
     // const watchRead$ = Observable.from(terminal)
-    // .flatMap(s => s.read$.filter(v => v.type === this.type && v.id === this.id));
+    // .flatMap(s => s.read$.filter(v => v.type === this.typeName && v.id === this.id));
     const watchWrite$ = Observable.from(terminal)
     .flatMap((s: Storage) => s.write$)
     .filter((v: Interfaces.ModelDelta) => {
       return (
-        (v.type === this.type) &&
+        (v.typeName === this.typeName) &&
         (v.id === this.id) &&
         (v.invalidate.some(i => fields.indexOf(i) >= 0))
       );
     })
     .flatMapTo(
       Observable.from(terminal)
-      .flatMap((s: Storage) => Observable.fromPromise(s.read(this.type, this.id, fields)))
+      .flatMap((s: Storage) => Observable.fromPromise(s.read(this.typeName, this.id, fields)))
     );
     // );
     return preload$.merge(watchWrite$)
@@ -277,7 +278,7 @@ export class Model {
   }
 
   static applyDefaults(v) {
-    return validateInput(this, v);
+    return validateInput(this.schema, v);
   };
 
   static applyDelta(current, delta) {

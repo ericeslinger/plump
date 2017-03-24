@@ -44,7 +44,7 @@ export function testSuite(mocha, storeOpts) {
       return (store.before || (() => Bluebird.resolve()))(actualStore)
       .then(() => {
         actualStore = new store.ctor(store.opts); // eslint-disable-line new-cap
-        actualStore.addType(TestType);
+        actualStore.addSchema(TestType);
       });
     });
 
@@ -144,14 +144,18 @@ export function testSuite(mocha, storeOpts) {
             ]);
             return actualStore.read({ type: 'tests', id: createdObject.id }, ['relationships.parents']);
           })
-          .then((v:Interfaces.ModelData) => expect(v.relationships.parents).to.deep.equal([{ id: 100 }]));
+          .then((v: Interfaces.ModelData) => expect(v.relationships.parents).to.deep.equal([{ id: 100 }]));
         });
       });
 
       mocha.it('can add to a hasMany relationship with extras', () => {
         return actualStore.writeAttributes(sampleObject)
         .then((createdObject) => {
-          return actualStore.writeRelationshipItem({ type: 'tests', id: createdObject.id }, 'valenceChildren', { id: 100, meta: { perm: 1 } })
+          return actualStore.writeRelationshipItem(
+            { type: 'tests', id: createdObject.id },
+            'valenceChildren',
+            { id: 100, meta: { perm: 1 } }
+          )
           .then(() => actualStore.read({ type: 'tests', id: createdObject.id }, 'relationships.valenceChildren'))
           .then((v) => expect(v.relationships.valenceChildren).to.deep.equal([{ id: 100, meta: { perm: 1 } }]));
         });
@@ -160,10 +164,19 @@ export function testSuite(mocha, storeOpts) {
       mocha.it('can modify valence on a hasMany relationship', () => {
         return actualStore.writeAttributes(sampleObject)
         .then((createdObject) => {
-          return actualStore.writeRelationshipItem({ type: 'tests', id: createdObject.id }, 'valenceChildren', { id: 100, meta: { perm: 1 } })
+          return actualStore.writeRelationshipItem(
+            { type: 'tests', id: createdObject.id },
+            'valenceChildren',
+            { id: 100, meta: { perm: 1 } }
+          )
           .then(() => actualStore.read({ type: 'tests', id: createdObject.id }, 'relationships.valenceChildren'))
           .then((v) => expect(v.relationships.valenceChildren).to.deep.equal([{ id: 100, meta: { perm: 1 } }]))
-          .then(() => actualStore.writeRelationshipItem({ type: 'tests', id: createdObject.id }, 'valenceChildren', { id: 100, meta: { perm: 2 } }))
+          .then(() =>
+            actualStore.writeRelationshipItem(
+              { type: 'tests', id: createdObject.id },
+              'valenceChildren', { id: 100, meta: { perm: 2 } }
+            )
+          )
           .then(() => actualStore.read({ type: 'tests', id: createdObject.id }, 'relationships.valenceChildren'))
           .then((v) => expect(v.relationships.valenceChildren).to.deep.equal([{ id: 100, meta: { perm: 2 } }]));
         });
@@ -280,7 +293,8 @@ export function testSuite(mocha, storeOpts) {
         .then((v) => expect(v.relationships.children).to.deep.equal([{id: 100}]))
         .then(() => actualStore.writeRelationshipItem({ type: 'tests', id: testItem.id }, 'children', { id: 101 }))
         .then(() => new Bluebird((resolve) => setTimeout(resolve, 100)))
-        .then(() => expect(memstore.read({ type: 'tests', id: testItem.id })).to.eventually.not.have.deep.property('relationships.children'))
+        .then(() => memstore.read({ type: 'tests', id: testItem.id }))
+        .then((v) => expect(v).to.not.have.deep.property('relationships.children'))
         .finally(() => testPlump.teardown());
       });
 
@@ -311,7 +325,7 @@ export function testSuite(mocha, storeOpts) {
     });
 
     mocha.after(() => {
-      return (store.after || (() => {}))(actualStore);
+      return (store.after || (() => { return; }))(actualStore);
     });
   });
 }
