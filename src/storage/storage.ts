@@ -134,6 +134,7 @@ export abstract class Storage {
       throw new Error('Cannot wire a terminal store into another store');
     } else {
       // TODO: figure out where the type data comes from.
+      debugger;
       store.read$.takeUntil(shutdownSignal).subscribe((v) => {
         this.cache(v);
       });

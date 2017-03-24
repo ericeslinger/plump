@@ -5,7 +5,7 @@ export class MemoryStore extends KeyValueStore {
 
   private store = {};
 
-  constructor(opts) {
+  constructor(opts = {}) {
     super(opts);
   }
 

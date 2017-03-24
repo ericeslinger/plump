@@ -1,17 +1,15 @@
 import { Model } from './model';
 import { Subject, Observable } from 'rxjs/Rx';
 import * as Bluebird from 'bluebird';
+import {StringIndexed} from './dataTypes';
 
 export class Plump {
 
   destroy$: Observable<string>;
-  stores = []
 
-  private teardownSubject = new Subject();
-  private subscriptions = {};
-  private storeSubscriptions = {};
-  private storage: Storage[] = [];
-  private types = {};
+  private teardownSubject: Subject<string>;
+  private storage: Storage[];
+  private types: StringIndexed<Model>;
   private terminal: Storage;
 
   constructor(opts = {}) {
@@ -19,6 +17,10 @@ export class Plump {
       storage: [],
       types: [],
     }, opts);
+    this.teardownSubject = new Subject();
+    this.storage = [];
+    this.types = {};
+    this.destroy$ = this.teardownSubject.asObservable();
     options.storage.forEach((s) => this.addStore(s));
     options.types.forEach((t) => this.addType(t));
   }
@@ -55,7 +57,6 @@ export class Plump {
         store.wire(this.terminal, this.destroy$);
       }
     }
-    this.stores.push(store);
     for (const typeName in this.types) {
       store.addType(this.types[typeName]);
     }
@@ -72,7 +73,7 @@ export class Plump {
   }
 
   teardown() {
-    this.teardownSubject.next(0);
+    this.teardownSubject.next('done');
   }
 
   get(value, opts = ['attributes']) {
