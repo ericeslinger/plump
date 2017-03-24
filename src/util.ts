@@ -1,4 +1,4 @@
-import mergeOptions from 'merge-options';
+import * as mergeOptions from 'merge-options';
 
 export function validateInput(type, value) {
   const retVal = { type: value.type, id: value.id, attributes: {}, relationships: {} };

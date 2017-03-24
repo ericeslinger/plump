@@ -1,15 +1,10 @@
 /* eslint no-unused-vars: 0 */
 
-import Bluebird from 'bluebird';
-import mergeOptions from 'merge-options';
+import * as Bluebird from 'bluebird';
+import * as mergeOptions from 'merge-options';
 import { validateInput } from '../util';
-import { Subject } from 'rxjs/Rx';
-
-import { $self, $all } from '../model';
-
-const $readSubject = Symbol('$readSubject');
-const $writeSubject = Symbol('$writeSubject');
-const $types = Symbol('$types');
+import { Subject, Observable } from 'rxjs/Rx';
+import { Interfaces } from '../dataTypes';
 
 // type: an object that defines the type. typically this will be
 // part of the Model class hierarchy, but Storage objects call no methods
@@ -22,9 +17,17 @@ const $types = Symbol('$types');
 // hasMany relationships are treated like id arrays. So, add / remove / has
 // just stores and removes integers.
 
-export class Storage {
+export abstract class Storage {
 
-  constructor(opts = {}) {
+  terminal: boolean;
+  read$: Observable<Interfaces.ModelData>;
+  write$: Observable<Interfaces.ModelDelta>;
+  private readSubject = new Subject();
+  private writeSubject = new Subject();
+  protected types: Interfaces.StringIndexed<{$schema: Interfaces.ModelSchema, type: string}> = {};
+  // protected types: Model[]; TODO: figure this out
+
+  constructor(opts:any = {}) {
     // a "terminal" storage facility is the end of the storage chain.
     // usually sql on the server side and rest on the client side, it *must*
     // receive the writes, and is the final authoritative answer on whether
@@ -34,58 +37,22 @@ export class Storage {
     // authorization questions, but the design may allow for authorization to be
     // cached.
     this.terminal = opts.terminal || false;
-    this[$readSubject] = new Subject();
-    this[$writeSubject] = new Subject();
-    this.read$ = this[$readSubject].asObservable();
-    this.write$ = this[$writeSubject].asObservable();
-    this[$types] = {};
+    this.read$ = this.readSubject.asObservable();
+    this.write$ = this.writeSubject.asObservable();
   }
 
   // Abstract - all stores must provide below:
 
-  writeAttributes(value) {
-    // if value.id exists, this is an update. If it doesn't, it is an
-    // insert. In the case of an update, it should merge down the tree.
-    return Bluebird.reject(new Error('writeAttributes not implemented'));
-  }
-
-  readAttributes(value) {
-    return Bluebird.reject(new Error('readAttributes not implemented'));
-  }
-
-  cacheAttributes(value) {
-    return Bluebird.reject(new Error('cacheAttributes not implemented'));
-  }
-
-  readRelationship(value, key) {
-    return Bluebird.reject(new Error('readRelationship not implemented'));
-  }
-
-  // wipe should quietly erase a value from the store. This is used during
-  // cache invalidation events when the current value is known to be incorrect.
-  // it is not a delete (which is a user-initiated, event-causing thing), but
-  // should result in this value not stored in storage anymore.
-
-  wipe(type, id, field) {
-    return Bluebird.reject(new Error('Wipe not implemented'));
-  }
-
-  delete(value) {
-    return Bluebird.reject(new Error('Delete not implemented'));
-  }
-
-  writeRelationshipItem(value, relationshipTitle, child) {
-    // add to a hasMany relationship
-    // note that hasMany fields can have (impl-specific) valence data (now renamed extras)
-    // example: membership between profile and community can have perm 1, 2, 3
-    return Bluebird.reject(new Error('write relationship item not implemented'));
-  }
-
-  removeRelationshipItem(value, relationshipTitle, child) {
-    // remove from a hasMany relationship
-    return Bluebird.reject(new Error('remove not implemented'));
-  }
-
+  abstract writeAttributes(value: Interfaces.ModelData): Bluebird<Interfaces.ModelData>;
+  abstract readAttributes(value: Interfaces.ModelReference): Bluebird<Interfaces.ModelData>;
+  abstract cache(value: Interfaces.ModelData): Bluebird<Interfaces.ModelData>;
+  abstract cacheAttributes(value: Interfaces.ModelData): Bluebird<Interfaces.ModelData>;
+  abstract cacheRelationship(value: Interfaces.ModelData): Bluebird<Interfaces.ModelData>;
+  abstract readRelationship(value: Interfaces.ModelReference, key?: string | string[]): Bluebird<Interfaces.ModelData>;
+  abstract wipe(value: Interfaces.ModelReference, key?: string | string[]): void;
+  abstract delete(value: Interfaces.ModelReference): void;
+  abstract writeRelationshipItem(value: Interfaces.ModelReference, relationshipTitle: string, child: {id: string | number}): Bluebird<Interfaces.ModelData>;
+  abstract deleteRelationshipItem(value: Interfaces.ModelReference, relationshipTitle: string, child: {id: string | number}): Bluebird<Interfaces.ModelData>;
   query(q) {
     // q: {type: string, query: any}
     // q.query is impl defined - a string for sql (raw sql)
@@ -94,30 +61,26 @@ export class Storage {
 
   // convenience function used internally
   // read a bunch of relationships and merge them together.
-  readRelationships(item, relationships) {
+  readRelationships(item: Interfaces.ModelReference, relationships: string[]) {
     return Bluebird.all(relationships.map(r => this.readRelationship(item, r)))
-    .then(
-      rA => rA.reduce((a, r) => mergeOptions(a, r || {}), { type: item.type, id: item.id, attributes: {}, relationships: {} })
+    .then(rA =>
+      rA.reduce(
+        (a, r) => mergeOptions(a, r || {}),
+        { type: item.type, id: item.id, attributes: {}, relationships: {} }
+      )
     );
   }
 
-  // read a value from the store.
-  // opts is an array of attributes to read - syntax is:
-  // 'attributes' (to read the attributes, at least, and is the default)
-  // 'relationships' to read all relationships
-  // 'relationships.relationshipname' to read a certain relationship only
-
-  read(item, opts = ['attributes']) {
+  read(item: Interfaces.ModelReference, opts: string | string[] = ['attributes']) {
     const type = this.getType(item.type);
-    const keys = opts && !Array.isArray(opts) ? [opts] : opts;
-
+    const keys = (opts && !Array.isArray(opts) ? [opts] : opts) as string[];
     return this.readAttributes(item)
     .then(attributes => {
       if (!attributes) {
         return null;
       } else {
         if (attributes.id && attributes.attributes && !attributes.attributes[type.$id]) {
-          attributes.attributes[type.$id] = attributes.id;
+          attributes.attributes[type.$id] = attributes.id; // eslint-disable-line no-param-reassign
         }
         const relsWanted = (keys.indexOf('relationships') >= 0)
           ? Object.keys(type.$schema.relationships)
@@ -143,16 +106,16 @@ export class Storage {
     });
   }
 
-  bulkRead(type, id) {
+  bulkRead(item: Interfaces.ModelReference) {
     // override this if you want to do any special pre-processing
     // for reading from the store prior to a REST service event
-    return this.read(type, id).then(data => {
+    return this.read(item).then(data => {
       return { data, included: [] };
     });
   }
 
 
-  hot(type, id) {
+  hot(item: Interfaces.ModelReference) : boolean {
     // t: type, id: id (integer).
     // if hot, then consider this value authoritative, no need to go down
     // the datastore chain. Consider a memorystorage used as a top-level cache.
@@ -171,6 +134,7 @@ export class Storage {
       throw new Error('Cannot wire a terminal store into another store');
     } else {
       // TODO: figure out where the type data comes from.
+      debugger;
       store.read$.takeUntil(shutdownSignal).subscribe((v) => {
         this.cache(v);
       });
@@ -191,14 +155,14 @@ export class Storage {
 
   getType(t) {
     if (typeof t === 'string') {
-      return this[$types][t];
+      return this.types[t];
     } else {
       return t;
     }
   }
 
   addType(t) {
-    this[$types][t.type] = t;
+    this.types[t.type] = t;
   }
 
   addTypes(a) {
@@ -206,41 +170,13 @@ export class Storage {
   }
 
 
-  fireWriteUpdate(val) {
-    this[$writeSubject].next(val);
+  fireWriteUpdate(val: Interfaces.ModelData & {invalidate: string[]}) {
+    this.writeSubject.next(val);
     return Bluebird.resolve(val);
   }
 
-  fireReadUpdate(val) {
-    this[$readSubject].next(val);
+  fireReadUpdate(val: Interfaces.ModelData) {
+    this.readSubject.next(val);
     return Bluebird.resolve(val);
-  }
-
-  notifyUpdate(v) {
-    return Bluebird.resolve(v);
-  }
-
-  $$testIndex(...args) {
-    if (args.length === 1) {
-      if (args[0].$id === undefined) {
-        throw new Error('Illegal operation on an unsaved new model');
-      }
-    } else if (args[1][args[0].$id] === undefined) {
-      throw new Error('Illegal operation on an unsaved new model');
-    }
   }
 }
-
-
-// convenience function that walks an array replacing any {id} with context.id
-Storage.massReplace = function massReplace(block, context) {
-  return block.map((v) => {
-    if (Array.isArray(v)) {
-      return massReplace(v, context);
-    } else if ((typeof v === 'string') && (v.match(/^\{(.*)\}$/))) {
-      return context[v.match(/^\{(.*)\}$/)[1]];
-    } else {
-      return v;
-    }
-  });
-};

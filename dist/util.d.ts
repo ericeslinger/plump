@@ -1,7 +1,1 @@
-export interface StringIndexed<T> {
-  [index: string]: T,
-}
-
-export interface NumericIDed {
-  $id: number,
-}
+export declare function validateInput(type: any, value: any): any;

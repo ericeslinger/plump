@@ -1,45 +1,36 @@
 import { Model } from './model';
-import { Subject } from 'rxjs/Rx';
-import Bluebird from 'bluebird';
-
-const $types = Symbol('$types');
-const $storage = Symbol('$storage');
-const $terminal = Symbol('$terminal');
-const $teardown = Symbol('$teardown');
-const $subscriptions = Symbol('$subscriptions');
-const $storeSubscriptions = Symbol('$storeSubscriptions');
+import { Subject, Observable } from 'rxjs/Rx';
+import * as Bluebird from 'bluebird';
+import { Interfaces } from './dataTypes';
 
 export class Plump {
-  constructor(opts = {}) {
+
+  destroy$: Observable<string>;
+
+  private teardownSubject: Subject<string>;
+  private storage: Storage[];
+  private types: Interfaces.StringIndexed<typeof Model>;
+  private terminal: Storage;
+
+  constructor(opts: { storage?: Storage[], types?: (typeof Model)[]} = {}) {
     const options = Object.assign({}, {
       storage: [],
       types: [],
     }, opts);
-    this[$teardown] = new Subject();
-    this.destroy$ = this[$teardown].asObservable();
-    this[$subscriptions] = {};
-    this[$storeSubscriptions] = [];
-    this[$storage] = [];
-    this.stores = [];
-    this[$types] = {};
+    this.teardownSubject = new Subject();
+    this.storage = [];
+    this.types = {};
+    this.destroy$ = this.teardownSubject.asObservable();
     options.storage.forEach((s) => this.addStore(s));
     options.types.forEach((t) => this.addType(t));
   }
 
-  addTypesFromSchema(schemata, ExtendingModel = Model) {
-    for (const k in schemata) { // eslint-disable-line guard-for-in
-      class DynamicModel extends ExtendingModel {}
-      DynamicModel.fromJSON(schemata[k]);
-      this.addType(DynamicModel);
-    }
-  }
-
   addType(T) {
-    if (this[$types][T.type] === undefined) {
-      this[$types][T.type] = T;
-      this[$storage].forEach(s => s.addType(T));
-      if (this[$terminal]) {
-        this[$terminal].addType(T);
+    if (this.types[T.type] === undefined) {
+      this.types[T.type] = T;
+      this.storage.forEach(s => s.addType(T));
+      if (this.terminal) {
+        this.terminal.addType(T);
       }
     } else {
       throw new Error(`Duplicate Type registered: ${T.type}`);
@@ -47,50 +38,47 @@ export class Plump {
   }
 
   type(T) {
-    return this[$types][T];
-  }
-
-  types() {
-    return Object.keys(this[$types]);
+    return this.types[T];
   }
 
   addStore(store) {
     if (store.terminal) {
-      if (this[$terminal] !== undefined) {
+      if (this.terminal !== undefined) {
         throw new Error('cannot have more than one terminal store');
       } else {
-        this[$terminal] = store;
-        this[$storage].forEach((cacheStore) => {
+        this.terminal = store;
+        this.storage.forEach((cacheStore) => {
           cacheStore.wire(store, this.destroy$);
         });
       }
     } else {
-      this[$storage].push(store);
-      if (this[$terminal] !== undefined) {
-        store.wire(this[$terminal], this.destroy$);
+      this.storage.push(store);
+      if (this.terminal !== undefined) {
+        store.wire(this.terminal, this.destroy$);
       }
     }
-    this.stores.push(store);
-    this.types().forEach(t => store.addType(this.type(t)));
+    for (const typeName in this.types) {
+      store.addType(this.types[typeName]);
+    }
   }
 
   find(t, id) {
-    const Type = typeof t === 'string' ? this[$types][t] : t;
+    const Type = typeof t === 'string' ? this.types[t] : t;
     return new Type({ [Type.$id]: id }, this);
   }
 
   forge(t, val) {
-    const Type = typeof t === 'string' ? this[$types][t] : t;
+    const Type = typeof t === 'string' ? this.types[t] : t;
     return new Type(val, this);
   }
 
   teardown() {
-    this[$teardown].next(0);
+    this.teardownSubject.next('done');
   }
 
   get(value, opts = ['attributes']) {
     const keys = opts && !Array.isArray(opts) ? [opts] : opts;
-    return this[$storage].reduce((thenable, storage) => {
+    return this.storage.reduce((thenable, storage) => {
       return thenable.then((v) => {
         if (v !== null) {
           return v;
@@ -102,8 +90,8 @@ export class Plump {
       });
     }, Promise.resolve(null))
     .then((v) => {
-      if (((v === null) || (v.attributes === null)) && (this[$terminal])) {
-        return this[$terminal].read(value, keys);
+      if (((v === null) || (v.attributes === null)) && (this.terminal)) {
+        return this.terminal.read(value, keys);
       } else {
         return v;
       }
@@ -111,15 +99,15 @@ export class Plump {
   }
 
   bulkGet(type, id) {
-    return this[$terminal].bulkRead(type, id);
+    return this.terminal.bulkRead(type, id);
   }
 
   save(value) {
-    if (this[$terminal]) {
+    if (this.terminal) {
       return Bluebird.resolve()
       .then(() => {
         if (Object.keys(value.attributes).length > 0) {
-          return this[$terminal].writeAttributes(value);
+          return this.terminal.writeAttributes(value);
         } else {
           return null;
         }
@@ -129,11 +117,11 @@ export class Plump {
           return Bluebird.all(Object.keys(value.relationships).map((relName) => {
             return Bluebird.all(value.relationships[relName].map((delta) => {
               if (delta.op === 'add') {
-                return this[$terminal].writeRelationshipItem(value, relName, delta);
+                return this.terminal.writeRelationshipItem(value, relName, delta);
               } else if (delta.op === 'remove') {
-                return this[$terminal].deleteRelationshipItem(value, relName, delta);
+                return this.terminal.deleteRelationshipItem(value, relName, delta);
               } else if (delta.op === 'modify') {
-                return this[$terminal].writeRelationshipItem(value, relName, delta);
+                return this.terminal.writeRelationshipItem(value, relName, delta);
               } else {
                 throw new Error(`Unknown relationship delta ${JSON.stringify(delta)}`);
               }
@@ -149,9 +137,9 @@ export class Plump {
   }
 
   delete(...args) {
-    if (this[$terminal]) {
-      return this[$terminal].delete(...args).then(() => {
-        return Bluebird.all(this[$storage].map((store) => {
+    if (this.terminal) {
+      return this.terminal.delete(...args).then(() => {
+        return Bluebird.all(this.storage.map((store) => {
           return store.delete(...args);
         }));
       });
@@ -161,32 +149,32 @@ export class Plump {
   }
 
   add(...args) {
-    if (this[$terminal]) {
-      return this[$terminal].add(...args);
+    if (this.terminal) {
+      return this.terminal.add(...args);
     } else {
       return Promise.reject(new Error('Plump has no terminal store'));
     }
   }
 
   restRequest(opts) {
-    if (this[$terminal] && this[$terminal].rest) {
-      return this[$terminal].rest(opts);
+    if (this.terminal && this.terminal.rest) {
+      return this.terminal.rest(opts);
     } else {
       return Promise.reject(new Error('No Rest terminal store'));
     }
   }
 
   modifyRelationship(...args) {
-    if (this[$terminal]) {
-      return this[$terminal].modifyRelationship(...args);
+    if (this.terminal) {
+      return this.terminal.modifyRelationship(...args);
     } else {
       return Promise.reject(new Error('Plump has no terminal store'));
     }
   }
 
   remove(...args) {
-    if (this[$terminal]) {
-      return this[$terminal].remove(...args);
+    if (this.terminal) {
+      return this.terminal.remove(...args);
     } else {
       return Promise.reject(new Error('Plump has no terminal store'));
     }
@@ -194,6 +182,6 @@ export class Plump {
 
   invalidate(type, id, field) {
     const fields = Array.isArray(field) ? field : [field];
-    this[$terminal].fireWriteUpdate({ type, id, invalidate: fields });
+    this.terminal.fireWriteUpdate({ type, id, invalidate: fields });
   }
 }
