@@ -45,9 +45,11 @@ export interface ModelSchema {
   name: string;
   attributes: {
     [attrName: string]: {
-      type: 'number' | 'string' | 'boolean' | 'date' | 'array' | 'object';
+      // type: 'number' | 'string' | 'boolean' | 'date' | 'array' | 'object';
+      type: string;
       readOnly: boolean;
-      default?: number | string | boolean | Date | string[];
+      default?: any;
+      // default?: number | string | boolean | Date | string[];
     }
   };
   relationships: {

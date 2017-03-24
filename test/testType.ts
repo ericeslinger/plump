@@ -80,9 +80,9 @@ export class TestType extends Model {
     idAttribute: 'id',
     attributes: {
       id: { type: 'number', readOnly: true },
-      // name: { type: 'string' },
-      // otherName: { type: 'string', default: '' },
-      // extended: { type: 'object', default: {} },
+      name: { type: 'string', readOnly: false },
+      otherName: { type: 'string', default: '', readOnly: false },
+      extended: { type: 'object', default: {}, readOnly: false },
     },
     relationships: {
       children: { type: Children },
