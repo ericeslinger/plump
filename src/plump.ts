@@ -2,6 +2,7 @@ import { Subject, Observable } from 'rxjs/Rx';
 import * as Bluebird from 'bluebird';
 import * as Interfaces from './dataTypes';
 import { Storage } from './storage/storage';
+import { Model } from './model';
 
 export class Plump {
 
@@ -62,7 +63,7 @@ export class Plump {
     }
   }
 
-  find(t, id) {
+  find(t, id): Model {
     const Type = typeof t === 'string' ? this.types[t] : t;
     return new Type({ [Type.schema.idAttribute]: id }, this);
   }

@@ -225,29 +225,35 @@ describe('model', () => {
         let phase = 0;
         one.save()
         .then(() => {
-          const subscription = one.subscribe((v) => {
-            try {
-              if (phase === 0) {
-                if (v.attributes.name) {
-                  phase = 1;
+          const subscription = one.subscribe({
+            error: (err) => {
+              throw err;
+            },
+            complete: () => { /* noop */ },
+            next: (v) => {
+              try {
+                if (phase === 0) {
+                  if (v.attributes.name) {
+                    phase = 1;
+                  }
                 }
-              }
-              if (phase === 1) {
-                expect(v).to.have.deep.property('attributes.name', 'potato');
-                if (v.id !== undefined) {
-                  phase = 2;
+                if (phase === 1) {
+                  expect(v).to.have.deep.property('attributes.name', 'potato');
+                  if (v.id !== undefined) {
+                    phase = 2;
+                  }
                 }
-              }
-              if (phase === 2) {
-                if (v.attributes.name !== 'potato') {
-                  expect(v).to.have.deep.property('attributes.name', 'grotato');
-                  phase = 3;
-                  subscription.unsubscribe();
-                  resolve();
+                if (phase === 2) {
+                  if (v.attributes.name !== 'potato') {
+                    expect(v).to.have.deep.property('attributes.name', 'grotato');
+                    phase = 3;
+                    subscription.unsubscribe();
+                    resolve();
+                  }
                 }
+              } catch (err) {
+                reject(err);
               }
-            } catch (err) {
-              reject(err);
             }
           });
         })
@@ -262,30 +268,36 @@ describe('model', () => {
         one.save()
         .then(() => one.add('children', { id: 100 }).save())
         .then(() => {
-          const subscription = one.subscribe(['attributes', 'relationships'], (v) => {
-            try {
-              if (phase === 0) {
-                if (v.attributes) {
-                  expect(v).to.have.property('attributes');
-                  phase = 1;
+          const subscription = one.subscribe(['attributes', 'relationships'], {
+            error: (err) => {
+              throw err;
+            },
+            complete: () => { /* noop */ },
+            next: (v) => {
+              try {
+                if (phase === 0) {
+                  if (v.attributes) {
+                    expect(v).to.have.property('attributes');
+                    phase = 1;
+                  }
                 }
-              }
-              if (phase === 1 && v.relationships && v.relationships.children) {
-                expect(v.relationships.children).to.deep.equal([{ id: 100 }]);
-                phase = 2;
-              }
-              if (phase === 2) {
-                if ((v.relationships.children) && (v.relationships.children.length > 1)) {
-                  expect(v.relationships.children).to.deep.equal([
-                    { id: 100 },
-                    { id: 101 },
-                  ]);
-                  subscription.unsubscribe();
-                  resolve();
+                if (phase === 1 && v.relationships && v.relationships.children) {
+                  expect(v.relationships.children).to.deep.equal([{ id: 100 }]);
+                  phase = 2;
                 }
+                if (phase === 2) {
+                  if ((v.relationships.children) && (v.relationships.children.length > 1)) {
+                    expect(v.relationships.children).to.deep.equal([
+                      { id: 100 },
+                      { id: 101 },
+                    ]);
+                    subscription.unsubscribe();
+                    resolve();
+                  }
+                }
+              } catch (err) {
+                reject(err);
               }
-            } catch (err) {
-              reject(err);
             }
           });
         })
@@ -328,24 +340,30 @@ describe('model', () => {
           .then(() => {
             let phase = 0;
             const two = otherPlump.find('tests', val.id);
-            const subscription = two.subscribe((v) => {
-              try {
-                if (phase === 0) {
-                  if (v.attributes.name) {
-                    expect(v).to.have.property('attributes').with.property('name', 'potato');
-                    phase = 1;
+            const subscription = two.subscribe({
+              error: (err) => {
+                throw err;
+              },
+              complete: () => { /* noop */ },
+              next: (v) => {
+                try {
+                  if (phase === 0) {
+                    if (v.attributes.name) {
+                      expect(v).to.have.property('attributes').with.property('name', 'potato');
+                      phase = 1;
+                    }
                   }
-                }
-                if (phase === 1) {
-                  if (v.attributes.name !== 'potato') {
-                    expect(v).to.have.property('attributes').with.property('name', 'slowtato');
-                    subscription.unsubscribe();
-                    resolve();
+                  if (phase === 1) {
+                    if (v.attributes.name !== 'potato') {
+                      expect(v).to.have.property('attributes').with.property('name', 'slowtato');
+                      subscription.unsubscribe();
+                      resolve();
+                    }
                   }
+                } catch (err) {
+                  subscription.unsubscribe();
+                  reject(err);
                 }
-              } catch (err) {
-                subscription.unsubscribe();
-                reject(err);
               }
             });
           });

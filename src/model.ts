@@ -1,5 +1,5 @@
 import * as mergeOptions from 'merge-options';
-import { Observable } from 'rxjs/Rx';
+import { Observable, Subscription, Observer } from 'rxjs/Rx';
 
 import { validateInput } from './util';
 import * as Interfaces from './dataTypes';
@@ -72,7 +72,7 @@ export abstract class Model {
 
   // API METHODS
 
-  get(opts = 'attributes') {
+  get(opts: string | string[] = 'attributes') {
     // If opts is falsy (i.e., undefined), get attributes
     // Otherwise, get what was requested,
     // wrapping the request in a Array if it wasn't already one
@@ -123,17 +123,23 @@ export abstract class Model {
     return this;
   }
 
-  subscribe(...args) {
-    let fields = ['attributes'];
-    let cb;
-    if (args.length === 2) {
-      fields = args[0];
-      if (!Array.isArray(fields)) {
-        fields = [fields];
+  subscribe(cb: Observer<Interfaces.ModelData>): Subscription;
+  subscribe(fields: string | string[], cb: Observer<Interfaces.ModelData>): Subscription;
+  subscribe(arg1: Observer<Interfaces.ModelData> | string | string[], arg2?: Observer<Interfaces.ModelData>): Subscription {
+
+    let fields: string[] = [];
+    let cb: Observer<Interfaces.ModelData> = null;
+
+    if (arg2) {
+      cb = arg2;
+      if (Array.isArray(arg1)) {
+        fields = arg1 as string[];
+      } else {
+        fields = [arg1 as string];
       }
-      cb = args[1];
     } else {
-      cb = args[0];
+      cb = arg1 as Observer<Interfaces.ModelData>;
+      fields = ['attributes'];
     }
 
     if (fields.indexOf('relationships') >= 0) {

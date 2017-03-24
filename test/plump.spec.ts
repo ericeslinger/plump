@@ -44,32 +44,38 @@ describe('Plump', () => {
     .then(() => {
       let phase = 0;
       const newOne = otherPlump.find('tests', invalidated.id);
-      const subscription = newOne.subscribe((v) => {
-        try {
-          if (phase === 0) {
-            if (v.attributes.name) {
-              expect(v).to.have.property('attributes').with.property('name', 'foo');
-              phase = 1;
+      const subscription = newOne.subscribe({
+        next: (v) => {
+          try {
+            if (phase === 0) {
+              if (v.attributes.name) {
+                expect(v).to.have.property('attributes').with.property('name', 'foo');
+                phase = 1;
+              }
             }
-          }
-          if (phase === 1) {
-            if (v.attributes.name === 'slowtato') {
-              phase = 2;
-            } else if (v.attributes.name === 'grotato') {
-              subscription.unsubscribe();
-              done();
+            if (phase === 1) {
+              if (v.attributes.name === 'slowtato') {
+                phase = 2;
+              } else if (v.attributes.name === 'grotato') {
+                subscription.unsubscribe();
+                done();
+              }
             }
-          }
-          if (phase === 2) {
-            if (v.attributes.name !== 'slowtato') {
-              expect(v).to.have.property('attributes').with.property('name', 'grotato');
-              subscription.unsubscribe();
-              done();
+            if (phase === 2) {
+              if (v.attributes.name !== 'slowtato') {
+                expect(v).to.have.property('attributes').with.property('name', 'grotato');
+                subscription.unsubscribe();
+                done();
+              }
             }
+          } catch (err) {
+            subscription.unsubscribe();
+            done(err);
           }
-        } catch (err) {
-          subscription.unsubscribe();
-          done(err);
+        },
+        complete: () => { /* noop */ },
+        error: (err) => {
+          throw err;
         }
       });
       return coldMemstore._set(
