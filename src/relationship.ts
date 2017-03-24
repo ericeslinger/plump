@@ -1,6 +1,8 @@
-import * as mergeOptions from 'merge-options';
+import { RelationshipSchema } from './dataTypes';
 
-export class Relationship {
+export abstract class Relationship {
+
+  static schema: RelationshipSchema;
 
   constructor() {
     // this.plump = plump;

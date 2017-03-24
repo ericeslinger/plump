@@ -10,16 +10,16 @@ import * as Interfaces from './dataTypes';
 
 
 export class Model {
-  static $id: string = 'id';
-  static type: string = 'BASE';
+  id: string | number;
   static schema: Interfaces.ModelSchema = {
-    $id: 'id',
+    idAttribute: 'id',
+    name: 'BASE',
     attributes: {},
     relationships: {},
   };
-  id: string | number;
-  private dirty: Interfaces.DirtyValues;
   private static storeCache = new Map();
+
+  private dirty: Interfaces.DirtyValues;
 
   get type() {
     return this.constructor['type'];
@@ -152,17 +152,17 @@ export class Model {
     const terminal = this.plump.stores.filter(s => s.terminal === true);
 
     const preload$ = Observable.from(hots)
-    .flatMap((s:Storage) => Observable.fromPromise(s.read(this.type, this.id, fields)))
+    .flatMap((s: Storage) => Observable.fromPromise(s.read(this.type, this.id, fields)))
     .defaultIfEmpty(null)
     .flatMap((v) => {
       if (v !== null) {
         return Observable.of(v);
       } else {
         const terminal$ = Observable.from(terminal)
-        .flatMap((s:Storage) => Observable.fromPromise(s.read(this.type, this.id, fields)))
+        .flatMap((s: Storage) => Observable.fromPromise(s.read(this.type, this.id, fields)))
         .share();
         const cold$ = Observable.from(colds)
-        .flatMap((s:Storage) => Observable.fromPromise(s.read(this.type, this.id, fields)));
+        .flatMap((s: Storage) => Observable.fromPromise(s.read(this.type, this.id, fields)));
         return Observable.merge(
           terminal$,
           cold$.takeUntil(terminal$)
@@ -173,8 +173,8 @@ export class Model {
     // const watchRead$ = Observable.from(terminal)
     // .flatMap(s => s.read$.filter(v => v.type === this.type && v.id === this.id));
     const watchWrite$ = Observable.from(terminal)
-    .flatMap((s:Storage) => s.write$)
-    .filter((v:Interfaces.ModelDelta) => {
+    .flatMap((s: Storage) => s.write$)
+    .filter((v: Interfaces.ModelDelta) => {
       return (
         (v.type === this.type) &&
         (v.id === this.id) &&
@@ -183,7 +183,7 @@ export class Model {
     })
     .flatMapTo(
       Observable.from(terminal)
-      .flatMap((s:Storage) => Observable.fromPromise(s.read(this.type, this.id, fields)))
+      .flatMap((s: Storage) => Observable.fromPromise(s.read(this.type, this.id, fields)))
     );
     // );
     return preload$.merge(watchWrite$)
@@ -270,7 +270,7 @@ export class Model {
       {},
       opts,
       {
-        url: `/${this.type}/${opts.url}`,
+        url: `/${this.schema.name}/${opts.url}`,
       }
     );
     return plump.restRequest(restOpts);
