@@ -3,7 +3,7 @@ export declare namespace Interfaces {
         [index: string]: T;
     }
     interface NumericIDed {
-        $id: number;
+        id: number;
     }
     type Attribute = number | string | boolean | Date | string[];
     type Attributes = StringIndexed<Attribute>;
@@ -32,28 +32,25 @@ export declare namespace Interfaces {
         };
     }
     interface FieldMeta {
-        type: string | RelationshipSchema;
-        readOnly: boolean;
+        type: string | {
+            schema: RelationshipSchema;
+        };
+        readOnly?: boolean;
         default?: any;
+    }
+    interface AttributeMeta extends FieldMeta {
+        type: 'number' | 'string' | 'boolean' | 'date' | 'array' | 'object';
+    }
+    interface RelationshipMeta extends FieldMeta {
+        type: {
+            schema: RelationshipSchema;
+        };
     }
     interface ModelSchema {
         idAttribute: string;
         name: string;
-        attributes: {
-            [attrName: string]: {
-                type: string;
-                readOnly: boolean;
-                default?: any;
-            };
-        };
-        relationships: {
-            [relName: string]: {
-                type: {
-                    schema: RelationshipSchema;
-                };
-                readOnly?: boolean;
-            };
-        };
+        attributes: StringIndexed<AttributeMeta>;
+        relationships: StringIndexed<RelationshipMeta>;
         storeData?: StringIndexed<any> & {
             sql?: {
                 bulkQuery: string;

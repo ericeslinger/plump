@@ -4,7 +4,7 @@ export declare namespace Interfaces {
   }
 
   export interface NumericIDed {
-    $id: number;
+    id: number;
   }
 
   export type Attribute = number | string | boolean | Date | string[];
@@ -35,29 +35,24 @@ export declare namespace Interfaces {
   }
 
   export interface FieldMeta {
-    type: string | RelationshipSchema;
-    readOnly: boolean;
+    type: string | { schema: RelationshipSchema };
+    readOnly?: boolean;
     default?: any;
+  }
+
+  export interface AttributeMeta extends FieldMeta {
+    type: 'number' | 'string' | 'boolean' | 'date' | 'array' | 'object';
+  }
+
+  export interface RelationshipMeta extends FieldMeta {
+    type: { schema: RelationshipSchema },
   }
 
   export interface ModelSchema {
     idAttribute: string;
     name: string;
-    attributes: {
-      [attrName: string]: {
-        // type: 'number' | 'string' | 'boolean' | 'date' | 'array' | 'object';
-        type: string;
-        readOnly: boolean;
-        default?: any;
-        // default?: number | string | boolean | Date | string[];
-      }
-    };
-    relationships: {
-      [relName: string]: {
-        type: {schema: RelationshipSchema},
-        readOnly?: boolean,
-      },
-    };
+    attributes: StringIndexed<AttributeMeta>;
+    relationships: StringIndexed<RelationshipMeta>;
     storeData?: StringIndexed<any> & {
       sql?: {
         bulkQuery: string;
