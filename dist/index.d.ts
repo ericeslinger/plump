@@ -4,5 +4,4 @@ export { Storage } from './storage/storage';
 export { MemoryStore } from './storage/memory';
 export { KeyValueStore } from './storage/keyValueStore';
 export { Relationship } from './relationship';
-import * as I from './dataTypes';
-export declare const Interfaces: typeof I;
+export { ModelData, RelationshipSchema, RelationshipItem, RelationshipDelta, FieldMeta, ModelSchema, ModelConstructor, ModelReference, IndefiniteModelData, ModelDelta, DirtyModel, DirtyValues } from './dataTypes';

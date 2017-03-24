@@ -9,6 +9,27 @@ const ts = require('gulp-typescript');
 //   .pipe(gulp.dest(config.dest));
 // }
 //
+
+function buildTests() {
+  return gulp.src(config.testTS, { cwd: config.tests })
+  .pipe(sourcemaps.init())
+  .pipe(ts({
+    allowSyntheticDefaultImports: true,
+    declaration: true,
+    lib: [
+      'dom',
+      'es2015',
+    ],
+    outDir: config.tests,
+    module: 'commonjs',
+    moduleResolution: 'node',
+    // sourceMap: true,
+    target: 'es5',
+  }))
+  .pipe(sourcemaps.write())
+  .pipe(gulp.dest(config.dest));
+}
+
 function build() {
   return gulp.src(config.scripts, { cwd: config.src })
   .pipe(sourcemaps.init())
@@ -19,7 +40,7 @@ function build() {
       'dom',
       'es2015',
     ],
-    module: 'es2015',
+    module: 'commonjs',
     moduleResolution: 'node',
     // sourceMap: true,
     target: 'es5',
@@ -27,7 +48,7 @@ function build() {
   .pipe(sourcemaps.write())
   .pipe(gulp.dest(config.dest));
 }
-
+gulp.task('buildTests', buildTests);
 gulp.task('build', build);
 
 module.exports = build;
