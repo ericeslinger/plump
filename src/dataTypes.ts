@@ -2,12 +2,7 @@ export interface StringIndexed<T> {
   [index: string]: T;
 }
 
-export interface NumericIDed {
-  $id: number;
-}
-
 export type Attribute = number | string | boolean | Date | string[];
-export type Attributes = StringIndexed<Attribute>;
 
 export interface RelationshipSchema {
   sides: StringIndexed<{otherType: string, otherName: string}>;
