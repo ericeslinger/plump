@@ -27,19 +27,14 @@ export interface RelationshipDelta {
     op: 'add' | 'modify' | 'remove';
     data: RelationshipItem;
 }
-export interface FieldMeta {
-    type: string | RelationshipSchema;
-    readOnly: boolean;
-    default?: any;
-}
 export interface ModelSchema {
     idAttribute: string;
     name: string;
     attributes: {
         [attrName: string]: {
-            type: string;
-            readOnly: boolean;
-            default?: any;
+            type: 'number' | 'string' | 'boolean' | 'date' | 'array' | 'object';
+            readOnly?: boolean;
+            default?: number | string | boolean | Date | string[];
         };
     };
     relationships: {
@@ -54,11 +49,6 @@ export interface ModelSchema {
             tableName: string;
         };
     };
-}
-export interface ModelConstructor {
-    readonly schema: ModelSchema;
-    readonly typeName: string;
-    new (opts: any): any;
 }
 export interface ModelReference {
     typeName: string;

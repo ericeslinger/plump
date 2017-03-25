@@ -1,14 +1,8 @@
-
 export interface StringIndexed<T> {
   [index: string]: T;
 }
 
-export interface NumericIDed {
-  $id: number;
-}
-
 export type Attribute = number | string | boolean | Date | string[];
-export type Attributes = StringIndexed<Attribute>;
 
 export interface RelationshipSchema {
   sides: StringIndexed<{otherType: string, otherName: string}>;
@@ -31,22 +25,14 @@ export interface RelationshipDelta {
   data: RelationshipItem;
 }
 
-export interface FieldMeta {
-  type: string | RelationshipSchema;
-  readOnly: boolean;
-  default?: any;
-}
-
 export interface ModelSchema {
   idAttribute: string;
   name: string;
   attributes: {
     [attrName: string]: {
-      // type: 'number' | 'string' | 'boolean' | 'date' | 'array' | 'object';
-      type: string;
-      readOnly: boolean;
-      default?: any;
-      // default?: number | string | boolean | Date | string[];
+      type: 'number' | 'string' | 'boolean' | 'date' | 'array' | 'object';
+      readOnly?: boolean;
+      default?: number | string | boolean | Date | string[];
     }
   };
   relationships: {
@@ -61,12 +47,6 @@ export interface ModelSchema {
       tableName: string;
     },
   };
-}
-
-export interface ModelConstructor {
-  readonly schema: ModelSchema;
-  readonly typeName: string;
-  new(opts: any);
 }
 
 export interface ModelReference {

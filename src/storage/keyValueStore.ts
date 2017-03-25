@@ -2,7 +2,13 @@ import * as Bluebird from 'bluebird';
 import * as mergeOptions from 'merge-options';
 
 import { Storage } from './storage';
-import * as Interfaces from '../dataTypes';
+import {
+  IndefiniteModelData,
+  ModelData,
+  ModelReference,
+  ModelSchema,
+  RelationshipItem,
+} from '../dataTypes';
 
 function saneNumber(i) {
   return ((typeof i === 'number') && (!isNaN(i)) && (i !== Infinity) && (i !== -Infinity));
@@ -14,9 +20,9 @@ export abstract class KeyValueStore extends Storage {
   private maxKeys: { [typeName: string]: number } = {};
 
   abstract _keys(typeName: string): Bluebird<string[]>;
-  abstract _get(k: string): Bluebird<Interfaces.ModelData | null>;
-  abstract _set(k: string, v: Interfaces.ModelData): Bluebird<Interfaces.ModelData>;
-  abstract _del(k: string): Bluebird<Interfaces.ModelData>;
+  abstract _get(k: string): Bluebird<ModelData | null>;
+  abstract _set(k: string, v: ModelData): Bluebird<ModelData>;
+  abstract _del(k: string): Bluebird<ModelData>;
 
   $$maxKey(t: string): Bluebird<number> {
     return this._keys(t)
@@ -37,7 +43,7 @@ export abstract class KeyValueStore extends Storage {
     return Bluebird.resolve(this.maxKeys[typeName]);
   }
 
-  writeAttributes(inputValue: Interfaces.IndefiniteModelData) {
+  writeAttributes(inputValue: IndefiniteModelData) {
     const value = this.validateInput(inputValue);
     delete value.relationships;
     // trim out relationships for a direct write.
@@ -59,7 +65,7 @@ export abstract class KeyValueStore extends Storage {
         if (saneNumber(thisId) && thisId > this.maxKeys[value.typeName]) {
           this.maxKeys[value.typeName] = thisId;
         }
-        return this._get(this.keyString(value as Interfaces.ModelReference)).then(current => mergeOptions({}, current, value));
+        return this._get(this.keyString(value as ModelReference)).then(current => mergeOptions({}, current, value));
       }
     })
     .then((toSave) => {
@@ -71,7 +77,7 @@ export abstract class KeyValueStore extends Storage {
     });
   }
 
-  readAttributes(value: Interfaces.ModelReference): Bluebird<Interfaces.ModelData> {
+  readAttributes(value: ModelReference): Bluebird<ModelData> {
     return this._get(this.keyString(value))
     .then(d => {
       if (d && d.attributes && Object.keys(d.attributes).length > 0) {
@@ -82,7 +88,7 @@ export abstract class KeyValueStore extends Storage {
     });
   }
 
-  cache(value: Interfaces.ModelData) {
+  cache(value: ModelData) {
     if ((value.id === undefined) || (value.id === null)) {
       return Bluebird.reject('Cannot cache data without an id - write it to a terminal first');
     } else {
@@ -94,7 +100,7 @@ export abstract class KeyValueStore extends Storage {
     }
   }
 
-  cacheAttributes(value: Interfaces.ModelData) {
+  cacheAttributes(value: ModelData) {
     if ((value.id === undefined) || (value.id === null)) {
       return Bluebird.reject('Cannot cache data without an id - write it to a terminal first');
     } else {
@@ -110,7 +116,7 @@ export abstract class KeyValueStore extends Storage {
     }
   }
 
-  cacheRelationship(value: Interfaces.ModelData) {
+  cacheRelationship(value: ModelData) {
     if ((value.id === undefined) || (value.id === null)) {
       return Bluebird.reject('Cannot cache data without an id - write it to a terminal first');
     } else {
@@ -126,7 +132,7 @@ export abstract class KeyValueStore extends Storage {
     }
   }
 
-  readRelationship(value: Interfaces.ModelReference, relName: string): Bluebird<Interfaces.ModelData> {
+  readRelationship(value: ModelReference, relName: string): Bluebird<ModelData> {
     return this._get(this.keyString(value))
     .then((v) => {
       const retVal = Object.assign({}, v);
@@ -145,7 +151,7 @@ export abstract class KeyValueStore extends Storage {
     });
   }
 
-  delete(value: Interfaces.ModelReference) {
+  delete(value: ModelReference) {
     return this._del(this.keyString(value))
     .then(() => {
       if (this.terminal) {
@@ -154,7 +160,7 @@ export abstract class KeyValueStore extends Storage {
     });
   }
 
-  wipe(value: Interfaces.ModelReference, field: string) {
+  wipe(value: ModelReference, field: string) {
     const ks = this.keyString(value);
     return this._get(ks)
     .then((val) => {
@@ -178,7 +184,7 @@ export abstract class KeyValueStore extends Storage {
     });
   }
 
-  writeRelationshipItem(value: Interfaces.ModelReference, relName: string, child: Interfaces.RelationshipItem) {
+  writeRelationshipItem(value: ModelReference, relName: string, child: RelationshipItem) {
     const schema = this.getSchema(value.typeName);
     const relSchema = schema.relationships[relName].type;
     const otherRelType = relSchema.sides[relName].otherType;
@@ -208,8 +214,8 @@ export abstract class KeyValueStore extends Storage {
           relationships: {},
         };
       }
-      const newChild: Interfaces.RelationshipItem = { id: child.id };
-      const newParent: Interfaces.RelationshipItem = { id: value.id };
+      const newChild: RelationshipItem = { id: child.id };
+      const newParent: RelationshipItem = { id: value.id };
       if (!thisItem.relationships[relName]) {
         thisItem.relationships[relName] = [];
       }
@@ -251,7 +257,7 @@ export abstract class KeyValueStore extends Storage {
     });
   }
 
-  deleteRelationshipItem(value: Interfaces.ModelReference, relName: string, child: Interfaces.RelationshipItem) {
+  deleteRelationshipItem(value: ModelReference, relName: string, child: RelationshipItem) {
     const schema = this.getSchema(value.typeName);
     const relSchema = schema.relationships[relName].type;
     const otherRelType = relSchema.sides[relName].otherType;
@@ -289,7 +295,7 @@ export abstract class KeyValueStore extends Storage {
     });
   }
 
-  addSchema(t: {typeName: string, schema: Interfaces.ModelSchema}) {
+  addSchema(t: {typeName: string, schema: ModelSchema}) {
     return super.addSchema(t)
     .then(() => {
       return this._keys(t.typeName)
@@ -308,7 +314,7 @@ export abstract class KeyValueStore extends Storage {
     })
   }
 
-  keyString(value: Interfaces.ModelReference) {
+  keyString(value: ModelReference) {
     return `${value.typeName}:${value.id}`;
   }
 }
