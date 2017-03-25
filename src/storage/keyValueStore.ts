@@ -17,26 +17,12 @@ function saneNumber(i) {
 // declare function parseInt(n: string | number, radix: number): number;
 
 export abstract class KeyValueStore extends Storage {
-  private maxKeys: { [typeName: string]: number } = {};
+  protected maxKeys: { [typeName: string]: number } = {};
 
   abstract _keys(typeName: string): Bluebird<string[]>;
   abstract _get(k: string): Bluebird<ModelData | null>;
   abstract _set(k: string, v: ModelData): Bluebird<ModelData>;
   abstract _del(k: string): Bluebird<ModelData>;
-
-  $$maxKey(t: string): Bluebird<number> {
-    return this._keys(t)
-    .then((keyArray) => {
-      if (keyArray.length === 0) {
-        return 0;
-      } else {
-        return keyArray.map((k) => k.split(':')[2])
-        .map((k) => parseInt(k, 10))
-        .filter((i) => saneNumber(i))
-        .reduce((max, current) => (current > max) ? current : max, 0);
-      }
-    });
-  }
 
   allocateId(typeName: string) {
     this.maxKeys[typeName] = this.maxKeys[typeName] + 1;
@@ -301,21 +287,6 @@ export abstract class KeyValueStore extends Storage {
       this.maxKeys[t.typeName] = 0;
     });
   }
-  //     return this._keys(t.typeName)
-  //     .then((keyArray) => {
-  //       if (keyArray.length === 0) {
-  //         return 0;
-  //       } else {
-  //         return keyArray.map((k) => k.split(':')[2])
-  //         .map((k) => parseInt(k, 10))
-  //         .filter((i) => saneNumber(i))
-  //         .reduce((max, current) => (current > max) ? current : max, 0);
-  //       }
-  //     }).then((n) => {
-  //       this.maxKeys[t.typeName] = n;
-  //     });
-  //   })
-  // }
 
   keyString(value: ModelReference) {
     return `${value.typeName}:${value.id}`;
