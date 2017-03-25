@@ -28,9 +28,9 @@ export interface ModelSchema {
     name: string;
     attributes: {
         [attrName: string]: {
+            type: 'number' | 'string' | 'boolean' | 'date' | 'array' | 'object';
             readOnly?: boolean;
-            type: string;
-            default?: any;
+            default?: number | string | boolean | Date | string[];
         };
     };
     relationships: {

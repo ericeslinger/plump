@@ -14,7 +14,7 @@ export class MemoryStore extends KeyValueStore {
   }
 
   _keys(typeName) {
-    return Bluebird.resolve(Object.keys(this.store).filter((k) => k.indexOf(`${typeName}:attributes:`) === 0));
+    return Bluebird.resolve(Object.keys(this.store).filter((k) => k.indexOf(`${typeName}:`) === 0));
   }
 
   _get(k) {
