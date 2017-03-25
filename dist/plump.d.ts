@@ -10,13 +10,10 @@ export declare class Plump {
     private storage;
     private types;
     private terminal;
-    constructor(opts?: {
-        storage?: Storage[];
-        types?: (typeof Model)[];
-    });
-    addType(T: typeof Model): void;
+    constructor();
+    addType(T: typeof Model): Bluebird<void>;
     type(T: string): typeof Model;
-    addStore(store: Storage): void;
+    addStore(store: Storage): Bluebird<void>;
     find(t: any, id: any): Model;
     forge(t: any, val: any): Model;
     teardown(): void;

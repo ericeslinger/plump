@@ -12,6 +12,7 @@ export declare abstract class Storage {
     private readSubject;
     private writeSubject;
     constructor(opts?: any);
+    abstract allocateId(typeName: string): Bluebird<string | number>;
     abstract writeAttributes(value: IndefiniteModelData): Bluebird<ModelData>;
     abstract readAttributes(value: ModelReference): Bluebird<ModelData>;
     abstract cache(value: ModelData): Bluebird<ModelData>;
@@ -42,8 +43,8 @@ export declare abstract class Storage {
     addSchema(t: {
         typeName: string;
         schema: ModelSchema;
-    }): void;
-    addTypes(a: any): void;
+    }): Bluebird<void>;
+    addSchemas(a: any): Bluebird<void>;
     fireWriteUpdate(val: ModelDelta): Bluebird<ModelDelta>;
     fireReadUpdate(val: ModelData): Bluebird<ModelData>;
 }

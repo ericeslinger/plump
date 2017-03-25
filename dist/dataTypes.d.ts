@@ -1,11 +1,7 @@
 export interface StringIndexed<T> {
     [index: string]: T;
 }
-export interface NumericIDed {
-    $id: number;
-}
 export declare type Attribute = number | string | boolean | Date | string[];
-export declare type Attributes = StringIndexed<Attribute>;
 export interface RelationshipSchema {
     sides: StringIndexed<{
         otherType: string;
@@ -32,9 +28,9 @@ export interface ModelSchema {
     name: string;
     attributes: {
         [attrName: string]: {
-            type: 'number' | 'string' | 'boolean' | 'date' | 'array' | 'object';
             readOnly?: boolean;
-            default?: number | string | boolean | Date | string[];
+            type: string;
+            default?: any;
         };
     };
     relationships: {
