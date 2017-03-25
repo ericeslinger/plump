@@ -1,11 +1,16 @@
 /* eslint-env node, mocha*/
 /* eslint no-shadow: 0 */
 
-import { MemoryStore } from '../src/index';
+import { MemoryStore } from '../src/storage/memory';
 import { testSuite } from './storageTests';
 
+import 'mocha';
+
 testSuite({
-  describe, it, before, after,
+  describe: describe,
+  it: it,
+  before: before,
+  after: after,
 }, {
   ctor: MemoryStore,
   name: 'Plump Memory Storage',

@@ -1,102 +1,27 @@
-import * as Rx from 'rxjs/Rx.d';
-import * as Bluebird from '@types/bluebird';
-
-import { StringIndexed, NumericIDed } from './util.d';
-
-import { Model } from './model.d';
-import * as Relationship from './relationship.d';
-import { Storage, KeyValueStore } from './storage/index.d';
-
-export as namespace plump;
-
-declare class Plump {
-    new (opts?: {
-      storage?: Storage[],
-      types?: Model[],
-    });
-
-    addTypesFromSchema(
-      schemata: { [k: string]: Model.Schema },
-      ExtendingModel: Model
-    ): void;
-
-    addType(T: Model): void;
-
-    type(T: string): Model;
-
-    types(): Model[];
-
+/// <reference types="bluebird" />
+import { Observable } from 'rxjs/Rx';
+import * as Bluebird from 'bluebird';
+import * as Interfaces from './dataTypes';
+import { Storage } from './storage/storage';
+import { Model } from './model';
+export declare class Plump {
+    destroy$: Observable<string>;
+    private teardownSubject;
+    private storage;
+    private types;
+    private terminal;
+    constructor(opts?: {});
+    addType(T: Interfaces.ModelConstructor): void;
+    type(T: any): Interfaces.ModelConstructor;
     addStore(store: Storage): void;
-
-    find(
-      t: string | Model,
-      id: number
-    ): Model;
-
-    forge(
-      t: string | Model,
-      val: Model.Schema
-    ): Model;
-
-    subscribe(
-      typeName: string,
-      id: number,
-      handler: () => void
-    ): Rx.Subscription;
-
-    restRequest(opts: any): Bluebird<Model.Data>;
-
+    find(t: any, id: any): Model;
+    forge(t: any, val: any): any;
     teardown(): void;
-
-    get(
-      type: Model,
-      id: number,
-      keyOpts?: PropertyKey[]
-    ): Bluebird<Model>;
-
-    streamGet(
-      type: Model,
-      id: number,
-      keyOpts?: PropertyKey[]
-    ): Rx.Observable<Model>;
-
-    save(
-      type: Model,
-      val: Model.Schema
-    ): Bluebird<any>;
-
-    delete(
-      type: Model,
-      id: number
-    ): Bluebird<any>;
-
-    add(
-      type: Model,
-      id: number,
-      relationshipTitle: string,
-      childId: number,
-      extras?: StringIndexed<any>
-    ): Bluebird<any>;
-
-
-    modifyRelationship(
-      type: Model,
-      id: number,
-      relationshipTitle: string,
-      childId: number,
-      extras?: StringIndexed<any>
-    ): Bluebird<any>;
-
-    remove(
-      type: Model,
-      id: number,
-      relationshipTitle: string,
-      childId: number
-    ): Bluebird<any>;
-
-    invalidate(
-      type: Model,
-      id: number,
-      field: symbol | string,
-    ): Bluebird<any>;
+    get(value: Interfaces.ModelReference, opts?: string[]): Promise<any>;
+    save(value: Interfaces.DirtyModel): Promise<never> | Bluebird<Interfaces.ModelData>;
+    delete(item: Interfaces.ModelReference): Promise<never> | Bluebird<void[]>;
+    add(item: Interfaces.ModelReference, relName: string, child: Interfaces.RelationshipItem): Promise<never> | Bluebird<Interfaces.ModelData>;
+    modifyRelationship(item: Interfaces.ModelReference, relName: string, child: Interfaces.RelationshipItem): Promise<never> | Bluebird<Interfaces.ModelData>;
+    deleteRelationshipItem(item: Interfaces.ModelReference, relName: string, child: Interfaces.RelationshipItem): Promise<never> | Bluebird<Interfaces.ModelData>;
+    invalidate(item: Interfaces.ModelReference, field?: string | string[]): void;
 }

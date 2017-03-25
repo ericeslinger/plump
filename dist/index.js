@@ -1,66 +1,16 @@
-'use strict';
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+var plump_1 = require("./plump");
+exports.Plump = plump_1.Plump;
+var model_1 = require("./model");
+exports.Model = model_1.Model;
+var storage_1 = require("./storage/storage");
+exports.Storage = storage_1.Storage;
+var memory_1 = require("./storage/memory");
+exports.MemoryStore = memory_1.MemoryStore;
+var keyValueStore_1 = require("./storage/keyValueStore");
+exports.KeyValueStore = keyValueStore_1.KeyValueStore;
+var relationship_1 = require("./relationship");
+exports.Relationship = relationship_1.Relationship;
 
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-
-var _plump = require('./plump');
-
-Object.defineProperty(exports, 'Plump', {
-  enumerable: true,
-  get: function get() {
-    return _plump.Plump;
-  }
-});
-
-var _model = require('./model');
-
-Object.defineProperty(exports, 'Model', {
-  enumerable: true,
-  get: function get() {
-    return _model.Model;
-  }
-});
-Object.defineProperty(exports, '$all', {
-  enumerable: true,
-  get: function get() {
-    return _model.$all;
-  }
-});
-
-var _storage = require('./storage/storage');
-
-Object.defineProperty(exports, 'Storage', {
-  enumerable: true,
-  get: function get() {
-    return _storage.Storage;
-  }
-});
-
-var _memory = require('./storage/memory');
-
-Object.defineProperty(exports, 'MemoryStore', {
-  enumerable: true,
-  get: function get() {
-    return _memory.MemoryStore;
-  }
-});
-
-var _keyValueStore = require('./storage/keyValueStore');
-
-Object.defineProperty(exports, 'KeyValueStore', {
-  enumerable: true,
-  get: function get() {
-    return _keyValueStore.KeyValueStore;
-  }
-});
-
-var _relationship = require('./relationship');
-
-Object.defineProperty(exports, 'Relationship', {
-  enumerable: true,
-  get: function get() {
-    return _relationship.Relationship;
-  }
-});
-//# sourceMappingURL=data:application/json;charset=utf8;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbImluZGV4LmpzIl0sIm5hbWVzIjpbIlBsdW1wIiwiTW9kZWwiLCIkYWxsIiwiU3RvcmFnZSIsIk1lbW9yeVN0b3JlIiwiS2V5VmFsdWVTdG9yZSIsIlJlbGF0aW9uc2hpcCJdLCJtYXBwaW5ncyI6Ijs7Ozs7Ozs7Ozs7a0JBQVNBLEs7Ozs7Ozs7OztrQkFDQUMsSzs7Ozs7O2tCQUFPQyxJOzs7Ozs7Ozs7b0JBQ1BDLE87Ozs7Ozs7OzttQkFDQUMsVzs7Ozs7Ozs7OzBCQUNBQyxhOzs7Ozs7Ozs7eUJBQ0FDLFkiLCJmaWxlIjoiaW5kZXguanMiLCJzb3VyY2VzQ29udGVudCI6WyJleHBvcnQgeyBQbHVtcCB9IGZyb20gJy4vcGx1bXAnO1xuZXhwb3J0IHsgTW9kZWwsICRhbGwgfSBmcm9tICcuL21vZGVsJztcbmV4cG9ydCB7IFN0b3JhZ2UgfSBmcm9tICcuL3N0b3JhZ2Uvc3RvcmFnZSc7XG5leHBvcnQgeyBNZW1vcnlTdG9yZSB9IGZyb20gJy4vc3RvcmFnZS9tZW1vcnknO1xuZXhwb3J0IHsgS2V5VmFsdWVTdG9yZSB9IGZyb20gJy4vc3RvcmFnZS9rZXlWYWx1ZVN0b3JlJztcbmV4cG9ydCB7IFJlbGF0aW9uc2hpcCB9IGZyb20gJy4vcmVsYXRpb25zaGlwJztcbiJdfQ==
+//# sourceMappingURL=data:application/json;charset=utf8;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbImluZGV4LnRzIl0sIm5hbWVzIjpbXSwibWFwcGluZ3MiOiI7O0FBQUEsaUNBQWdDO0FBQXZCLHdCQUFBLEtBQUssQ0FBQTtBQUNkLGlDQUFnQztBQUF2Qix3QkFBQSxLQUFLLENBQUE7QUFDZCw2Q0FBNEM7QUFBbkMsNEJBQUEsT0FBTyxDQUFBO0FBQ2hCLDJDQUErQztBQUF0QywrQkFBQSxXQUFXLENBQUE7QUFDcEIseURBQXdEO0FBQS9DLHdDQUFBLGFBQWEsQ0FBQTtBQUN0QiwrQ0FBOEM7QUFBckMsc0NBQUEsWUFBWSxDQUFBIiwiZmlsZSI6ImluZGV4LmpzIiwic291cmNlc0NvbnRlbnQiOlsiZXhwb3J0IHsgUGx1bXAgfSBmcm9tICcuL3BsdW1wJztcbmV4cG9ydCB7IE1vZGVsIH0gZnJvbSAnLi9tb2RlbCc7XG5leHBvcnQgeyBTdG9yYWdlIH0gZnJvbSAnLi9zdG9yYWdlL3N0b3JhZ2UnO1xuZXhwb3J0IHsgTWVtb3J5U3RvcmUgfSBmcm9tICcuL3N0b3JhZ2UvbWVtb3J5JztcbmV4cG9ydCB7IEtleVZhbHVlU3RvcmUgfSBmcm9tICcuL3N0b3JhZ2Uva2V5VmFsdWVTdG9yZSc7XG5leHBvcnQgeyBSZWxhdGlvbnNoaXAgfSBmcm9tICcuL3JlbGF0aW9uc2hpcCc7XG5leHBvcnQge1xuICBNb2RlbERhdGEsXG4gIFJlbGF0aW9uc2hpcFNjaGVtYSxcbiAgUmVsYXRpb25zaGlwSXRlbSxcbiAgUmVsYXRpb25zaGlwRGVsdGEsXG4gIEZpZWxkTWV0YSxcbiAgTW9kZWxTY2hlbWEsXG4gIE1vZGVsQ29uc3RydWN0b3IsXG4gIE1vZGVsUmVmZXJlbmNlLFxuICBJbmRlZmluaXRlTW9kZWxEYXRhLFxuICBNb2RlbERlbHRhLFxuICBEaXJ0eU1vZGVsLFxuICBEaXJ0eVZhbHVlc1xufSBmcm9tICcuL2RhdGFUeXBlcyc7XG4iXX0=
