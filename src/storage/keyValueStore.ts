@@ -14,6 +14,8 @@ function saneNumber(i) {
   return ((typeof i === 'number') && (!isNaN(i)) && (i !== Infinity) && (i !== -Infinity));
 }
 
+// declare function parseInt(n: string | number, radix: number): number;
+
 export abstract class KeyValueStore extends Storage {
   protected maxKeys: { [typeName: string]: number } = {};
 
