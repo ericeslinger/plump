@@ -1,7 +1,7 @@
 /// <reference types="bluebird" />
 import * as Bluebird from 'bluebird';
 import { Observable } from 'rxjs/Rx';
-import { IndefiniteModelData, ModelData, ModelDelta, ModelSchema, ModelReference, RelationshipItem } from '../dataTypes';
+import { IndefiniteModelData, ModelData, ModelDelta, ModelSchema, ModelReference } from '../dataTypes';
 export declare abstract class Storage {
     terminal: boolean;
     read$: Observable<ModelData>;
@@ -18,7 +18,7 @@ export declare abstract class Storage {
     abstract cache(value: ModelData): Bluebird<ModelData>;
     abstract cacheAttributes(value: ModelData): Bluebird<ModelData>;
     abstract cacheRelationship(value: ModelData): Bluebird<ModelData>;
-    abstract readRelationship(value: ModelReference, key?: string | string[]): Bluebird<ModelData | RelationshipItem[]>;
+    abstract readRelationship(value: ModelReference, relName: string): Bluebird<ModelData>;
     abstract wipe(value: ModelReference, key?: string | string[]): void;
     abstract delete(value: ModelReference): Bluebird<void>;
     abstract writeRelationshipItem(value: ModelReference, relationshipTitle: string, child: {
@@ -28,7 +28,7 @@ export declare abstract class Storage {
         id: string | number;
     }): Bluebird<ModelData>;
     query(q: any): Bluebird<any>;
-    readRelationships(item: ModelReference, relationships: string[]): Bluebird<RelationshipItem[] | ModelData>;
+    readRelationships(item: ModelReference, relationships: string[]): Bluebird<ModelData>;
     read(item: ModelReference, opts?: string | string[]): Bluebird<any>;
     bulkRead(item: ModelReference): Bluebird<{
         data: any;

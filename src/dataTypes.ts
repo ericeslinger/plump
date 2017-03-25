@@ -11,6 +11,8 @@ export interface RelationshipSchema {
     sql?: {
       tableName: string;
       joinFields: StringIndexed<string>,
+      joinQuery?: StringIndexed<string>,
+      where?: StringIndexed<string>,
     },
   } & StringIndexed<any>;
 }
@@ -32,7 +34,8 @@ export interface ModelSchema {
     [attrName: string]: {
       type: 'number' | 'string' | 'boolean' | 'date' | 'array' | 'object';
       readOnly?: boolean;
-      default?: number | string | boolean | Date | string[];
+      // default?: number | string | boolean | Date | string[];
+      default?: any;
     }
   };
   relationships: {
@@ -43,8 +46,9 @@ export interface ModelSchema {
   };
   storeData?: StringIndexed<any> & {
     sql?: {
-      bulkQuery: string;
+      bulkQuery?: string;
       tableName: string;
+      singleQuery?: string;
     },
   };
 }
