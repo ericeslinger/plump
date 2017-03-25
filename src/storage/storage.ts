@@ -50,6 +50,7 @@ export abstract class Storage {
 
   // Abstract - all stores must provide below:
 
+  abstract allocateId(typeName: string): Bluebird<string | number>;
   abstract writeAttributes(value: IndefiniteModelData): Bluebird<ModelData>;
   abstract readAttributes(value: ModelReference): Bluebird<ModelData>;
   abstract cache(value: ModelData): Bluebird<ModelData>;
@@ -181,10 +182,13 @@ export abstract class Storage {
 
   addSchema(t: {typeName: string, schema: ModelSchema}) {
     this.types[t.typeName] = t.schema;
+    return Bluebird.resolve();
   }
 
-  addTypes(a) {
-    a.forEach(t => this.addSchema(t));
+  addSchemas(a): Bluebird<void> {
+    return Bluebird.all(
+      a.map(t => this.addSchema(t))
+    ).then(() => {/* noop */});
   }
 
 
