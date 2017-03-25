@@ -51,6 +51,7 @@ export abstract class Storage {
   abstract readRelationship(value: Interfaces.ModelReference, key?: string | string[]): Bluebird<Interfaces.ModelData>;
   abstract wipe(value: Interfaces.ModelReference, key?: string | string[]): void;
   abstract delete(value: Interfaces.ModelReference): Bluebird<void>;
+  abstract allocateId(typeName: string): Bluebird<string | number>;
   abstract writeRelationshipItem(
     value: Interfaces.ModelReference,
     relationshipTitle: string,
@@ -174,10 +175,13 @@ export abstract class Storage {
 
   addSchema(t: {typeName: string, schema: Interfaces.ModelSchema}) {
     this.types[t.typeName] = t.schema;
+    return Bluebird.resolve();
   }
 
-  addTypes(a) {
-    a.forEach(t => this.addSchema(t));
+  addSchemas(a): Bluebird<void> {
+    return Bluebird.all(
+      a.map(t => this.addSchema(t))
+    ).then(() => {/* noop */});
   }
 
 

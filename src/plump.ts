@@ -13,28 +13,25 @@ export class Plump {
   private types: Interfaces.StringIndexed<Interfaces.ModelConstructor>;
   private terminal: Storage;
 
-  constructor(opts = {}) {
-    const options = Object.assign({}, {
-      storage: [],
-      types: [],
-    }, opts);
+  constructor() {
     this.teardownSubject = new Subject();
     this.storage = [];
     this.types = {};
     this.destroy$ = this.teardownSubject.asObservable();
-    options.storage.forEach((s) => this.addStore(s));
-    options.types.forEach((t) => this.addType(t));
   }
 
-  addType(T: Interfaces.ModelConstructor) {
+  addType(T: Interfaces.ModelConstructor): Bluebird<void> {
     if (this.types[T.typeName] === undefined) {
       this.types[T.typeName] = T;
-      this.storage.forEach(s => s.addSchema(T));
-      if (this.terminal) {
-        this.terminal.addSchema(T);
-      }
+      return Bluebird.all(
+        this.storage.map(s => s.addSchema(T))
+      ).then(() => {
+        if (this.terminal) {
+          this.terminal.addSchema(T);
+        }
+      });
     } else {
-      throw new Error(`Duplicate Type registered: ${T.typeName}`);
+      return Bluebird.reject(`Duplicate Type registered: ${T.typeName}`);
     }
   }
 
@@ -42,7 +39,7 @@ export class Plump {
     return this.types[T];
   }
 
-  addStore(store: Storage) {
+  addStore(store: Storage): Bluebird<void> {
     if (store.terminal) {
       if (this.terminal !== undefined) {
         throw new Error('cannot have more than one terminal store');
@@ -58,9 +55,9 @@ export class Plump {
         store.wire(this.terminal, this.destroy$);
       }
     }
-    for (const typeName in this.types) {
-      store.addSchema(this.types[typeName]);
-    }
+    return store.addSchemas(
+      Object.keys(this.types).map(k => this.types[k])
+    );
   }
 
   find(t, id): Model {

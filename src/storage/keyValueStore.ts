@@ -8,7 +8,11 @@ function saneNumber(i) {
   return ((typeof i === 'number') && (!isNaN(i)) && (i !== Infinity) && (i !== -Infinity));
 }
 
+// declare function parseInt(n: string | number, radix: number): number;
+
 export abstract class KeyValueStore extends Storage {
+  private maxKeys: { [typeName: string]: number } = {};
+
   abstract _keys(typeName: string): Bluebird<string[]>;
   abstract _get(k: string): Bluebird<Interfaces.ModelData | null>;
   abstract _set(k: string, v: Interfaces.ModelData): Bluebird<Interfaces.ModelData>;
@@ -28,6 +32,11 @@ export abstract class KeyValueStore extends Storage {
     });
   }
 
+  allocateId(typeName: string) {
+    this.maxKeys[typeName] = this.maxKeys[typeName] + 1;
+    return Bluebird.resolve(this.maxKeys[typeName]);
+  }
+
   writeAttributes(inputValue: Interfaces.IndefiniteModelData) {
     const value = this.validateInput(inputValue);
     delete value.relationships;
@@ -40,13 +49,16 @@ export abstract class KeyValueStore extends Storage {
     })
     .then(() => {
       if ((value.id === undefined) || (value.id === null)) {
-        return this.$$maxKey(value.typeName)
+        return this.allocateId(value.typeName)
         .then((n) => {
-          const id = n + 1;
-          return mergeOptions({}, value, { id: id, relationships: {} }); // if new.
+          return mergeOptions({}, value, { id: n, relationships: {} }); // if new.
         });
       } else {
         // if not new, get current (including relationships) and merge
+        const thisId = typeof value.id === 'string' ? parseInt(value.id, 10) : value.id;
+        if (saneNumber(thisId) && thisId > this.maxKeys[value.typeName]) {
+          this.maxKeys[value.typeName] = thisId;
+        }
         return this._get(this.keyString(value as Interfaces.ModelReference)).then(current => mergeOptions({}, current, value));
       }
     })
@@ -275,6 +287,25 @@ export abstract class KeyValueStore extends Storage {
       })
       .then(() => thisItem);
     });
+  }
+
+  addSchema(t: {typeName: string, schema: Interfaces.ModelSchema}) {
+    return super.addSchema(t)
+    .then(() => {
+      return this._keys(t.typeName)
+      .then((keyArray) => {
+        if (keyArray.length === 0) {
+          return 0;
+        } else {
+          return keyArray.map((k) => k.split(':')[2])
+          .map((k) => parseInt(k, 10))
+          .filter((i) => saneNumber(i))
+          .reduce((max, current) => (current > max) ? current : max, 0);
+        }
+      }).then((n) => {
+        this.maxKeys[t.typeName] = n;
+      });
+    })
   }
 
   keyString(value: Interfaces.ModelReference) {

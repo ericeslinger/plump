@@ -197,14 +197,12 @@ export function testSuite(context, storeOpts ) {
     context.describe('events', () => {
       context.it('should pass basic write-invalidation events to other datastores', () => {
         const memstore = new MemoryStore();
-        const testPlump = new Plump({
-          storage: [memstore, actualStore],
-          types: [TestType],
-        });
-        return actualStore.writeAttributes({
-          typeName: 'tests',
-          attributes: { name: 'potato' },
-        }).then((createdObject) => {
+        const testPlump = new Plump();{
+        return testPlump.addStore(memstore)
+        .then(() => testPlump.addStore(actualStore))
+        .then(() => testPlump.addType(TestType))
+        .then(() => actualStore.writeAttributes({ typeName: 'tests', attributes: { name: 'potato' } })
+        .then((createdObject) => {
           return actualStore.read({ typeName: 'tests', id: createdObject.id })
           .then(() => {
             return new Bluebird((resolve) => setTimeout(resolve, 100))
