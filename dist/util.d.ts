@@ -1,7 +1,2 @@
-export interface StringIndexed<T> {
-  [index: string]: T,
-}
-
-export interface NumericIDed {
-  $id: number,
-}
+import { ModelData, IndefiniteModelData, ModelSchema } from './dataTypes';
+export declare function validateInput(schema: ModelSchema, value: IndefiniteModelData): ModelData;
