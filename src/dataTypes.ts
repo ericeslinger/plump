@@ -51,7 +51,7 @@ export interface ModelSchema {
   };
   relationships: {
     [relName: string]: {
-      type: {schema: RelationshipSchema},
+      type: RelationshipSchema,
       readOnly?: boolean,
     },
   };

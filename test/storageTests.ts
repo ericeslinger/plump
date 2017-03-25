@@ -1,9 +1,8 @@
 /* eslint-env node */
 /* eslint no-shadow: 0, max-len: 0 */
 
-import { MemoryStore, Plump } from '../src/index';
 import { TestType } from './testType';
-import * as Interfaces from '../src/dataTypes';
+import { MemoryStore, Plump } from '../src/index';
 import * as Bluebird from 'bluebird';
 import * as mergeOptions from 'merge-options';
 
@@ -29,7 +28,7 @@ const sampleObject = {
   relationships: {},
 };
 
-export function testSuite(mocha, storeOpts) {
+export function testSuite(context, storeOpts ) {
   const store = Object.assign(
     {},
     {
@@ -38,9 +37,9 @@ export function testSuite(mocha, storeOpts) {
     },
     storeOpts
   );
-  mocha.describe(store.name, () => {
+  context.describe(store.name, () => {
     let actualStore;
-    mocha.before(() => {
+    context.before(() => {
       return (store.before || (() => Bluebird.resolve()))(actualStore)
       .then(() => {
         actualStore = new store.ctor(store.opts); // eslint-disable-line new-cap
@@ -48,8 +47,8 @@ export function testSuite(mocha, storeOpts) {
       });
     });
 
-    mocha.describe('core CRUD', () => {
-      mocha.it('supports creating values with no id field, and retrieving values', () => {
+    context.describe('core CRUD', () => {
+      context.it('supports creating values with no id field, and retrieving values', () => {
         return actualStore.writeAttributes(sampleObject)
         .then((createdObject) => {
           return actualStore.read({ typeName: 'tests', id: createdObject.id }, ['attributes', 'relationships'])
@@ -76,7 +75,7 @@ export function testSuite(mocha, storeOpts) {
         });
       });
 
-      mocha.it('allows objects to be stored by id', () => {
+      context.it('allows objects to be stored by id', () => {
         return actualStore.writeAttributes(sampleObject)
         .then((createdObject) => {
           const modObject = mergeOptions({}, createdObject, { attributes: { name: 'carrot' } });
@@ -97,7 +96,7 @@ export function testSuite(mocha, storeOpts) {
         });
       });
 
-      mocha.it('allows for deletion of objects by id', () => {
+      context.it('allows for deletion of objects by id', () => {
         return actualStore.writeAttributes(sampleObject)
         .then((createdObject) => {
           return expect(actualStore.read({ typeName: 'tests', id: createdObject.id }))
@@ -108,8 +107,8 @@ export function testSuite(mocha, storeOpts) {
       });
     });
 
-    mocha.describe('relationships', () => {
-      mocha.it('can fetch a base and hasmany in one read', () => {
+    context.describe('relationships', () => {
+      context.it('can fetch a base and hasmany in one read', () => {
         return actualStore.writeAttributes(sampleObject)
         .then((createdObject) => {
           return actualStore.writeRelationshipItem({ typeName: 'tests', id: createdObject.id }, 'children', { id: 200 })
@@ -126,7 +125,7 @@ export function testSuite(mocha, storeOpts) {
         });
       });
 
-      mocha.it('can add to a hasMany relationship', () => {
+      context.it('can add to a hasMany relationship', () => {
         return actualStore.writeAttributes(sampleObject)
         .then((createdObject) => {
           return actualStore.writeRelationshipItem({ typeName: 'tests', id: createdObject.id }, 'children', { id: 100 })
@@ -144,11 +143,11 @@ export function testSuite(mocha, storeOpts) {
             ]);
             return actualStore.read({ typeName: 'tests', id: createdObject.id }, ['relationships.parents']);
           })
-          .then((v: Interfaces.ModelData) => expect(v.relationships.parents).to.deep.equal([{ id: 100 }]));
+          .then((v) => expect(v.relationships.parents).to.deep.equal([{ id: 100 }]));
         });
       });
 
-      mocha.it('can add to a hasMany relationship with extras', () => {
+      context.it('can add to a hasMany relationship with extras', () => {
         return actualStore.writeAttributes(sampleObject)
         .then((createdObject) => {
           return actualStore.writeRelationshipItem(
@@ -161,7 +160,7 @@ export function testSuite(mocha, storeOpts) {
         });
       });
 
-      mocha.it('can modify valence on a hasMany relationship', () => {
+      context.it('can modify valence on a hasMany relationship', () => {
         return actualStore.writeAttributes(sampleObject)
         .then((createdObject) => {
           return actualStore.writeRelationshipItem(
@@ -182,7 +181,7 @@ export function testSuite(mocha, storeOpts) {
         });
       });
 
-      mocha.it('can remove from a hasMany relationship', () => {
+      context.it('can remove from a hasMany relationship', () => {
         return actualStore.writeAttributes(sampleObject)
         .then((createdObject) => {
           return actualStore.writeRelationshipItem({ typeName: 'tests', id: createdObject.id }, 'children', { id: 100 })
@@ -195,8 +194,8 @@ export function testSuite(mocha, storeOpts) {
       });
     });
 
-    mocha.describe('events', () => {
-      mocha.it('should pass basic write-invalidation events to other datastores', () => {
+    context.describe('events', () => {
+      context.it('should pass basic write-invalidation events to other datastores', () => {
         const memstore = new MemoryStore();
         const testPlump = new Plump({
           storage: [memstore, actualStore],
@@ -232,7 +231,7 @@ export function testSuite(mocha, storeOpts) {
         });
       });
 
-      mocha.it('should pass basic cacheable-read events up the stack', () => {
+      context.it('should pass basic cacheable-read events up the stack', () => {
         const testPlump = new Plump({ types: [TestType] });
         let testItem;
         let memstore;
@@ -263,7 +262,7 @@ export function testSuite(mocha, storeOpts) {
         }).finally(() => testPlump.teardown());
       });
 
-      mocha.it('should pass write-invalidation events on hasMany relationships to other datastores', () => {
+      context.it('should pass write-invalidation events on hasMany relationships to other datastores', () => {
         let testItem;
         const memstore = new MemoryStore();
         const testPlump = new Plump({
@@ -290,7 +289,7 @@ export function testSuite(mocha, storeOpts) {
           return new Bluebird((resolve) => setTimeout(resolve, 100));
         })
         .then(() => memstore.read({ typeName: 'tests', id: testItem.id }, 'children'))
-        .then((v) => expect(v.relationships.children).to.deep.equal([{id: 100}]))
+        .then((v) => expect(v.relationships.children).to.deep.equal([{ id: 100 }]))
         .then(() => actualStore.writeRelationshipItem({ typeName: 'tests', id: testItem.id }, 'children', { id: 101 }))
         .then(() => new Bluebird((resolve) => setTimeout(resolve, 100)))
         .then(() => memstore.read({ typeName: 'tests', id: testItem.id }))
@@ -298,7 +297,7 @@ export function testSuite(mocha, storeOpts) {
         .finally(() => testPlump.teardown());
       });
 
-      mocha.it('should pass cacheable-read events on hasMany relationships to other datastores', () => {
+      context.it('should pass cacheable-read events on hasMany relationships to other datastores', () => {
         const testPlump = new Plump({ types: [TestType] });
         let testItem;
         let memstore;
@@ -319,12 +318,12 @@ export function testSuite(mocha, storeOpts) {
           return actualStore.read({ typeName: 'tests', id: testItem.id }, 'children');
         }).then(() => new Bluebird((resolve) => setTimeout(resolve, 100)))
         .then(() => memstore.read({ typeName: 'tests', id: testItem.id }, 'children'))
-        .then((v) => expect(v.relationships.children).to.deep.equal([{id: 100}]))
+        .then((v) => expect(v.relationships.children).to.deep.equal([{ id: 100 }]))
         .finally(() => testPlump.teardown());
       });
     });
 
-    mocha.after(() => {
+    context.after(() => {
       return (store.after || (() => { return; }))(actualStore);
     });
   });

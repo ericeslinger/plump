@@ -168,7 +168,7 @@ export abstract class KeyValueStore extends Storage {
 
   writeRelationshipItem(value: Interfaces.ModelReference, relName: string, child: Interfaces.RelationshipItem) {
     const schema = this.getSchema(value.typeName);
-    const relSchema = schema.relationships[relName].type.schema;
+    const relSchema = schema.relationships[relName].type;
     const otherRelType = relSchema.sides[relName].otherType;
     const otherRelName = relSchema.sides[relName].otherName;
     const thisKeyString = this.keyString(value);
@@ -241,7 +241,7 @@ export abstract class KeyValueStore extends Storage {
 
   deleteRelationshipItem(value: Interfaces.ModelReference, relName: string, child: Interfaces.RelationshipItem) {
     const schema = this.getSchema(value.typeName);
-    const relSchema = schema.relationships[relName].type.schema;
+    const relSchema = schema.relationships[relName].type;
     const otherRelType = relSchema.sides[relName].otherType;
     const otherRelName = relSchema.sides[relName].otherName;
     const thisKeyString = this.keyString(value);
