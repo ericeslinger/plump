@@ -2,17 +2,23 @@ import * as mergeOptions from 'merge-options';
 import { Observable, Subscription, Observer } from 'rxjs/Rx';
 
 import { validateInput } from './util';
-import * as Interfaces from './dataTypes';
+import {
+  ModelData,
+  ModelDelta,
+  ModelSchema,
+  DirtyValues,
+  DirtyModel,
+  RelationshipDelta,
+  RelationshipItem,
+} from './dataTypes';
 
 // TODO: figure out where error events originate (storage or model)
 // and who keeps a roll-backable delta
 
-
-
 export abstract class Model {
   id: string | number;
   static typeName = 'BASE';
-  static schema: Interfaces.ModelSchema = {
+  static schema: ModelSchema = {
     idAttribute: 'id',
     name: 'BASE',
     attributes: {},
@@ -20,7 +26,7 @@ export abstract class Model {
   };
   private static storeCache = new Map();
 
-  private dirty: Interfaces.DirtyValues;
+  private dirty: DirtyValues;
 
   get typeName() {
     return this.constructor['typeName'];
@@ -96,7 +102,7 @@ export abstract class Model {
 
   // TODO: Should $save ultimately return this.get()?
   save() {
-    const update: Interfaces.DirtyModel = mergeOptions(
+    const update: DirtyModel = mergeOptions(
       { id: this.id, typeName: this.typeName },
       this.dirty
     );
@@ -123,12 +129,12 @@ export abstract class Model {
     return this;
   }
 
-  subscribe(cb: Observer<Interfaces.ModelData>): Subscription;
-  subscribe(fields: string | string[], cb: Observer<Interfaces.ModelData>): Subscription;
-  subscribe(arg1: Observer<Interfaces.ModelData> | string | string[], arg2?: Observer<Interfaces.ModelData>): Subscription {
+  subscribe(cb: Observer<ModelData>): Subscription;
+  subscribe(fields: string | string[], cb: Observer<ModelData>): Subscription;
+  subscribe(arg1: Observer<ModelData> | string | string[], arg2?: Observer<ModelData>): Subscription {
 
     let fields: string[] = [];
-    let cb: Observer<Interfaces.ModelData> = null;
+    let cb: Observer<ModelData> = null;
 
     if (arg2) {
       cb = arg2;
@@ -138,7 +144,7 @@ export abstract class Model {
         fields = [arg1 as string];
       }
     } else {
-      cb = arg1 as Observer<Interfaces.ModelData>;
+      cb = arg1 as Observer<ModelData>;
       fields = ['attributes'];
     }
 
@@ -174,7 +180,7 @@ export abstract class Model {
     // const watchRead$ = Observable.from(terminal)
     // .flatMap(s => s.read$.filter(v => v.type === this.typeName && v.id === this.id));
     const watchWrite$ = terminal.write$
-    .filter((v: Interfaces.ModelDelta) => {
+    .filter((v: ModelDelta) => {
       return (
         (v.typeName === this.typeName) &&
         (v.id === this.id) &&
@@ -205,7 +211,7 @@ export abstract class Model {
     return this.plump.restRequest(restOpts).then(res => res.data);
   }
 
-  add(key: string, item: Interfaces.RelationshipItem) {
+  add(key: string, item: RelationshipItem) {
     if (key in this.schema.relationships) {
       if (item.id >= 1) {
         if (this.dirty.relationships[key] === undefined) {
@@ -226,7 +232,7 @@ export abstract class Model {
     }
   }
 
-  modifyRelationship(key: string, item: Interfaces.RelationshipItem) {
+  modifyRelationship(key: string, item: RelationshipItem) {
     if (key in this.schema.relationships) {
       if (item.id >= 1) {
         this.dirty.relationships[key] = this.dirty.relationships[key] || [];
@@ -244,7 +250,7 @@ export abstract class Model {
     }
   }
 
-  remove(key: string, item: Interfaces.RelationshipItem) {
+  remove(key: string, item: RelationshipItem) {
     if (key in this.schema.relationships) {
       if (item.id >= 1) {
         if (!(key in this.dirty.relationships)) {
@@ -317,7 +323,7 @@ export abstract class Model {
     return mergeOptions({}, base, updates);
   }
 
-  static resolveRelationship(deltas: Interfaces.RelationshipDelta[], base: Interfaces.RelationshipItem[] = []) {
+  static resolveRelationship(deltas: RelationshipDelta[], base: RelationshipItem[] = []) {
     const retVal = base.concat();
     deltas.forEach((delta) => {
       if ((delta.op === 'add') || (delta.op === 'modify')) {

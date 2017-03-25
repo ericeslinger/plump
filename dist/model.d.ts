@@ -1,10 +1,10 @@
 import { Subscription, Observer } from 'rxjs/Rx';
-import * as Interfaces from './dataTypes';
+import { ModelData, ModelSchema, RelationshipDelta, RelationshipItem } from './dataTypes';
 export declare abstract class Model {
     private plump;
     id: string | number;
     static typeName: string;
-    static schema: Interfaces.ModelSchema;
+    static schema: ModelSchema;
     private static storeCache;
     private dirty;
     readonly typeName: any;
@@ -17,14 +17,14 @@ export declare abstract class Model {
     bulkGet(): any;
     save(): any;
     set(update: any): this;
-    subscribe(cb: Observer<Interfaces.ModelData>): Subscription;
-    subscribe(fields: string | string[], cb: Observer<Interfaces.ModelData>): Subscription;
+    subscribe(cb: Observer<ModelData>): Subscription;
+    subscribe(fields: string | string[], cb: Observer<ModelData>): Subscription;
     delete(): any;
     $rest(opts: any): any;
-    add(key: string, item: Interfaces.RelationshipItem): this;
-    modifyRelationship(key: string, item: Interfaces.RelationshipItem): this;
-    remove(key: string, item: Interfaces.RelationshipItem): this;
-    static applyDefaults(v: any): Interfaces.ModelData;
+    add(key: string, item: RelationshipItem): this;
+    modifyRelationship(key: string, item: RelationshipItem): this;
+    remove(key: string, item: RelationshipItem): this;
+    static applyDefaults(v: any): ModelData;
     static applyDelta(current: any, delta: any): any;
     static cacheGet(store: any, key: any): any;
     static cacheSet(store: any, key: any, value: any): void;
@@ -36,5 +36,5 @@ export declare abstract class Model {
         relationships: any;
     };
     static resolveRelationships(deltas: any, base?: {}): any;
-    static resolveRelationship(deltas: Interfaces.RelationshipDelta[], base?: Interfaces.RelationshipItem[]): Interfaces.RelationshipItem[];
+    static resolveRelationship(deltas: RelationshipDelta[], base?: RelationshipItem[]): RelationshipItem[];
 }
