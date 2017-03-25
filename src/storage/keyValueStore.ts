@@ -298,21 +298,24 @@ export abstract class KeyValueStore extends Storage {
   addSchema(t: {typeName: string, schema: ModelSchema}) {
     return super.addSchema(t)
     .then(() => {
-      return this._keys(t.typeName)
-      .then((keyArray) => {
-        if (keyArray.length === 0) {
-          return 0;
-        } else {
-          return keyArray.map((k) => k.split(':')[2])
-          .map((k) => parseInt(k, 10))
-          .filter((i) => saneNumber(i))
-          .reduce((max, current) => (current > max) ? current : max, 0);
-        }
-      }).then((n) => {
-        this.maxKeys[t.typeName] = n;
-      });
-    })
+      this.maxKeys[t.typeName] = 0;
+    });
   }
+  //     return this._keys(t.typeName)
+  //     .then((keyArray) => {
+  //       if (keyArray.length === 0) {
+  //         return 0;
+  //       } else {
+  //         return keyArray.map((k) => k.split(':')[2])
+  //         .map((k) => parseInt(k, 10))
+  //         .filter((i) => saneNumber(i))
+  //         .reduce((max, current) => (current > max) ? current : max, 0);
+  //       }
+  //     }).then((n) => {
+  //       this.maxKeys[t.typeName] = n;
+  //     });
+  //   })
+  // }
 
   keyString(value: ModelReference) {
     return `${value.typeName}:${value.id}`;

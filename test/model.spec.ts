@@ -10,10 +10,7 @@ import { TestType } from './testType';
 
 const memstore2 = new MemoryStore({ terminal: true });
 
-const plump = new Plump({
-  storage: [memstore2],
-  types: [TestType],
-});
+const plump = new Plump();
 
 Bluebird.config({
   longStackTraces: true
@@ -21,6 +18,11 @@ Bluebird.config({
 
 chai.use(chaiAsPromised);
 const expect = chai.expect;
+
+before(() => {
+  return plump.addStore(memstore2)
+  .then(() => plump.addType(TestType));
+})
 
 describe('model', () => {
   describe('basic functionality', () => {
@@ -321,50 +323,56 @@ describe('model', () => {
         };
         const delayedMemstore = new Proxy(new MemoryStore({ terminal: true }), DelayProxy);
         const coldMemstore = new MemoryStore();
-        const otherPlump = new Plump({
-          storage: [coldMemstore, delayedMemstore],
-          types: [TestType],
-        });
-        const one = new TestType({ name: 'slowtato' }, otherPlump);
-        one.save()
-        .then(() => one.get())
-        .then((val) => {
-          return coldMemstore.cache({
-            id: val.id,
-            typeName: 'tests',
-            attributes: {
-              name: 'potato',
+        const otherPlump = new Plump();
+        // {
+        //   storage: [coldMemstore, delayedMemstore],
+        //   types: [TestType],
+        // });
+        otherPlump.addType(TestType)
+        .then(() => otherPlump.addStore(coldMemstore))
+        .then(() => otherPlump.addStore(delayedMemstore))
+        .then(() => {
+          const one = new TestType({ name: 'slowtato' }, otherPlump);
+          one.save()
+          .then(() => one.get())
+          .then((val) => {
+            return coldMemstore.cache({
               id: val.id,
-            },
-          })
-          .then(() => {
-            let phase = 0;
-            const two = otherPlump.find('tests', val.id);
-            const subscription = two.subscribe({
-              error: (err) => {
-                throw err;
+              typeName: 'tests',
+              attributes: {
+                name: 'potato',
+                id: val.id,
               },
-              complete: () => { /* noop */ },
-              next: (v) => {
-                try {
-                  if (phase === 0) {
-                    if (v.attributes.name) {
-                      expect(v).to.have.property('attributes').with.property('name', 'potato');
-                      phase = 1;
+            })
+            .then(() => {
+              let phase = 0;
+              const two = otherPlump.find('tests', val.id);
+              const subscription = two.subscribe({
+                error: (err) => {
+                  throw err;
+                },
+                complete: () => { /* noop */ },
+                next: (v) => {
+                  try {
+                    if (phase === 0) {
+                      if (v.attributes.name) {
+                        expect(v).to.have.property('attributes').with.property('name', 'potato');
+                        phase = 1;
+                      }
                     }
-                  }
-                  if (phase === 1) {
-                    if (v.attributes.name !== 'potato') {
-                      expect(v).to.have.property('attributes').with.property('name', 'slowtato');
-                      subscription.unsubscribe();
-                      resolve();
+                    if (phase === 1) {
+                      if (v.attributes.name !== 'potato') {
+                        expect(v).to.have.property('attributes').with.property('name', 'slowtato');
+                        subscription.unsubscribe();
+                        resolve();
+                      }
                     }
+                  } catch (err) {
+                    subscription.unsubscribe();
+                    reject(err);
                   }
-                } catch (err) {
-                  subscription.unsubscribe();
-                  reject(err);
                 }
-              }
+              });
             });
           });
         });

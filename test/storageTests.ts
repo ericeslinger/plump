@@ -197,11 +197,11 @@ export function testSuite(context, storeOpts ) {
     context.describe('events', () => {
       context.it('should pass basic write-invalidation events to other datastores', () => {
         const memstore = new MemoryStore();
-        const testPlump = new Plump();{
+        const testPlump = new Plump();
         return testPlump.addStore(memstore)
         .then(() => testPlump.addStore(actualStore))
         .then(() => testPlump.addType(TestType))
-        .then(() => actualStore.writeAttributes({ typeName: 'tests', attributes: { name: 'potato' } })
+        .then(() => actualStore.writeAttributes({ typeName: 'tests', attributes: { name: 'potato' } }))
         .then((createdObject) => {
           return actualStore.read({ typeName: 'tests', id: createdObject.id })
           .then(() => {
@@ -224,19 +224,19 @@ export function testSuite(context, storeOpts ) {
               .to.eventually.be.null;
             });
           });
-        }).finally(() => {
+        })
+        .finally(() => {
           return testPlump.teardown();
         });
       });
 
       context.it('should pass basic cacheable-read events up the stack', () => {
-        const testPlump = new Plump({ types: [TestType] });
+        const testPlump = new Plump();
         let testItem;
         let memstore;
-        return actualStore.writeAttributes({
-          typeName: 'tests',
-          attributes: { name: 'potato' },
-        }).then((createdObject) => {
+        return testPlump.addType(TestType)
+        .then(() => actualStore.writeAttributes({ typeName: 'tests', attributes: { name: 'potato' } }))
+        .then((createdObject) => {
           testItem = createdObject;
           return expect(actualStore.read({ typeName: 'tests', id: testItem.id }))
           .to.eventually.have.deep.property('attributes.name', 'potato');
@@ -263,14 +263,12 @@ export function testSuite(context, storeOpts ) {
       context.it('should pass write-invalidation events on hasMany relationships to other datastores', () => {
         let testItem;
         const memstore = new MemoryStore();
-        const testPlump = new Plump({
-          storage: [memstore, actualStore],
-          types: [TestType],
-        });
-        return actualStore.writeAttributes({
-          typeName: 'tests',
-          attributes: { name: 'potato' },
-        }).then((createdObject) => {
+        const testPlump = new Plump();
+        return testPlump.addType(TestType)
+        .then(() => testPlump.addStore(memstore))
+        .then(() => testPlump.addStore(actualStore))
+        .then(() => actualStore.writeAttributes({ typeName: 'tests', attributes: { name: 'potato' } }))
+        .then((createdObject) => {
           testItem = createdObject;
           return expect(actualStore.read({ typeName: 'tests', id: testItem.id }))
           .to.eventually.have.deep.property('attributes.name', 'potato');
@@ -296,13 +294,12 @@ export function testSuite(context, storeOpts ) {
       });
 
       context.it('should pass cacheable-read events on hasMany relationships to other datastores', () => {
-        const testPlump = new Plump({ types: [TestType] });
         let testItem;
         let memstore;
-        return actualStore.writeAttributes({
-          typeName: 'tests',
-          attributes: { name: 'potato' },
-        }).then((createdObject) => {
+        const testPlump = new Plump();
+        return testPlump.addType(TestType)
+        .then(() => actualStore.writeAttributes({ typeName: 'tests', attributes: { name: 'potato' } }))
+        .then((createdObject) => {
           testItem = createdObject;
           return expect(actualStore.read({ typeName: 'tests', id: testItem.id }))
           .to.eventually.have.deep.property('attributes.name', 'potato');

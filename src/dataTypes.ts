@@ -30,9 +30,11 @@ export interface ModelSchema {
   name: string;
   attributes: {
     [attrName: string]: {
-      type: 'number' | 'string' | 'boolean' | 'date' | 'array' | 'object';
       readOnly?: boolean;
-      default?: number | string | boolean | Date | string[];
+      type: string;
+      default?: any;
+      // type: 'number' | 'string' | 'boolean' | 'date' | 'array' | 'object';
+      // default?: number | string | boolean | Date | string[];
     }
   };
   relationships: {

@@ -35,62 +35,65 @@ describe('Plump', () => {
     const coldMemstore = new MemoryStore();
     const hotMemstore = new MemoryStore();
     hotMemstore.hot = () => true;
-    const otherPlump = new Plump({
-      storage: [hotMemstore, coldMemstore, delayedMemstore],
-      types: [TestType],
-    });
-    const invalidated = new TestType({ name: 'foo' }, otherPlump);
-    invalidated.save()
+    const otherPlump = new Plump();
+    otherPlump.addStore(hotMemstore)
+    .then(() => otherPlump.addStore(coldMemstore))
+    .then(() => otherPlump.addStore(delayedMemstore))
+    .then(() => otherPlump.addType(TestType))
     .then(() => {
-      let phase = 0;
-      const newOne = otherPlump.find('tests', invalidated.id);
-      const subscription = newOne.subscribe({
-        next: (v) => {
-          try {
-            if (phase === 0) {
-              if (v.attributes.name) {
-                expect(v).to.have.property('attributes').with.property('name', 'foo');
-                phase = 1;
+      const invalidated = new TestType({ name: 'foo' }, otherPlump);
+      invalidated.save()
+      .then(() => {
+        let phase = 0;
+        const newOne = otherPlump.find('tests', invalidated.id);
+        const subscription = newOne.subscribe({
+          next: (v) => {
+            try {
+              if (phase === 0) {
+                if (v.attributes.name) {
+                  expect(v).to.have.property('attributes').with.property('name', 'foo');
+                  phase = 1;
+                }
               }
-            }
-            if (phase === 1) {
-              if (v.attributes.name === 'slowtato') {
-                phase = 2;
-              } else if (v.attributes.name === 'grotato') {
-                subscription.unsubscribe();
-                done();
+              if (phase === 1) {
+                if (v.attributes.name === 'slowtato') {
+                  phase = 2;
+                } else if (v.attributes.name === 'grotato') {
+                  subscription.unsubscribe();
+                  done();
+                }
               }
-            }
-            if (phase === 2) {
-              if (v.attributes.name !== 'slowtato') {
-                expect(v).to.have.property('attributes').with.property('name', 'grotato');
-                subscription.unsubscribe();
-                done();
+              if (phase === 2) {
+                if (v.attributes.name !== 'slowtato') {
+                  expect(v).to.have.property('attributes').with.property('name', 'grotato');
+                  subscription.unsubscribe();
+                  done();
+                }
               }
+            } catch (err) {
+              subscription.unsubscribe();
+              done(err);
             }
-          } catch (err) {
-            subscription.unsubscribe();
-            done(err);
+          },
+          complete: () => { /* noop */ },
+          error: (err) => {
+            throw err;
           }
-        },
-        complete: () => { /* noop */ },
-        error: (err) => {
-          throw err;
-        }
-      });
-      return coldMemstore._set(
-        coldMemstore.keyString(invalidated),
-        { id: invalidated.id, attributes: { name: 'slowtato' }, relationships: {} }
-      );
-    })
-    .then(() => {
-      return terminalStore._set(
-        terminalStore.keyString(invalidated),
-        { id: invalidated.id, attributes: { name: 'grotato' }, relationships: {} }
-      );
-    })
-    .then(() => {
-      return otherPlump.invalidate(invalidated, ['attributes']);
+        });
+        return coldMemstore._set(
+          coldMemstore.keyString(invalidated),
+          { id: invalidated.id, attributes: { name: 'slowtato' }, relationships: {} }
+        );
+      })
+      .then(() => {
+        return terminalStore._set(
+          terminalStore.keyString(invalidated),
+          { id: invalidated.id, attributes: { name: 'grotato' }, relationships: {} }
+        );
+      })
+      .then(() => {
+        return otherPlump.invalidate(invalidated, ['attributes']);
+      })
     })
     .catch((err) => done(err));
   });
