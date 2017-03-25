@@ -24,7 +24,7 @@ export function validateInput(schema: ModelSchema, value: IndefiniteModelData): 
   for (const attrName in schema.attributes) {
     if (!value.attributes[attrName] && (schema.attributes[attrName].default !== undefined)) {
       if (Array.isArray(schema.attributes[attrName].default)) {
-        retVal.attributes[attrName] = schema.attributes[attrName].default.concat();
+        retVal.attributes[attrName] = (schema.attributes[attrName].default as any[]).concat();
       } else if (typeof schema.attributes[attrName].default === 'object') {
         retVal.attributes[attrName] = Object.assign({}, schema.attributes[attrName].default);
       } else {
