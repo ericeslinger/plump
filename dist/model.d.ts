@@ -5,7 +5,6 @@ export declare abstract class Model {
     id: string | number;
     static typeName: string;
     static schema: ModelSchema;
-    private static storeCache;
     private dirty;
     readonly typeName: any;
     readonly schema: any;
@@ -26,8 +25,6 @@ export declare abstract class Model {
     remove(key: string, item: RelationshipItem): this;
     static applyDefaults(v: any): ModelData;
     static applyDelta(current: any, delta: any): any;
-    static cacheGet(store: any, key: any): any;
-    static cacheSet(store: any, key: any, value: any): void;
     static resolveAndOverlay(update: any, base?: {
         attributes: {};
         relationships: {};

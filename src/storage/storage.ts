@@ -56,7 +56,7 @@ export abstract class Storage {
   abstract cache(value: ModelData): Bluebird<ModelData>;
   abstract cacheAttributes(value: ModelData): Bluebird<ModelData>;
   abstract cacheRelationship(value: ModelData): Bluebird<ModelData>;
-  abstract readRelationship(value: ModelReference, key?: string | string[]): Bluebird<ModelData | RelationshipItem[]>;
+  abstract readRelationship(value: ModelReference, relName: string): Bluebird<ModelData>;
   abstract wipe(value: ModelReference, key?: string | string[]): void;
   abstract delete(value: ModelReference): Bluebird<void>;
   abstract writeRelationshipItem(

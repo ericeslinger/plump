@@ -24,7 +24,6 @@ export abstract class Model {
     attributes: {},
     relationships: {},
   };
-  private static storeCache = new Map();
 
   private dirty: DirtyValues;
 
@@ -296,17 +295,6 @@ export abstract class Model {
       return current;
     }
   };
-
-  static cacheGet(store, key) {
-    return (this.storeCache.get(store) || {})[key];
-  }
-
-  static cacheSet(store, key, value) {
-    if (this.storeCache.get(store) === undefined) {
-      this.storeCache.set(store, {});
-    }
-    this.storeCache.get(store)[key] = value;
-  }
 
   static resolveAndOverlay(update, base = { attributes: {}, relationships: {} }) {
     const attributes = mergeOptions({}, base.attributes, update.attributes);
