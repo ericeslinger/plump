@@ -10,7 +10,7 @@ import {
   ModelDelta,
   ModelSchema,
   ModelReference,
-  RelationshipItem,
+  // RelationshipItem,
 } from '../dataTypes';
 
 // type: an object that defines the type. typically this will be

@@ -2,7 +2,7 @@ export interface StringIndexed<T> {
   [index: string]: T;
 }
 
-export type Attribute = number | string | boolean | Date | string[];
+export type Attribute = number | string | boolean | Date | string[] | object;
 
 export interface RelationshipSchema {
   sides: StringIndexed<{otherType: string, otherName: string}>;
@@ -31,12 +31,21 @@ export interface ModelSchema {
   idAttribute: string;
   name: string;
   attributes: {
-    [attrName: string]: {
-      type: 'number' | 'string' | 'boolean' | 'date' | 'array' | 'object';
-      readOnly?: boolean;
-      // default?: number | string | boolean | Date | string[];
-      default?: any;
-    }
+    [attrName: string]:
+      // prepending this with {readOnly?: boolean} & also works
+      // but it depends on AFAIK-undocumented order-of-operations
+      // stuff in typescript, so I'm leaving it more verbose
+      // for now
+      { type: 'number', default?: number, readOnly?: boolean} |
+      { type: 'string', default?: string, readOnly?: boolean} |
+      { type: 'boolean', default?: boolean, readOnly?: boolean} |
+      { type: 'date', default?: Date, readOnly?: boolean} |
+      { type: 'object', default?: object, readOnly?: boolean}
+    //   type: 'number' | 'string' | 'boolean' | 'date' | 'array' | 'object';
+    //   readOnly?: boolean;
+    //   default?: number | string | boolean | Date | string[];
+    //   default?: any;
+    // }
   };
   relationships: {
     [relName: string]: {
