@@ -151,7 +151,8 @@ export abstract class Model {
         .flatMap((s: Storage) => Observable.fromPromise(s.read(this, fields)))
         .share();
         const cold$ = Observable.from(colds)
-        .flatMap((s: Storage) => Observable.fromPromise(s.read(this, fields)));
+        .flatMap((s: Storage) => Observable.fromPromise(s.read(this, fields)))
+        .startWith(undefined);
         return Observable.merge(
           terminal$,
           cold$.takeUntil(terminal$)

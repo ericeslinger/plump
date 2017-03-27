@@ -22,7 +22,7 @@ const expect = chai.expect;
 before(() => {
   return plump.addStore(memstore2)
   .then(() => plump.addType(TestType));
-})
+});
 
 describe('model', () => {
   describe('basic functionality', () => {
@@ -234,6 +234,9 @@ describe('model', () => {
             complete: () => { /* noop */ },
             next: (v) => {
               try {
+                if (!v) {
+                  return;
+                }
                 if (phase === 0) {
                   if (v.attributes.name) {
                     phase = 1;
@@ -277,6 +280,9 @@ describe('model', () => {
             complete: () => { /* noop */ },
             next: (v) => {
               try {
+                if (!v) {
+                  return;
+                }
                 if (phase === 0) {
                   if (v.attributes) {
                     expect(v).to.have.property('attributes');
@@ -354,6 +360,9 @@ describe('model', () => {
                 complete: () => { /* noop */ },
                 next: (v) => {
                   try {
+                    if (!v) {
+                      return;
+                    }
                     if (phase === 0) {
                       if (v.attributes.name) {
                         expect(v).to.have.property('attributes').with.property('name', 'potato');
