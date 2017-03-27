@@ -128,25 +128,8 @@ export abstract class Model {
     return this;
   }
 
-  subscribe(cb: Observer<ModelData>): Subscription;
-  subscribe(fields: string | string[], cb: Observer<ModelData>): Subscription;
-  subscribe(arg1: Observer<ModelData> | string | string[], arg2?: Observer<ModelData>): Subscription {
-
-    let fields: string[] = [];
-    let cb: Observer<ModelData> = null;
-
-    if (arg2) {
-      cb = arg2;
-      if (Array.isArray(arg1)) {
-        fields = arg1 as string[];
-      } else {
-        fields = [arg1 as string];
-      }
-    } else {
-      cb = arg1 as Observer<ModelData>;
-      fields = ['attributes'];
-    }
-
+  asObservable(opts: string | string[] = ['relationships', 'attributes']): Observable<ModelData> {
+    let fields = Array.isArray(opts) ? opts.concat() : [opts];
     if (fields.indexOf('relationships') >= 0) {
       fields = fields.concat(
         Object.keys(this.schema.relationships).map(k => `relationships.${k}`)
@@ -191,7 +174,27 @@ export abstract class Model {
       .flatMap((s: Storage) => Observable.fromPromise(s.read(this, fields)))
     );
     // );
-    return preload$.merge(watchWrite$)
+    return preload$.merge(watchWrite$);
+  }
+
+  subscribe(cb: Observer<ModelData>): Subscription;
+  subscribe(fields: string | string[], cb: Observer<ModelData>): Subscription;
+  subscribe(arg1: Observer<ModelData> | string | string[], arg2?: Observer<ModelData>): Subscription {
+    let fields: string[] = [];
+    let cb: Observer<ModelData> = null;
+
+    if (arg2) {
+      cb = arg2;
+      if (Array.isArray(arg1)) {
+        fields = arg1 as string[];
+      } else {
+        fields = [arg1 as string];
+      }
+    } else {
+      cb = arg1 as Observer<ModelData>;
+      fields = ['attributes'];
+    }
+    return this.asObservable(fields)
     .subscribe(cb);
   }
 
