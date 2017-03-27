@@ -1,4 +1,4 @@
-import { Subscription, Observer } from 'rxjs/Rx';
+import { Observable, Subscription, Observer } from 'rxjs/Rx';
 import { ModelData, ModelSchema, RelationshipDelta, RelationshipItem } from './dataTypes';
 export declare abstract class Model {
     private plump;
@@ -16,6 +16,7 @@ export declare abstract class Model {
     bulkGet(): any;
     save(): any;
     set(update: any): this;
+    asObservable(opts?: string | string[]): Observable<ModelData>;
     subscribe(cb: Observer<ModelData>): Subscription;
     subscribe(fields: string | string[], cb: Observer<ModelData>): Subscription;
     delete(): any;
