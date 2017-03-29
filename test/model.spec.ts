@@ -159,6 +159,14 @@ describe('model', () => {
       .then((v) => expect(v.relationships.children).to.deep.equal([{ id: 100 }]));
     });
 
+    it('should add several hasMany elements by child field', () => {
+      const one = new TestType({ name: 'frotato' }, plump);
+      return one.save()
+      .then(() => one.add('children', { id: 100 }).add('children', { id: 101 }).save())
+      .then(() => one.get('relationships.children'))
+      .then((v) => expect(v.relationships.children).to.deep.equal([{ id: 100 }, { id: 101 }]));
+    });
+
     it('should remove hasMany elements', () => {
       const one = new TestType({ name: 'frotato' }, plump);
       return one.save()
