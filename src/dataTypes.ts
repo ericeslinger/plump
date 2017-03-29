@@ -40,12 +40,8 @@ export interface ModelSchema {
       { type: 'string', default?: string, readOnly?: boolean} |
       { type: 'boolean', default?: boolean, readOnly?: boolean} |
       { type: 'date', default?: Date, readOnly?: boolean} |
+      { type: 'array', default?: any[], readOnly?: boolean } |
       { type: 'object', default?: object, readOnly?: boolean}
-    //   type: 'number' | 'string' | 'boolean' | 'date' | 'array' | 'object';
-    //   readOnly?: boolean;
-    //   default?: number | string | boolean | Date | string[];
-    //   default?: any;
-    // }
   };
   relationships: {
     [relName: string]: {

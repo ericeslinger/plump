@@ -46,6 +46,10 @@ export interface ModelSchema {
             default?: Date;
             readOnly?: boolean;
         } | {
+            type: 'array';
+            default?: any[];
+            readOnly?: boolean;
+        } | {
             type: 'object';
             default?: object;
             readOnly?: boolean;
