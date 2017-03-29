@@ -4,10 +4,10 @@ import * as Bluebird from 'bluebird';
 import { Storage } from './storage/storage';
 import { Model } from './model';
 import {
-  IndefiniteModelData,
+  // IndefiniteModelData,
   ModelData,
-  ModelDelta,
-  ModelSchema,
+  // ModelDelta,
+  // ModelSchema,
   ModelReference,
   DirtyModel,
   RelationshipItem,
@@ -129,17 +129,19 @@ export class Plump {
       .then((updated) => {
         if (value.relationships && Object.keys(value.relationships).length > 0) {
           return Bluebird.all(Object.keys(value.relationships).map((relName) => {
-            return Bluebird.all(value.relationships[relName].map((delta) => {
-              if (delta.op === 'add') {
-                return this.terminal.writeRelationshipItem(updated, relName, delta.data);
-              } else if (delta.op === 'remove') {
-                return this.terminal.deleteRelationshipItem(updated, relName, delta.data);
-              } else if (delta.op === 'modify') {
-                return this.terminal.writeRelationshipItem(updated, relName, delta.data);
-              } else {
-                throw new Error(`Unknown relationship delta ${JSON.stringify(delta)}`);
-              }
-            }));
+            return value.relationships[relName].reduce((thenable: Bluebird<void | ModelData>, delta) => {
+              return thenable.then(() => {
+                if (delta.op === 'add') {
+                  return this.terminal.writeRelationshipItem(updated, relName, delta.data);
+                } else if (delta.op === 'remove') {
+                  return this.terminal.deleteRelationshipItem(updated, relName, delta.data);
+                } else if (delta.op === 'modify') {
+                  return this.terminal.writeRelationshipItem(updated, relName, delta.data);
+                } else {
+                  throw new Error(`Unknown relationship delta ${JSON.stringify(delta)}`);
+                }
+              });
+            }, Bluebird.resolve());
           })).then(() => updated);
         } else {
           return updated;

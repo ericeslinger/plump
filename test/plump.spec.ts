@@ -9,6 +9,14 @@ import * as chaiAsPromised from 'chai-as-promised';
 import { Plump, MemoryStore } from '../src/index';
 import { TestType } from './testType';
 
+// import { ITest } from 'mocha';
+// The typings for it don't include the timeout() function. GRRRR.
+declare module 'mocha' {
+  interface ITest {
+    timeout(n: number): ITest;
+  }
+}
+
 Bluebird.config({
   longStackTraces: true,
 });
@@ -93,8 +101,49 @@ describe('Plump', () => {
       })
       .then(() => {
         return otherPlump.invalidate(invalidated, ['attributes']);
-      })
+      });
     })
     .catch((err) => done(err));
   });
+
+  it('HAMMERTIME', () => {
+    const mstore = new MemoryStore({ terminal: true });
+    const plump = new Plump();
+    return plump.addStore(mstore)
+    .then(() => plump.addType(TestType))
+    .then(() => {
+      return new Array(100).fill(0);
+    })
+    .then((init) => {
+      return Bluebird.all(
+        init.map(() => {
+          return new TestType({ name: 'mchammer' }, plump).save();
+        })
+      );
+    })
+    .then((saved) => {
+      return Bluebird.all(
+        saved.map((val) => {
+          return plump.find('tests', val.id)
+          .add('valenceChildren', { id: 1001, meta: { perm: 1 } })
+          .add('valenceChildren', { id: 1002, meta: { perm: 2 } })
+          .add('valenceChildren', { id: 1003, meta: { perm: 3 } })
+          .save();
+        })
+      );
+    })
+    .then((added) => {
+      return Bluebird.all(
+        added.map((val) => {
+          return plump.find('tests', val.id).get(['attributes', 'relationships'])
+          .then((final) => {
+            expect(final.attributes.name).to.equal('mchammer');
+            expect(final.relationships.valenceChildren).to.deep.equal(
+              [{ id: 1001, meta: { perm: 1 } }, { id: 1002, meta: { perm: 2 } }, { id: 1003, meta: { perm: 3 } }]
+            );
+          });
+        })
+      );
+    });
+  }).timeout(5000);
 });
