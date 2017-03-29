@@ -281,6 +281,18 @@ export abstract class KeyValueStore extends Storage {
     });
   }
 
+  query(t: string): Bluebird<ModelReference[]> {
+    return this._keys(t)
+    .then((keys) => {
+      return keys.map(k => {
+        return {
+          typeName: t,
+          id: parseInt(k.split(':')[1], 10),
+        };
+      }).filter(v => !isNaN(v.id));
+    });
+  }
+
   addSchema(t: {typeName: string, schema: ModelSchema}) {
     return super.addSchema(t)
     .then(() => {
