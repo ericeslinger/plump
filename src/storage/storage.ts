@@ -71,7 +71,7 @@ export abstract class Storage {
   ): Bluebird<ModelData>;
 
 
-  query(q: any) {
+  query(q: any): Bluebird<ModelReference[]> {
     // q: {type: string, query: any}
     // q.query is impl defined - a string for sql (raw sql)
     return Bluebird.reject(new Error('Query not implemented'));
