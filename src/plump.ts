@@ -184,6 +184,10 @@ export class Plump {
     return this.add(item, relName, child);
   }
 
+  query(q: any): Bluebird<ModelReference[]> {
+    return this.terminal.query(q);
+  }
+
   deleteRelationshipItem(item: ModelReference, relName: string, child: RelationshipItem) {
     if (this.terminal) {
       return this.terminal.deleteRelationshipItem(item, relName, child);

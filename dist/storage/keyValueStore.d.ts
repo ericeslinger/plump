@@ -21,6 +21,7 @@ export declare abstract class KeyValueStore extends Storage {
     wipe(value: ModelReference, field: string): Bluebird<ModelData>;
     writeRelationshipItem(value: ModelReference, relName: string, child: RelationshipItem): Bluebird<ModelData>;
     deleteRelationshipItem(value: ModelReference, relName: string, child: RelationshipItem): Bluebird<ModelData>;
+    query(t: string): Bluebird<ModelReference[]>;
     addSchema(t: {
         typeName: string;
         schema: ModelSchema;

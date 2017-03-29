@@ -27,7 +27,7 @@ export declare abstract class Storage {
     abstract deleteRelationshipItem(value: ModelReference, relationshipTitle: string, child: {
         id: string | number;
     }): Bluebird<ModelData>;
-    query(q: any): Bluebird<any>;
+    query(q: any): Bluebird<ModelReference[]>;
     readRelationships(item: ModelReference, relationships: string[]): Bluebird<ModelData>;
     read(item: ModelReference, opts?: string | string[]): Bluebird<any>;
     bulkRead(item: ModelReference): Bluebird<{
