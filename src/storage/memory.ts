@@ -1,4 +1,3 @@
-import * as Bluebird from 'bluebird';
 import { KeyValueStore } from './keyValueStore';
 
 export class MemoryStore extends KeyValueStore {
@@ -14,19 +13,19 @@ export class MemoryStore extends KeyValueStore {
   }
 
   _keys(typeName) {
-    return Bluebird.resolve(Object.keys(this.store).filter((k) => k.indexOf(`${typeName}:`) === 0));
+    return Promise.resolve(Object.keys(this.store).filter((k) => k.indexOf(`${typeName}:`) === 0));
   }
 
   _get(k) {
     if (this.store[k]) {
-      return Bluebird.resolve(JSON.parse(this.store[k]));
+      return Promise.resolve(JSON.parse(this.store[k]));
     } else {
-      return Bluebird.resolve(null);
+      return Promise.resolve(null);
     }
   }
 
   _set(k, v) {
-    return Bluebird.resolve()
+    return Promise.resolve()
     .then(() => {
       this.store[k] = JSON.stringify(v);
       return v;
@@ -34,7 +33,7 @@ export class MemoryStore extends KeyValueStore {
   }
 
   _del(k) {
-    return Bluebird.resolve()
+    return Promise.resolve()
     .then(() => {
       const retVal = JSON.parse(this.store[k]);
       delete this.store[k];

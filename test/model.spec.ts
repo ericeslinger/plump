@@ -1,7 +1,6 @@
 /* eslint-env node, mocha*/
 
 import 'mocha';
-import * as Bluebird from 'bluebird';
 import * as chai from 'chai';
 import * as chaiAsPromised from 'chai-as-promised';
 
@@ -12,15 +11,11 @@ const memstore2 = new MemoryStore({ terminal: true });
 
 const plump = new Plump();
 
-Bluebird.config({
-  longStackTraces: true
-});
-
 chai.use(chaiAsPromised);
 const expect = chai.expect;
 
 before(() => {
-  return plump.addStore(memstore2)
+  return plump.setTerminal(memstore2)
   .then(() => plump.addType(TestType));
 });
 
@@ -98,7 +93,7 @@ describe('model', () => {
       return one.save()
       .then(() => {
         one.set({ name: 'rutabaga' });
-        return Bluebird.all([
+        return Promise.all([
           expect(one.get()).to.eventually.have.deep.property('attributes.name', 'rutabaga'),
           expect(plump.get(one)).to.eventually.have.deep.property('attributes.name', 'potato'),
         ]);
@@ -230,7 +225,7 @@ describe('model', () => {
     });
 
     it('should allow subscription to model data', () => {
-      return new Bluebird((resolve, reject) => {
+      return new Promise((resolve, reject) => {
         const one = new TestType({ name: 'potato' }, plump);
         let phase = 0;
         one.save()
@@ -275,7 +270,7 @@ describe('model', () => {
     });
 
     it('should allow subscription to model sideloads', () => {
-      return new Bluebird((resolve, reject) => {
+      return new Promise((resolve, reject) => {
         const one = new TestType({ name: 'potato' }, plump);
         let phase = 0;
         one.save()
@@ -322,13 +317,13 @@ describe('model', () => {
     });
 
     it('should update on cacheable read events', () => {
-      return new Bluebird((resolve, reject) => {
+      return new Promise((resolve, reject) => {
         const DelayProxy = {
           get: (target, name) => {
             if (['read', 'write', 'add', 'remove'].indexOf(name) >= 0) {
               return (...args) => {
-                return Bluebird.delay(200)
-              .then(() => target[name](...args));
+                return new Promise((r) => setTimeout(r, 200))
+                .then(() => target[name](...args));
               };
             } else {
               return target[name];
@@ -343,8 +338,8 @@ describe('model', () => {
         //   types: [TestType],
         // });
         otherPlump.addType(TestType)
-        .then(() => otherPlump.addStore(coldMemstore))
-        .then(() => otherPlump.addStore(delayedMemstore))
+        .then(() => otherPlump.addCache(coldMemstore))
+        .then(() => otherPlump.setTerminal(delayedMemstore))
         .then(() => {
           const one = new TestType({ name: 'slowtato' }, otherPlump);
           one.save()

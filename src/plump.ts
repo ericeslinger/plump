@@ -1,7 +1,5 @@
 import { Subject, Observable } from 'rxjs/Rx';
-import * as Bluebird from 'bluebird';
 
-import { Storage } from './storage/storage';
 import { Model } from './model';
 import {
   // IndefiniteModelData,
@@ -11,36 +9,39 @@ import {
   ModelReference,
   DirtyModel,
   RelationshipItem,
+  PackagedModelData,
+  CacheStore,
+  TerminalStore,
 } from './dataTypes';
 
 export class Plump {
 
   destroy$: Observable<string>;
+  caches: CacheStore[];
+  terminal: TerminalStore;
 
   private teardownSubject: Subject<string>;
-  private storage: Storage[];
   private types: { [type: string]: typeof Model };
-  private terminal: Storage;
 
   constructor() {
     this.teardownSubject = new Subject();
-    this.storage = [];
+    this.caches = [];
     this.types = {};
     this.destroy$ = this.teardownSubject.asObservable();
   }
 
-  addType(T: typeof Model): Bluebird<void> {
+  addType(T: typeof Model): Promise<void> {
     if (this.types[T.typeName] === undefined) {
       this.types[T.typeName] = T;
-      return Bluebird.all(
-        this.storage.map(s => s.addSchema(T))
+      return Promise.all(
+        this.caches.map(s => s.addSchema(T))
       ).then(() => {
         if (this.terminal) {
           this.terminal.addSchema(T);
         }
       });
     } else {
-      return Bluebird.reject(`Duplicate Type registered: ${T.typeName}`);
+      return Promise.reject(`Duplicate Type registered: ${T.typeName}`);
     }
   }
 
@@ -48,21 +49,25 @@ export class Plump {
     return this.types[T];
   }
 
-  addStore(store: Storage): Bluebird<void> {
-    if (store.terminal) {
-      if (this.terminal !== undefined) {
-        throw new Error('cannot have more than one terminal store');
-      } else {
-        this.terminal = store;
-        this.storage.forEach((cacheStore) => {
-          cacheStore.wire(store, this.destroy$);
-        });
-      }
+  setTerminal(store: TerminalStore): Promise<void> {
+    if (this.terminal !== undefined) {
+      throw new Error('cannot have more than one terminal store');
     } else {
-      this.storage.push(store);
-      if (this.terminal !== undefined) {
-        store.wire(this.terminal, this.destroy$);
-      }
+      store.terminal = true;
+      this.terminal = store;
+      this.caches.forEach((cacheStore) => {
+        Plump.wire(cacheStore, store, this.destroy$);
+      });
+    }
+    return store.addSchemas(
+      Object.keys(this.types).map(k => this.types[k])
+    );
+  }
+
+  addCache(store: CacheStore): Promise<void> {
+    this.caches.push(store);
+    if (this.terminal !== undefined) {
+      Plump.wire(store, this.terminal, this.destroy$);
     }
     return store.addSchemas(
       Object.keys(this.types).map(k => this.types[k])
@@ -83,9 +88,9 @@ export class Plump {
     this.teardownSubject.next('done');
   }
 
-  get(value: ModelReference, opts: string[] = ['attributes']): Bluebird<ModelData> {
+  get(value: ModelReference, opts: string[] = ['attributes']): Promise<ModelData> {
     const keys = opts && !Array.isArray(opts) ? [opts] : opts;
-    return this.storage.reduce((thenable, storage) => {
+    return this.caches.reduce((thenable, storage) => {
       return thenable.then((v) => {
         if (v !== null) {
           return v;
@@ -95,7 +100,7 @@ export class Plump {
           return null;
         }
       });
-    }, Bluebird.resolve(null))
+    }, Promise.resolve(null))
     .then((v) => {
       if (((v === null) || (v.attributes === null)) && (this.terminal)) {
         return this.terminal.read(value, keys);
@@ -105,13 +110,13 @@ export class Plump {
     });
   }
 
-  // bulkGet(type, id) {
-  //   return this.terminal.bulkRead(type, id);
-  // }
+  bulkGet(value: ModelReference): Promise<PackagedModelData> {
+    return this.terminal.bulkRead(value);
+  }
 
-  save(value: DirtyModel): Bluebird<ModelData> {
+  save(value: DirtyModel): Promise<ModelData> {
     if (this.terminal) {
-      return Bluebird.resolve()
+      return Promise.resolve()
       .then(() => {
         if (Object.keys(value.attributes).length > 0) {
           return this.terminal.writeAttributes({
@@ -128,8 +133,8 @@ export class Plump {
       })
       .then((updated) => {
         if (value.relationships && Object.keys(value.relationships).length > 0) {
-          return Bluebird.all(Object.keys(value.relationships).map((relName) => {
-            return value.relationships[relName].reduce((thenable: Bluebird<void | ModelData>, delta) => {
+          return Promise.all(Object.keys(value.relationships).map((relName) => {
+            return value.relationships[relName].reduce((thenable: Promise<void | ModelData>, delta) => {
               return thenable.then(() => {
                 if (delta.op === 'add') {
                   return this.terminal.writeRelationshipItem(updated, relName, delta.data);
@@ -141,26 +146,26 @@ export class Plump {
                   throw new Error(`Unknown relationship delta ${JSON.stringify(delta)}`);
                 }
               });
-            }, Bluebird.resolve());
+            }, Promise.resolve());
           })).then(() => updated);
         } else {
           return updated;
         }
       });
     } else {
-      return Bluebird.reject(new Error('Plump has no terminal store'));
+      return Promise.reject(new Error('Plump has no terminal store'));
     }
   }
 
-  delete(item: ModelReference): Bluebird<void[]> {
+  delete(item: ModelReference): Promise<void[]> {
     if (this.terminal) {
       return this.terminal.delete(item).then(() => {
-        return Bluebird.all(this.storage.map((store) => {
-          return store.delete(item);
+        return Promise.all(this.caches.map((store) => {
+          return store.wipe(item);
         }));
       });
     } else {
-      return Bluebird.reject(new Error('Plump has no terminal store'));
+      return Promise.reject(new Error('Plump has no terminal store'));
     }
   }
 
@@ -168,7 +173,7 @@ export class Plump {
     if (this.terminal) {
       return this.terminal.writeRelationshipItem(item, relName, child);
     } else {
-      return Bluebird.reject(new Error('Plump has no terminal store'));
+      return Promise.reject(new Error('Plump has no terminal store'));
     }
   }
 
@@ -176,7 +181,7 @@ export class Plump {
   //   if (this.terminal && this.terminal.rest) {
   //     return this.terminal.rest(opts);
   //   } else {
-  //     return Bluebird.reject(new Error('No Rest terminal store'));
+  //     return Promise.reject(new Error('No Rest terminal store'));
   //   }
   // }
 
@@ -184,7 +189,7 @@ export class Plump {
     return this.add(item, relName, child);
   }
 
-  query(q: any): Bluebird<ModelReference[]> {
+  query(q: any): Promise<ModelReference[]> {
     return this.terminal.query(q);
   }
 
@@ -192,7 +197,7 @@ export class Plump {
     if (this.terminal) {
       return this.terminal.deleteRelationshipItem(item, relName, child);
     } else {
-      return Bluebird.reject(new Error('Plump has no terminal store'));
+      return Promise.reject(new Error('Plump has no terminal store'));
     }
   }
 
@@ -200,4 +205,22 @@ export class Plump {
     const fields = Array.isArray(field) ? field : [field];
     this.terminal.fireWriteUpdate({ typeName: item.typeName, id: item.id , invalidate: fields });
   }
+
+  static wire(me: CacheStore, they: TerminalStore, shutdownSignal: Observable<string>) {
+    if (me.terminal) {
+      throw new Error('Cannot wire a terminal store into another store');
+    } else {
+      // TODO: figure out where the type data comes from.
+      they.read$.takeUntil(shutdownSignal).subscribe((v) => {
+        me.cache(v);
+      });
+      they.write$.takeUntil(shutdownSignal).subscribe((v) => {
+        v.invalidate.forEach((invalid) => {
+          me.wipe(v, invalid);
+        });
+      });
+    }
+  }
+
+
 }

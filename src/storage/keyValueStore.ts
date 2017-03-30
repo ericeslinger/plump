@@ -1,4 +1,3 @@
-import * as Bluebird from 'bluebird';
 import * as mergeOptions from 'merge-options';
 
 import { Storage } from './storage';
@@ -8,6 +7,9 @@ import {
   ModelReference,
   ModelSchema,
   RelationshipItem,
+  TerminalStore,
+  CacheStore,
+  AllocatingStore
 } from '../dataTypes';
 
 function saneNumber(i) {
@@ -16,24 +18,24 @@ function saneNumber(i) {
 
 // declare function parseInt(n: string | number, radix: number): number;
 
-export abstract class KeyValueStore extends Storage {
+export abstract class KeyValueStore extends Storage implements TerminalStore, CacheStore, AllocatingStore {
   protected maxKeys: { [typeName: string]: number } = {};
 
-  abstract _keys(typeName: string): Bluebird<string[]>;
-  abstract _get(k: string): Bluebird<ModelData | null>;
-  abstract _set(k: string, v: ModelData): Bluebird<ModelData>;
-  abstract _del(k: string): Bluebird<ModelData>;
+  abstract _keys(typeName: string): Promise<string[]>;
+  abstract _get(k: string): Promise<ModelData | null>;
+  abstract _set(k: string, v: ModelData): Promise<ModelData>;
+  abstract _del(k: string): Promise<ModelData>;
 
   allocateId(typeName: string) {
     this.maxKeys[typeName] = this.maxKeys[typeName] + 1;
-    return Bluebird.resolve(this.maxKeys[typeName]);
+    return Promise.resolve(this.maxKeys[typeName]);
   }
 
   writeAttributes(inputValue: IndefiniteModelData) {
     const value = this.validateInput(inputValue);
     delete value.relationships;
     // trim out relationships for a direct write.
-    return Bluebird.resolve()
+    return Promise.resolve()
     .then(() => {
       if (!this.terminal) {
         throw new Error('Cannot create new content in a non-terminal store');
@@ -43,7 +45,7 @@ export abstract class KeyValueStore extends Storage {
       if ((value.id === undefined) || (value.id === null)) {
         return this.allocateId(value.typeName)
         .then((n) => {
-          return mergeOptions({}, value, { id: n, relationships: {} }); // if new.
+          return mergeOptions({}, value, { id: n, relationships: {} }) as ModelData; // if new.
         });
       } else {
         // if not new, get current (including relationships) and merge
@@ -54,7 +56,7 @@ export abstract class KeyValueStore extends Storage {
         return this._get(this.keyString(value as ModelReference)).then(current => mergeOptions({}, current, value));
       }
     })
-    .then((toSave) => {
+    .then((toSave: ModelData) => {
       return this._set(this.keyString(toSave), toSave)
       .then(() => {
         this.fireWriteUpdate(Object.assign({}, toSave, { invalidate: ['attributes'] }));
@@ -63,7 +65,7 @@ export abstract class KeyValueStore extends Storage {
     });
   }
 
-  readAttributes(value: ModelReference): Bluebird<ModelData> {
+  readAttributes(value: ModelReference): Promise<ModelData> {
     return this._get(this.keyString(value))
     .then(d => {
       if (d && d.attributes && Object.keys(d.attributes).length > 0) {
@@ -76,7 +78,7 @@ export abstract class KeyValueStore extends Storage {
 
   cache(value: ModelData) {
     if ((value.id === undefined) || (value.id === null)) {
-      return Bluebird.reject('Cannot cache data without an id - write it to a terminal first');
+      return Promise.reject('Cannot cache data without an id - write it to a terminal first');
     } else {
       return this._get(this.keyString(value))
       .then((current) => {
@@ -88,7 +90,7 @@ export abstract class KeyValueStore extends Storage {
 
   cacheAttributes(value: ModelData) {
     if ((value.id === undefined) || (value.id === null)) {
-      return Bluebird.reject('Cannot cache data without an id - write it to a terminal first');
+      return Promise.reject('Cannot cache data without an id - write it to a terminal first');
     } else {
       return this._get(this.keyString(value))
       .then((current) => {
@@ -104,7 +106,7 @@ export abstract class KeyValueStore extends Storage {
 
   cacheRelationship(value: ModelData) {
     if ((value.id === undefined) || (value.id === null)) {
-      return Bluebird.reject('Cannot cache data without an id - write it to a terminal first');
+      return Promise.reject('Cannot cache data without an id - write it to a terminal first');
     } else {
       return this._get(this.keyString(value))
       .then((current) => {
@@ -118,7 +120,7 @@ export abstract class KeyValueStore extends Storage {
     }
   }
 
-  readRelationship(value: ModelReference, relName: string): Bluebird<ModelData> {
+  readRelationship(value: ModelReference, relName: string): Promise<ModelData> {
     return this._get(this.keyString(value))
     .then((v) => {
       const retVal = Object.assign({}, v);
@@ -177,7 +179,7 @@ export abstract class KeyValueStore extends Storage {
     const otherRelName = relSchema.sides[relName].otherName;
     const thisKeyString = this.keyString(value);
     const otherKeyString = this.keyString({ typeName: otherRelType, id: child.id });
-    return Bluebird.all([
+    return Promise.all([
       this._get(thisKeyString),
       this._get(otherKeyString),
     ])
@@ -232,7 +234,7 @@ export abstract class KeyValueStore extends Storage {
         otherItem.relationships[otherRelName][otherIdx] = newParent;
       }
 
-      return Bluebird.all([
+      return Promise.all([
         this._set(this.keyString(thisItem), thisItem),
         this._set(this.keyString(otherItem), otherItem),
       ]).then(() => {
@@ -250,7 +252,7 @@ export abstract class KeyValueStore extends Storage {
     const otherRelName = relSchema.sides[relName].otherName;
     const thisKeyString = this.keyString(value);
     const otherKeyString = this.keyString({ typeName: otherRelType, id: child.id });
-    return Bluebird.all([
+    return Promise.all([
       this._get(thisKeyString),
       this._get(otherKeyString),
     ])
@@ -270,7 +272,7 @@ export abstract class KeyValueStore extends Storage {
         otherItem.relationships[otherRelName].splice(otherIdx, 1);
       }
 
-      return Bluebird.all([
+      return Promise.all([
         this._set(this.keyString(thisItem), thisItem),
         this._set(this.keyString(otherItem), otherItem),
       ]).then(() => {
@@ -281,7 +283,7 @@ export abstract class KeyValueStore extends Storage {
     });
   }
 
-  query(t: string): Bluebird<ModelReference[]> {
+  query(t: string): Promise<ModelReference[]> {
     return this._keys(t)
     .then((keys) => {
       return keys.map(k => {
