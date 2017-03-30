@@ -1,8 +1,6 @@
 import * as mergeOptions from 'merge-options';
 import { Observable, Subscription, Observer } from 'rxjs/Rx';
-import * as Bluebird from 'bluebird';
 
-import { validateInput } from './util';
 import {
   ModelData,
   ModelDelta,
@@ -11,7 +9,11 @@ import {
   DirtyModel,
   RelationshipDelta,
   RelationshipItem,
+  CacheStore,
+  TerminalStore,
 } from './dataTypes';
+
+import { Plump } from './plump';
 
 // TODO: figure out where error events originate (storage or model)
 // and who keeps a roll-backable delta
@@ -42,7 +44,7 @@ export abstract class Model {
     .concat(Object.keys(this.dirty.relationships));
   }
 
-  constructor(opts, private plump) {
+  constructor(opts, private plump: Plump) {
     // TODO: Define Delta interface
     this.dirty = {
       attributes: {}, // Simple key-value
@@ -68,21 +70,12 @@ export abstract class Model {
     };
   }
 
-  // $$fireUpdate(v) {
-  //   const update = Model.resolveAndOverlay(this.dirty, v);
-  //   if (this.id) {
-  //     update.id = this.id;
-  //   }
-  //   this[$subject].next(update);
-  // }
 
-  // API METHODS
-
-  get(opts: string | string[] = 'attributes'): Bluebird<ModelData> {
+  get(opts: string | string[] = 'attributes'): Promise<ModelData> {
     // If opts is falsy (i.e., undefined), get attributes
     // Otherwise, get what was requested,
     // wrapping the request in a Array if it wasn't already one
-    const keys = opts && !Array.isArray(opts) ? [opts] : opts;
+    const keys = opts && !Array.isArray(opts) ? [opts] : opts as string[];
     return this.plump.get(this, keys)
     .then(self => {
       if (!self && this.dirtyFields().length === 0) {
@@ -97,11 +90,11 @@ export abstract class Model {
   }
 
   bulkGet() {
-    return this.plump.bulkGet(this.constructor, this.id);
+    return this.plump.bulkGet(this);
   }
 
   // TODO: Should $save ultimately return this.get()?
-  save(): Bluebird<ModelData> {
+  save(): Promise<ModelData> {
     const update: DirtyModel = mergeOptions(
       { id: this.id, typeName: this.typeName },
       this.dirty
@@ -139,22 +132,22 @@ export abstract class Model {
       );
     }
 
-    const hots = this.plump.storage.filter(s => s.hot(this.typeName, this.id));
-    const colds = this.plump.storage.filter(s => !s.hot(this.typeName, this.id));
+    const hots = this.plump.caches.filter(s => s.hot(this));
+    const colds = this.plump.caches.filter(s => !s.hot(this));
     const terminal = this.plump.terminal;
 
     const preload$ = Observable.from(hots)
-    .flatMap((s: Storage) => Observable.fromPromise(s.read(this, fields)))
+    .flatMap((s: CacheStore) => Observable.fromPromise(s.read(this, fields)))
     .defaultIfEmpty(null)
     .flatMap((v) => {
       if (v !== null) {
         return Observable.of(v);
       } else {
         const terminal$ = Observable.of(terminal)
-        .flatMap((s: Storage) => Observable.fromPromise(s.read(this, fields)))
+        .flatMap((s: TerminalStore) => Observable.fromPromise(s.read(this, fields)))
         .share();
         const cold$ = Observable.from(colds)
-        .flatMap((s: Storage) => Observable.fromPromise(s.read(this, fields)))
+        .flatMap((s: CacheStore) => Observable.fromPromise(s.read(this, fields)))
         .startWith(undefined);
         return Observable.merge(
           terminal$,
@@ -165,7 +158,7 @@ export abstract class Model {
     // TODO: cacheable reads
     // const watchRead$ = Observable.from(terminal)
     // .flatMap(s => s.read$.filter(v => v.type === this.typeName && v.id === this.id));
-    const watchWrite$ = terminal.write$
+    const watchWrite$: Observable<ModelDelta> = terminal.write$
     .filter((v: ModelDelta) => {
       return (
         (v.typeName === this.typeName) &&
@@ -175,7 +168,7 @@ export abstract class Model {
     })
     .flatMapTo(
       Observable.of(terminal)
-      .flatMap((s: Storage) => Observable.fromPromise(s.read(this, fields)))
+      .flatMap((s: TerminalStore) => Observable.fromPromise(s.read(this, fields)))
     );
     // );
     return preload$.merge(watchWrite$);
@@ -206,16 +199,16 @@ export abstract class Model {
     return this.plump.delete(this);
   }
 
-  $rest(opts) {
-    const restOpts = Object.assign(
-      {},
-      opts,
-      {
-        url: `/${this.constructor['type']}/${this.id}/${opts.url}`,
-      }
-    );
-    return this.plump.restRequest(restOpts).then(res => res.data);
-  }
+  // $rest(opts) {
+  //   const restOpts = Object.assign(
+  //     {},
+  //     opts,
+  //     {
+  //       url: `/${this.constructor['type']}/${this.id}/${opts.url}`,
+  //     }
+  //   );
+  //   return this.plump.restRequest(restOpts).then(res => res.data);
+  // }
 
   add(key: string, item: RelationshipItem): this {
     if (key in this.schema.relationships) {
@@ -288,9 +281,9 @@ export abstract class Model {
   //   return plump.restRequest(restOpts);
   // }
 
-  static applyDefaults(v) {
-    return validateInput(this.schema, v);
-  };
+  // static applyDefaults(v) {
+  //   return validateInput(this.schema, v);
+  // };
 
   static applyDelta(current, delta) {
     if (delta.op === 'add' || delta.op === 'modify') {
@@ -303,7 +296,7 @@ export abstract class Model {
     }
   };
 
-  static resolveAndOverlay(update, base = { attributes: {}, relationships: {} }) {
+  static resolveAndOverlay(update, base: {attributes?: any, relationships?: any} = { attributes: {}, relationships: {} }) {
     const attributes = mergeOptions({}, base.attributes, update.attributes);
     const resolvedRelationships = this.resolveRelationships(update.relationships, base.relationships);
     return { attributes, relationships: resolvedRelationships };

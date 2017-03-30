@@ -1,7 +1,7 @@
 export interface StringIndexed<T> {
     [index: string]: T;
 }
-export declare type Attribute = number | string | boolean | Date | string[] | number[] | object;
+export declare type Attribute = number | string | boolean | Date | string[] | number[] | any;
 export interface RelationshipSchema {
     sides: StringIndexed<{
         otherType: string;
@@ -24,6 +24,9 @@ export interface RelationshipItem {
 export interface RelationshipDelta {
     op: 'add' | 'modify' | 'remove';
     data: RelationshipItem;
+}
+export interface StorageOptions {
+    terminal: boolean;
 }
 export interface ModelSchema {
     idAttribute: string;

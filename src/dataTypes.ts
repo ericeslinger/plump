@@ -1,8 +1,10 @@
+import { Observable } from 'rxjs/Rx';
+
 export interface StringIndexed<T> {
   [index: string]: T;
 }
 
-export type Attribute = number | string | boolean | Date | string[] | number[] | object;
+export type Attribute = number | string | boolean | Date | string[] | number[] | any;
 
 export interface RelationshipSchema {
   sides: StringIndexed<{otherType: string, otherName: string}>;
@@ -25,6 +27,46 @@ export interface RelationshipItem {
 export interface RelationshipDelta {
   op: 'add' | 'modify' | 'remove';
   data: RelationshipItem;
+}
+
+export interface StorageOptions {
+  terminal?: boolean;
+}
+
+export interface BaseStore {
+  terminal: boolean;
+  read$: Observable<ModelData>;
+  write$: Observable<ModelDelta>;
+  readRelationship(value: ModelReference, relName: string): Promise<ModelData>;
+  readAttributes(value: ModelReference): Promise<ModelData>;
+  getSchema(t: {schema: ModelSchema} | ModelSchema | string): ModelSchema;
+  addSchema(t: {typeName: string, schema: ModelSchema}): Promise<void>;
+  addSchemas(t: {typeName: string, schema: ModelSchema}[]): Promise<void>;
+  validateInput(value: ModelData | IndefiniteModelData): typeof value;
+  read(item: ModelReference, opts: string | string[]): Promise<ModelData>;
+}
+
+
+export interface CacheStore extends BaseStore {
+  cache(value: ModelData): Promise<ModelData>;
+  cacheAttributes(value: ModelData): Promise<ModelData>;
+  cacheRelationship(value: ModelData): Promise<ModelData>;
+  wipe(value: ModelReference, key?: string | string[]): void;
+  hot(value: ModelReference): boolean;
+}
+
+export interface TerminalStore extends BaseStore {
+  writeAttributes(value: IndefiniteModelData): Promise<ModelData>;
+  delete(value: ModelReference): Promise<void>;
+  fireReadUpdate(val: ModelData);
+  fireWriteUpdate(val: ModelDelta);
+  writeRelationshipItem( value: ModelReference, relName: string, child: {id: string | number} ): Promise<ModelData>;
+  deleteRelationshipItem( value: ModelReference, relName: string, child: {id: string | number} ): Promise<ModelData>;
+  query(q: any): Promise<ModelReference[]>;
+  bulkRead(value: ModelReference): Promise<PackagedModelData>;
+}
+export interface AllocatingStore extends TerminalStore {
+  allocateId(typeName: string): Promise<string | number>;
 }
 
 export interface ModelSchema {
@@ -72,6 +114,11 @@ export interface IndefiniteModelData {
 
 export interface ModelData extends IndefiniteModelData {
   id: number | string;
+}
+
+export interface PackagedModelData {
+  data: ModelData;
+  included: ModelData[];
 }
 
 export interface ModelDelta extends ModelData {

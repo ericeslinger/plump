@@ -2,7 +2,6 @@
 
 
 import 'mocha';
-import * as Bluebird from 'bluebird';
 import * as chai from 'chai';
 import * as chaiAsPromised from 'chai-as-promised';
 
@@ -17,10 +16,6 @@ import { TestType } from './testType';
 //   }
 // }
 
-Bluebird.config({
-  longStackTraces: true,
-});
-
 chai.use(chaiAsPromised);
 const expect = chai.expect;
 
@@ -30,7 +25,7 @@ describe('Plump', () => {
       get: (target, name) => {
         if (['read', 'write', 'add', 'remove'].indexOf(name) >= 0) {
           return (...args) => {
-            return Bluebird.delay(200)
+            return new Promise((resolve) => setTimeout(resolve, 200))
             .then(() => target[name](...args));
           };
         } else {
@@ -44,9 +39,9 @@ describe('Plump', () => {
     const hotMemstore = new MemoryStore();
     hotMemstore.hot = () => true;
     const otherPlump = new Plump();
-    otherPlump.addStore(hotMemstore)
-    .then(() => otherPlump.addStore(coldMemstore))
-    .then(() => otherPlump.addStore(delayedMemstore))
+    otherPlump.addCache(hotMemstore)
+    .then(() => otherPlump.addCache(coldMemstore))
+    .then(() => otherPlump.setTerminal(delayedMemstore))
     .then(() => otherPlump.addType(TestType))
     .then(() => {
       const invalidated = new TestType({ name: 'foo' }, otherPlump);
@@ -109,20 +104,20 @@ describe('Plump', () => {
   it('HAMMERTIME', () => {
     const mstore = new MemoryStore({ terminal: true });
     const plump = new Plump();
-    return plump.addStore(mstore)
+    return plump.setTerminal(mstore)
     .then(() => plump.addType(TestType))
     .then(() => {
       return new Array(100).fill(0);
     })
     .then((init) => {
-      return Bluebird.all(
+      return Promise.all(
         init.map(() => {
           return new TestType({ name: 'mchammer' }, plump).save();
         })
       );
     })
     .then((saved) => {
-      return Bluebird.all(
+      return Promise.all(
         saved.map((val) => {
           return plump.find('tests', val.id)
           .add('valenceChildren', { id: 1001, meta: { perm: 1 } })
@@ -133,7 +128,7 @@ describe('Plump', () => {
       );
     })
     .then((added) => {
-      return Bluebird.all(
+      return Promise.all(
         added.map((val) => {
           return plump.find('tests', val.id).get(['attributes', 'relationships'])
           .then((final) => {
