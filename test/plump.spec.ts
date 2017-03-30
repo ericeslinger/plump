@@ -106,7 +106,7 @@ describe('Plump', () => {
     return plump.setTerminal(mstore)
     .then(() => plump.addType(TestType))
     .then(() => {
-      return new Array(100).fill(0);
+      return new Array(1000).fill(0);
     })
     .then((init) => {
       return Promise.all(
