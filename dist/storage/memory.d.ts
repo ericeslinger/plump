@@ -1,12 +1,13 @@
-/// <reference types="bluebird" />
-import * as Bluebird from 'bluebird';
-import { KeyValueStore } from './keyValueStore';
-export declare class MemoryStore extends KeyValueStore {
+import { ModifiableKeyValueStore } from './modifiableKeyValueStore';
+import { ModelData, RelationshipItem, ModelReference } from '../dataTypes';
+export declare class MemoryStore extends ModifiableKeyValueStore {
     private store;
     constructor(opts?: {});
     logStore(): void;
-    _keys(typeName: any): Bluebird<string[]>;
-    _get(k: any): Bluebird<any>;
-    _set(k: any, v: any): Bluebird<any>;
-    _del(k: any): Bluebird<any>;
+    _keys(typeName: any): Promise<string[]>;
+    _get(item: ModelReference): Promise<any>;
+    _upsert(vals: ModelData): Promise<ModelData>;
+    _updateArray(ref: ModelReference, relName: string, item: RelationshipItem): Promise<ModelReference>;
+    _removeFromArray(ref: ModelReference, relName: string, item: RelationshipItem): Promise<ModelReference>;
+    _del(ref: ModelReference, fields: string[]): Promise<ModelData>;
 }

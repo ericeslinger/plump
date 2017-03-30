@@ -2,10 +2,10 @@
 /* eslint no-shadow: 0 */
 
 import { MemoryStore } from '../src/storage/memory';
+import { ModelData } from '../src/dataTypes';
 import { testSuite } from './storageTests';
 import { TestType } from './testType';
 import { expect, use } from 'chai';
-import * as Bluebird from 'bluebird';
 import * as chaiAsPromised from 'chai-as-promised';
 
 use(chaiAsPromised);
@@ -31,8 +31,8 @@ describe('Memory Storage specific', () => {
     .then(() => newStore.writeAttributes({ typeName: 'tests', attributes: { name: 'potato' } }).then(v => idArray.push(v.id)))
     .then(() => newStore.writeAttributes({ typeName: 'tests', attributes: { name: 'potato' } }).then(v => idArray.push(v.id)))
     .then(() => newStore.query('tests'))
-    .then((items) => Bluebird.all(items.map(item => newStore.readAttributes(item))))
-    .then((models) => {
+    .then((items) => Promise.all(items.map(item => newStore.readAttributes(item))))
+    .then((models: ModelData[]) => {
       models.forEach(v => expect(v.attributes.name).to.equal('potato'));
       expect(models.map(v => v.id)).to.have.members(idArray);
     });

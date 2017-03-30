@@ -14,5 +14,9 @@ export {
   IndefiniteModelData,
   ModelDelta,
   DirtyModel,
-  DirtyValues
+  DirtyValues,
+  CacheStore,
+  TerminalStore,
+  BaseStore,
+  StorageOptions
 } from './dataTypes';

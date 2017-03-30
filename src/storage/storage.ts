@@ -1,8 +1,7 @@
 /* eslint no-unused-vars: 0 */
 
-import * as Bluebird from 'bluebird';
 import * as mergeOptions from 'merge-options';
-import { validateInput } from '../util';
+// import { validateInput } from '../util';
 import { Subject, Observable } from 'rxjs/Rx';
 import {
   IndefiniteModelData,
@@ -10,6 +9,9 @@ import {
   ModelDelta,
   ModelSchema,
   ModelReference,
+  BaseStore,
+  StorageOptions,
+  PackagedModelData,
   // RelationshipItem,
 } from '../dataTypes';
 
@@ -24,7 +26,7 @@ import {
 // hasMany relationships are treated like id arrays. So, add / remove / has
 // just stores and removes integers.
 
-export abstract class Storage {
+export abstract class Storage implements BaseStore {
 
   terminal: boolean;
   read$: Observable<ModelData>;
@@ -34,7 +36,7 @@ export abstract class Storage {
   private writeSubject = new Subject();
   // protected types: Model[]; TODO: figure this out
 
-  constructor(opts: any = {}) {
+  constructor(opts: StorageOptions = {}) {
     // a "terminal" storage facility is the end of the storage chain.
     // usually sql on the server side and rest on the client side, it *must*
     // receive the writes, and is the final authoritative answer on whether
@@ -50,37 +52,25 @@ export abstract class Storage {
 
   // Abstract - all stores must provide below:
 
-  abstract allocateId(typeName: string): Bluebird<string | number>;
-  abstract writeAttributes(value: IndefiniteModelData): Bluebird<ModelData>;
-  abstract readAttributes(value: ModelReference): Bluebird<ModelData>;
-  abstract cache(value: ModelData): Bluebird<ModelData>;
-  abstract cacheAttributes(value: ModelData): Bluebird<ModelData>;
-  abstract cacheRelationship(value: ModelData): Bluebird<ModelData>;
-  abstract readRelationship(value: ModelReference, relName: string): Bluebird<ModelData>;
-  abstract wipe(value: ModelReference, key?: string | string[]): void;
-  abstract delete(value: ModelReference): Bluebird<void>;
-  abstract writeRelationshipItem(
-    value: ModelReference,
-    relationshipTitle: string,
-    child: {id: string | number}
-  ): Bluebird<ModelData>;
-  abstract deleteRelationshipItem(
-    value: ModelReference,
-    relationshipTitle: string,
-    child: {id: string | number}
-  ): Bluebird<ModelData>;
-
-
-  query(q: any): Bluebird<ModelReference[]> {
-    // q: {type: string, query: any}
-    // q.query is impl defined - a string for sql (raw sql)
-    return Bluebird.reject(new Error('Query not implemented'));
-  }
-
+  // abstract allocateId(typeName: string): Promise<string | number>;
+  // abstract writeAttributes(value: IndefiniteModelData): Promise<ModelData>;
+  abstract readAttributes(value: ModelReference): Promise<ModelData>;
+  abstract readRelationship(value: ModelReference, relName: string): Promise<ModelData>;
+  // abstract delete(value: ModelReference): Promise<void>;
+  // abstract writeRelationshipItem( value: ModelReference, relName: string, child: {id: string | number} ): Promise<ModelData>;
+  // abstract deleteRelationshipItem( value: ModelReference, relName: string, child: {id: string | number} ): Promise<ModelData>;
+  //
+  //
+  // query(q: any): Promise<ModelReference[]> {
+  //   // q: {type: string, query: any}
+  //   // q.query is impl defined - a string for sql (raw sql)
+  //   return Promise.reject(new Error('Query not implemented'));
+  // }
+  //
   // convenience function used internally
   // read a bunch of relationships and merge them together.
   readRelationships(item: ModelReference, relationships: string[]) {
-    return Bluebird.all(relationships.map(r => this.readRelationship(item, r)))
+    return Promise.all(relationships.map(r => this.readRelationship(item, r)))
     .then(rA =>
       rA.reduce(
         (a, r) => mergeOptions(a, r || {}),
@@ -124,7 +114,7 @@ export abstract class Storage {
     });
   }
 
-  bulkRead(item: ModelReference) {
+  bulkRead(item: ModelReference): Promise<PackagedModelData> {
     // override this if you want to do any special pre-processing
     // for reading from the store prior to a REST service event
     return this.read(item).then(data => {
@@ -146,26 +136,44 @@ export abstract class Storage {
     return false;
   }
 
-  // hook a non-terminal store into a terminal store.
-  wire(store, shutdownSignal) {
-    if (this.terminal) {
-      throw new Error('Cannot wire a terminal store into another store');
-    } else {
-      // TODO: figure out where the type data comes from.
-      store.read$.takeUntil(shutdownSignal).subscribe((v) => {
-        this.cache(v);
-      });
-      store.write$.takeUntil(shutdownSignal).subscribe((v) => {
-        v.invalidate.forEach((invalid) => {
-          this.wipe(v, invalid);
-        });
-      });
-    }
-  }
+  validateInput(value: ModelData | IndefiniteModelData): typeof value {
+    const schema = this.getSchema(value.typeName);
+    const retVal = { typeName: value.typeName, id: value.id, attributes: {}, relationships: {} };
+    const typeAttrs = Object.keys(schema.attributes || {});
+    const valAttrs = Object.keys(value.attributes || {});
+    const typeRels = Object.keys(schema.relationships || {});
+    const valRels = Object.keys(value.relationships || {});
 
-  validateInput(value: IndefiniteModelData, opts = {}) {
-    const type = this.getSchema(value.typeName);
-    return validateInput(type, value);
+    const invalidAttrs = valAttrs.filter(item => typeAttrs.indexOf(item) < 0);
+    const invalidRels = valRels.filter(item => typeRels.indexOf(item) < 0);
+
+    if (invalidAttrs.length > 0) {
+      throw new Error(`Invalid attributes on value object: ${JSON.stringify(invalidAttrs)}`);
+    }
+
+    if (invalidRels.length > 0) {
+      throw new Error(`Invalid relationships on value object: ${JSON.stringify(invalidRels)}`);
+    }
+
+
+    for (const attrName in schema.attributes) {
+      if (!value.attributes[attrName] && (schema.attributes[attrName].default !== undefined)) {
+        if (Array.isArray(schema.attributes[attrName].default)) {
+          retVal.attributes[attrName] = (schema.attributes[attrName].default as any[]).concat();
+        } else if (typeof schema.attributes[attrName].default === 'object') {
+          retVal.attributes[attrName] = Object.assign({}, schema.attributes[attrName].default);
+        } else {
+          retVal.attributes[attrName] = schema.attributes[attrName].default;
+        }
+      }
+    }
+
+    for (const relName in schema.relationships) {
+      if (value.relationships && value.relationships[relName] && !Array.isArray(value.relationships[relName])) {
+        throw new Error(`relation ${relName} is not an array`);
+      }
+    }
+    return mergeOptions({}, value, retVal);
   }
 
   // store type info data on the store itself
@@ -182,11 +190,11 @@ export abstract class Storage {
 
   addSchema(t: {typeName: string, schema: ModelSchema}) {
     this.types[t.typeName] = t.schema;
-    return Bluebird.resolve();
+    return Promise.resolve();
   }
 
-  addSchemas(a): Bluebird<void> {
-    return Bluebird.all(
+  addSchemas(a: {typeName: string, schema: ModelSchema}[]): Promise<void> {
+    return Promise.all(
       a.map(t => this.addSchema(t))
     ).then(() => {/* noop */});
   }
@@ -194,11 +202,11 @@ export abstract class Storage {
 
   fireWriteUpdate(val: ModelDelta) {
     this.writeSubject.next(val);
-    return Bluebird.resolve(val);
+    return Promise.resolve(val);
   }
 
   fireReadUpdate(val: ModelData) {
     this.readSubject.next(val);
-    return Bluebird.resolve(val);
+    return Promise.resolve(val);
   }
 }
