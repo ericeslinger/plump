@@ -1,4 +1,6 @@
+/// <reference types="bluebird" />
 import { Observable, Subscription, Observer } from 'rxjs/Rx';
+import * as Bluebird from 'bluebird';
 import { ModelData, ModelSchema, RelationshipDelta, RelationshipItem } from './dataTypes';
 export declare abstract class Model {
     private plump;
@@ -12,9 +14,9 @@ export declare abstract class Model {
     constructor(opts: any, plump: any);
     $$copyValuesFrom(opts?: {}): void;
     $$resetDirty(): void;
-    get(opts?: string | string[]): any;
+    get(opts?: string | string[]): Bluebird<ModelData>;
     bulkGet(): any;
-    save(): any;
+    save(): Bluebird<ModelData>;
     set(update: any): this;
     asObservable(opts?: string | string[]): Observable<ModelData>;
     subscribe(cb: Observer<ModelData>): Subscription;

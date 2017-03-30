@@ -1,5 +1,6 @@
 import * as mergeOptions from 'merge-options';
 import { Observable, Subscription, Observer } from 'rxjs/Rx';
+import * as Bluebird from 'bluebird';
 
 import { validateInput } from './util';
 import {
@@ -51,7 +52,7 @@ export abstract class Model {
     // this.$$fireUpdate(opts);
   }
 
-  $$copyValuesFrom(opts = {}) {
+  $$copyValuesFrom(opts = {}): void {
     // const idField = this.constructor.$id in opts ? this.constructor.$id : 'id';
     // this[this.constructor.$id] = opts[idField] || this.id;
     if ((this.id === undefined) && (opts[this.schema.idAttribute])) {
@@ -60,7 +61,7 @@ export abstract class Model {
     this.dirty = mergeOptions(this.dirty, { attributes: opts });
   }
 
-  $$resetDirty() {
+  $$resetDirty(): void {
     this.dirty = {
       attributes: {}, // Simple key-value
       relationships: {}, // relName: Delta[]
@@ -77,7 +78,7 @@ export abstract class Model {
 
   // API METHODS
 
-  get(opts: string | string[] = 'attributes') {
+  get(opts: string | string[] = 'attributes'): Bluebird<ModelData> {
     // If opts is falsy (i.e., undefined), get attributes
     // Otherwise, get what was requested,
     // wrapping the request in a Array if it wasn't already one
@@ -100,7 +101,7 @@ export abstract class Model {
   }
 
   // TODO: Should $save ultimately return this.get()?
-  save() {
+  save(): Bluebird<ModelData> {
     const update: DirtyModel = mergeOptions(
       { id: this.id, typeName: this.typeName },
       this.dirty
@@ -112,10 +113,12 @@ export abstract class Model {
         this.id = updated.id;
       }
       return this.get();
+    }).catch(err => {
+      throw err;
     });
   }
 
-  set(update) {
+  set(update): this {
     const flat = update.attributes || update;
     // Filter out non-attribute keys
     const sanitized = Object.keys(flat)
@@ -214,7 +217,7 @@ export abstract class Model {
     return this.plump.restRequest(restOpts).then(res => res.data);
   }
 
-  add(key: string, item: RelationshipItem) {
+  add(key: string, item: RelationshipItem): this {
     if (key in this.schema.relationships) {
       if (item.id >= 1) {
         if (this.dirty.relationships[key] === undefined) {
@@ -235,7 +238,7 @@ export abstract class Model {
     }
   }
 
-  modifyRelationship(key: string, item: RelationshipItem) {
+  modifyRelationship(key: string, item: RelationshipItem): this {
     if (key in this.schema.relationships) {
       if (item.id >= 1) {
         this.dirty.relationships[key] = this.dirty.relationships[key] || [];
@@ -253,7 +256,7 @@ export abstract class Model {
     }
   }
 
-  remove(key: string, item: RelationshipItem) {
+  remove(key: string, item: RelationshipItem): this {
     if (key in this.schema.relationships) {
       if (item.id >= 1) {
         if (!(key in this.dirty.relationships)) {
