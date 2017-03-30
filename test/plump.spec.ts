@@ -51,6 +51,7 @@ describe('Plump', () => {
         const newOne = otherPlump.find('tests', invalidated.id);
         const subscription = newOne.subscribe({
           next: (v) => {
+            // console.log(JSON.stringify(v, null, 2));
             try {
               if (phase === 0) {
                 if (v.attributes.name) {
@@ -83,15 +84,13 @@ describe('Plump', () => {
             throw err;
           }
         });
-        return coldMemstore._set(
-          coldMemstore.keyString(invalidated),
-          { id: invalidated.id, attributes: { name: 'slowtato' }, relationships: {} }
+        return coldMemstore._upsert(
+          { id: invalidated.id, typeName: TestType.typeName, attributes: { name: 'slowtato' }, relationships: {} }
         );
       })
       .then(() => {
-        return terminalStore._set(
-          terminalStore.keyString(invalidated),
-          { id: invalidated.id, attributes: { name: 'grotato' }, relationships: {} }
+        return terminalStore._upsert(
+          { id: invalidated.id, typeName: TestType.typeName, attributes: { name: 'grotato' }, relationships: {} }
         );
       })
       .then(() => {
