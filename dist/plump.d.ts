@@ -22,6 +22,7 @@ export declare class Plump {
     delete(item: ModelReference): Bluebird<void[]>;
     add(item: ModelReference, relName: string, child: RelationshipItem): Bluebird<any>;
     modifyRelationship(item: ModelReference, relName: string, child: RelationshipItem): Bluebird<any>;
+    query(q: any): Bluebird<ModelReference[]>;
     deleteRelationshipItem(item: ModelReference, relName: string, child: RelationshipItem): Bluebird<any>;
     invalidate(item: ModelReference, field?: string | string[]): void;
 }

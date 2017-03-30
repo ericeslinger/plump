@@ -11,11 +11,11 @@ import { TestType } from './testType';
 
 // import { ITest } from 'mocha';
 // The typings for it don't include the timeout() function. GRRRR.
-declare module 'mocha' {
-  interface ITest {
-    timeout(n: number): ITest;
-  }
-}
+// declare module 'mocha' {
+//   interface IRunnable {
+//     timeout(n: number): this;
+//   }
+// }
 
 Bluebird.config({
   longStackTraces: true,
