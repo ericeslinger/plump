@@ -113,6 +113,8 @@ export abstract class Model {
         this.id = updated.id;
       }
       return this.get();
+    }).catch(err => {
+      throw err;
     });
   }
 
