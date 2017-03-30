@@ -1,30 +1,28 @@
-/// <reference types="bluebird" />
-import * as Bluebird from 'bluebird';
 import { Storage } from './storage';
-import { IndefiniteModelData, ModelData, ModelReference, ModelSchema, RelationshipItem } from '../dataTypes';
-export declare abstract class KeyValueStore extends Storage {
+import { IndefiniteModelData, ModelData, ModelReference, ModelSchema, RelationshipItem, TerminalStore, CacheStore, AllocatingStore } from '../dataTypes';
+export declare abstract class KeyValueStore extends Storage implements TerminalStore, CacheStore, AllocatingStore {
     protected maxKeys: {
         [typeName: string]: number;
     };
-    abstract _keys(typeName: string): Bluebird<string[]>;
-    abstract _get(k: string): Bluebird<ModelData | null>;
-    abstract _set(k: string, v: ModelData): Bluebird<ModelData>;
-    abstract _del(k: string): Bluebird<ModelData>;
-    allocateId(typeName: string): Bluebird<number>;
-    writeAttributes(inputValue: IndefiniteModelData): Bluebird<any>;
-    readAttributes(value: ModelReference): Bluebird<ModelData>;
-    cache(value: ModelData): Bluebird<any>;
-    cacheAttributes(value: ModelData): Bluebird<any>;
-    cacheRelationship(value: ModelData): Bluebird<any>;
-    readRelationship(value: ModelReference, relName: string): Bluebird<ModelData>;
-    delete(value: ModelReference): Bluebird<void>;
-    wipe(value: ModelReference, field: string): Bluebird<ModelData>;
-    writeRelationshipItem(value: ModelReference, relName: string, child: RelationshipItem): Bluebird<ModelData>;
-    deleteRelationshipItem(value: ModelReference, relName: string, child: RelationshipItem): Bluebird<ModelData>;
-    query(t: string): Bluebird<ModelReference[]>;
+    abstract _keys(typeName: string): Promise<string[]>;
+    abstract _get(k: string): Promise<ModelData | null>;
+    abstract _set(k: string, v: ModelData): Promise<ModelData>;
+    abstract _del(k: string): Promise<ModelData>;
+    allocateId(typeName: string): Promise<number>;
+    writeAttributes(inputValue: IndefiniteModelData): Promise<ModelData>;
+    readAttributes(value: ModelReference): Promise<ModelData>;
+    cache(value: ModelData): Promise<never>;
+    cacheAttributes(value: ModelData): Promise<never>;
+    cacheRelationship(value: ModelData): Promise<never>;
+    readRelationship(value: ModelReference, relName: string): Promise<ModelData>;
+    delete(value: ModelReference): Promise<void>;
+    wipe(value: ModelReference, field: string): Promise<ModelData>;
+    writeRelationshipItem(value: ModelReference, relName: string, child: RelationshipItem): Promise<ModelData>;
+    deleteRelationshipItem(value: ModelReference, relName: string, child: RelationshipItem): Promise<ModelData>;
+    query(t: string): Promise<ModelReference[]>;
     addSchema(t: {
         typeName: string;
         schema: ModelSchema;
-    }): Bluebird<void>;
+    }): Promise<void>;
     keyString(value: ModelReference): string;
 }

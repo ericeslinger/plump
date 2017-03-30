@@ -1,7 +1,6 @@
-/// <reference types="bluebird" />
 import { Observable, Subscription, Observer } from 'rxjs/Rx';
-import * as Bluebird from 'bluebird';
-import { ModelData, ModelSchema, RelationshipDelta, RelationshipItem } from './dataTypes';
+import { ModelData, ModelSchema, RelationshipDelta, RelationshipItem, PackagedModelData } from './dataTypes';
+import { Plump } from './plump';
 export declare abstract class Model {
     private plump;
     id: string | number;
@@ -11,26 +10,24 @@ export declare abstract class Model {
     readonly typeName: any;
     readonly schema: any;
     dirtyFields(): string[];
-    constructor(opts: any, plump: any);
+    constructor(opts: any, plump: Plump);
     $$copyValuesFrom(opts?: {}): void;
     $$resetDirty(): void;
-    get(opts?: string | string[]): Bluebird<ModelData>;
-    bulkGet(): any;
-    save(): Bluebird<ModelData>;
+    get(opts?: string | string[]): Promise<ModelData>;
+    bulkGet(): Promise<PackagedModelData>;
+    save(): Promise<ModelData>;
     set(update: any): this;
     asObservable(opts?: string | string[]): Observable<ModelData>;
     subscribe(cb: Observer<ModelData>): Subscription;
     subscribe(fields: string | string[], cb: Observer<ModelData>): Subscription;
-    delete(): any;
-    $rest(opts: any): any;
+    delete(): Promise<void[]>;
     add(key: string, item: RelationshipItem): this;
     modifyRelationship(key: string, item: RelationshipItem): this;
     remove(key: string, item: RelationshipItem): this;
-    static applyDefaults(v: any): ModelData;
     static applyDelta(current: any, delta: any): any;
     static resolveAndOverlay(update: any, base?: {
-        attributes: {};
-        relationships: {};
+        attributes?: any;
+        relationships?: any;
     }): {
         attributes: any;
         relationships: any;
