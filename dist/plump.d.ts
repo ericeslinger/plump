@@ -18,7 +18,7 @@ export declare class Plump {
     get(value: ModelReference, opts?: string[]): Promise<ModelData>;
     bulkGet(value: ModelReference): Promise<PackagedModelData>;
     save(value: DirtyModel): Promise<ModelData>;
-    delete(item: ModelReference): Promise<void[]>;
+    delete(item: ModelReference): Promise<void>;
     add(item: ModelReference, relName: string, child: RelationshipItem): Promise<never>;
     modifyRelationship(item: ModelReference, relName: string, child: RelationshipItem): Promise<never>;
     query(q: any): Promise<ModelReference[]>;

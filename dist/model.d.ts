@@ -1,7 +1,7 @@
 import { Observable, Subscription, Observer } from 'rxjs/Rx';
 import { ModelData, ModelSchema, RelationshipDelta, RelationshipItem, PackagedModelData } from './dataTypes';
 import { Plump } from './plump';
-export declare abstract class Model {
+export declare class Model {
     private plump;
     id: string | number;
     static typeName: string;
@@ -20,7 +20,7 @@ export declare abstract class Model {
     asObservable(opts?: string | string[]): Observable<ModelData>;
     subscribe(cb: Observer<ModelData>): Subscription;
     subscribe(fields: string | string[], cb: Observer<ModelData>): Subscription;
-    delete(): Promise<void[]>;
+    delete(): Promise<void>;
     add(key: string, item: RelationshipItem): this;
     modifyRelationship(key: string, item: RelationshipItem): this;
     remove(key: string, item: RelationshipItem): this;

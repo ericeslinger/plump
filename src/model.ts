@@ -19,7 +19,7 @@ import { Plump } from './plump';
 // TODO: figure out where error events originate (storage or model)
 // and who keeps a roll-backable delta
 
-export abstract class Model {
+export class Model {
   id: string | number;
   static typeName = 'BASE';
   static schema: ModelSchema = {
@@ -47,6 +47,9 @@ export abstract class Model {
 
   constructor(opts, private plump: Plump) {
     // TODO: Define Delta interface
+    if (this.typeName === 'BASE') {
+      throw new TypeError('Cannot instantiate base plump Models, please subclass with a schema and valid typeName');
+    }
     this.dirty = {
       attributes: {}, // Simple key-value
       relationships: {}, // relName: Delta[]

@@ -157,13 +157,13 @@ export class Plump {
     }
   }
 
-  delete(item: ModelReference): Promise<void[]> {
+  delete(item: ModelReference): Promise<void> {
     if (this.terminal) {
       return this.terminal.delete(item).then(() => {
         return Promise.all(this.caches.map((store) => {
           return store.wipe(item);
         }));
-      });
+      }).then(() => { /* noop */ } );
     } else {
       return Promise.reject(new Error('Plump has no terminal store'));
     }
