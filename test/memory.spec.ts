@@ -9,7 +9,6 @@ import { expect, use } from 'chai';
 import * as chaiAsPromised from 'chai-as-promised';
 
 use(chaiAsPromised);
-import 'mocha';
 
 testSuite({
   describe: describe,

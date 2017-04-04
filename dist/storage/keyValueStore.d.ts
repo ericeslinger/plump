@@ -1,7 +1,7 @@
 import { Storage } from './storage';
 import { IndefiniteModelData, ModelData, ModelReference, ModelSchema, RelationshipItem, TerminalStore, CacheStore, AllocatingStore } from '../dataTypes';
 export declare abstract class KeyValueStore extends Storage implements TerminalStore, CacheStore, AllocatingStore {
-    protected maxKeys: {
+    maxKeys: {
         [typeName: string]: number;
     };
     abstract _keys(typeName: string): Promise<string[]>;
