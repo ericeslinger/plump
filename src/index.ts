@@ -17,6 +17,7 @@ export {
   DirtyValues,
   CacheStore,
   TerminalStore,
+  PackagedModelData,
   BaseStore,
   StorageOptions
 } from './dataTypes';

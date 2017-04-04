@@ -19,7 +19,7 @@ function saneNumber(i) {
 // declare function parseInt(n: string | number, radix: number): number;
 
 export abstract class KeyValueStore extends Storage implements TerminalStore, CacheStore, AllocatingStore {
-  protected maxKeys: { [typeName: string]: number } = {};
+  maxKeys: { [typeName: string]: number } = {};
 
   abstract _keys(typeName: string): Promise<string[]>;
   abstract _get(k: string): Promise<ModelData | null>;
