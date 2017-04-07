@@ -11,7 +11,6 @@ import {
   ModelReference,
   BaseStore,
   StorageOptions,
-  PackagedModelData,
   // RelationshipItem,
 } from '../dataTypes';
 
@@ -114,11 +113,14 @@ export abstract class Storage implements BaseStore {
     });
   }
 
-  bulkRead(item: ModelReference): Promise<PackagedModelData> {
+  bulkRead(item: ModelReference): Promise<ModelData> {
     // override this if you want to do any special pre-processing
     // for reading from the store prior to a REST service event
     return this.read(item).then(data => {
-      return { data, included: [] };
+      if (data.included === undefined) {
+        data.included = [];
+      }
+      return data;
     });
   }
 
