@@ -1,5 +1,5 @@
 import { Observable, Subscription, Observer } from 'rxjs/Rx';
-import { ModelData, ModelSchema, RelationshipDelta, RelationshipItem, PackagedModelData } from './dataTypes';
+import { ModelData, ModelSchema, RelationshipDelta, RelationshipItem } from './dataTypes';
 import { Plump } from './plump';
 export declare class Model {
     private plump;
@@ -14,7 +14,7 @@ export declare class Model {
     $$copyValuesFrom(opts?: {}): void;
     $$resetDirty(): void;
     get(opts?: string | string[]): Promise<ModelData>;
-    bulkGet(): Promise<PackagedModelData>;
+    bulkGet(): Promise<ModelData>;
     save(): Promise<ModelData>;
     set(update: any): this;
     asObservable(opts?: string | string[]): Observable<ModelData>;

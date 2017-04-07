@@ -68,7 +68,7 @@ export interface TerminalStore extends BaseStore {
         id: string | number;
     }): Promise<ModelData>;
     query(q: any): Promise<ModelReference[]>;
-    bulkRead(value: ModelReference): Promise<PackagedModelData>;
+    bulkRead(value: ModelReference): Promise<ModelData>;
 }
 export interface AllocatingStore extends TerminalStore {
     allocateId(typeName: string): Promise<string | number>;
@@ -129,10 +129,7 @@ export interface IndefiniteModelData {
 }
 export interface ModelData extends IndefiniteModelData {
     id: number | string;
-}
-export interface PackagedModelData {
-    data: ModelData;
-    included: ModelData[];
+    included?: ModelData[];
 }
 export interface ModelDelta extends ModelData {
     invalidate: string[];
