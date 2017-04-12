@@ -12,7 +12,7 @@ export declare class Plump {
     type(T: string): typeof Model;
     setTerminal(store: TerminalStore): Promise<void>;
     addCache(store: CacheStore): Promise<void>;
-    find(t: any, id: any): Model;
+    find(ref: ModelReference): Model;
     forge(t: any, val: any): Model;
     teardown(): void;
     get(value: ModelReference, opts?: string[]): Promise<ModelData>;
