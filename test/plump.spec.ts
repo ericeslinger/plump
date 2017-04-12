@@ -47,7 +47,7 @@ describe('Plump', () => {
       invalidated.save()
       .then(() => {
         let phase = 0;
-        const newOne = otherPlump.find('tests', invalidated.id);
+        const newOne = otherPlump.find({ typeName: 'tests', id: invalidated.id });
         const subscription = newOne.subscribe({
           next: (v) => {
             // console.log(JSON.stringify(v, null, 2));
@@ -117,7 +117,7 @@ describe('Plump', () => {
     .then((saved) => {
       return Promise.all(
         saved.map((val) => {
-          return plump.find('tests', val.id)
+          return plump.find({ typeName: 'tests', id: val.id })
           .add('valenceChildren', { id: 1001, meta: { perm: 1 } })
           .add('valenceChildren', { id: 1002, meta: { perm: 2 } })
           .add('valenceChildren', { id: 1003, meta: { perm: 3 } })
@@ -128,7 +128,7 @@ describe('Plump', () => {
     .then((added) => {
       return Promise.all(
         added.map((val) => {
-          return plump.find('tests', val.id).get(['attributes', 'relationships'])
+          return plump.find({ typeName: 'tests', id: val.id }).get(['attributes', 'relationships'])
           .then((final) => {
             expect(final.attributes.name).to.equal('mchammer');
             expect(final.relationships.valenceChildren).to.deep.equal(

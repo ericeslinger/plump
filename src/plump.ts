@@ -73,9 +73,9 @@ export class Plump {
     );
   }
 
-  find(t, id): Model {
-    const Type = typeof t === 'string' ? this.types[t] : t;
-    return new Type({ [Type.schema.idAttribute]: id }, this);
+  find(ref: ModelReference): Model {
+    const Type = this.types[ref.typeName];
+    return new Type({ [Type.schema.idAttribute]: ref.id }, this);
   }
 
   forge(t, val): Model {

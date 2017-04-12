@@ -34,7 +34,7 @@ describe('model', () => {
     it('should load data from datastores', () => {
       return memstore2.writeAttributes({ typeName: 'tests', attributes: { name: 'potato' } })
       .then(createdObject => {
-        const two = plump.find('tests', createdObject.id);
+        const two = plump.find({ typeName: 'tests', id: createdObject.id });
         return expect(two.get()).to.eventually.have.deep.property('attributes.name', 'potato');
       });
     });
@@ -52,11 +52,11 @@ describe('model', () => {
       const one = new TestType({ name: 'potato' }, plump);
       return one.save()
       .then(() => {
-        return expect(plump.find('tests', one.id).get())
+        return expect(plump.find({ typeName: 'tests', id: one.id }).get())
         .to.eventually.have.deep.property('attributes.name', 'potato');
       })
       .then(() => one.delete())
-      .then(() => plump.find('tests', one.id).get())
+      .then(() => plump.find({ typeName: 'tests', id: one.id }).get())
       .then((v) => expect(v).to.be.null);
     });
 
@@ -64,11 +64,11 @@ describe('model', () => {
       const one = new TestType({ name: 'p', otherName: 'q' }, plump);
       return one.save()
       .then(() => {
-        return expect(plump.find('tests', one.id).get())
+        return expect(plump.find({ typeName: 'tests', id: one.id }).get())
         .to.eventually.have.deep.property('attributes.name', 'p');
       })
       .then(() => {
-        return expect(plump.find('tests', one.id).get(['attributes', 'relationships']))
+        return expect(plump.find({ typeName: 'tests', id: one.id }).get(['attributes', 'relationships']))
         .to.eventually.deep.equal(
           {
             typeName: 'tests',
@@ -110,7 +110,7 @@ describe('model', () => {
       .then(() => {
         // const hasManys = Object.keys(TestType.$fields).filter(field => TestType.$fields[field].type === 'hasMany');
 
-        return plump.find('tests', one.id).get();
+        return plump.find({ typeName: 'tests', id: one.id }).get();
       }).then(data => {
         const baseFields = Object.keys(TestType.schema.attributes);
 
@@ -189,7 +189,7 @@ describe('model', () => {
       const one = new TestType({ name: 'potato' }, plump);
       return one.save()
       .then(() => {
-        const onePrime = plump.find(TestType.typeName, one.id);
+        const onePrime = plump.find({ typeName: TestType.typeName, id: one.id });
         return one.get('relationships.children')
         .then((res) => expect(res).to.have.property('relationships')
         .that.deep.equals({ children: [] }))
@@ -210,7 +210,7 @@ describe('model', () => {
       const one = new TestType({ name: 'potato' }, plump);
       return one.save()
       .then(() => {
-        const onePrime = plump.find(TestType.typeName, one.id);
+        const onePrime = plump.find({ typeName: TestType.typeName, id: one.id });
         return one.get()
         .then((res) => expect(res).have.deep.property('attributes.name', 'potato'))
         .then(() => onePrime.get())
@@ -354,7 +354,7 @@ describe('model', () => {
             })
             .then(() => {
               let phase = 0;
-              const two = otherPlump.find('tests', val.id);
+              const two = otherPlump.find({ typeName: 'tests', id: val.id });
               const subscription = two.subscribe({
                 error: (err) => {
                   throw err;
