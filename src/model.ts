@@ -9,7 +9,6 @@ import {
   DirtyModel,
   RelationshipDelta,
   RelationshipItem,
-  PackagedModelData,
   CacheStore,
   TerminalStore,
 } from './dataTypes';
@@ -93,7 +92,7 @@ export class Model {
     });
   }
 
-  bulkGet(): Promise<PackagedModelData> {
+  bulkGet(): Promise<ModelData> {
     return this.plump.bulkGet(this);
   }
 
