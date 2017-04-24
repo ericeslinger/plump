@@ -69,6 +69,13 @@ export interface AllocatingStore extends TerminalStore {
   allocateId(typeName: string): Promise<string | number>;
 }
 
+export interface Relationships {
+  [relName: string]: {
+    type: RelationshipSchema,
+    readOnly?: boolean,
+  };
+}
+
 export interface ModelSchema {
   idAttribute: string;
   name: string;
@@ -85,12 +92,7 @@ export interface ModelSchema {
       { type: 'array', default?: string[] | number[], readOnly?: boolean } |
       { type: 'object', default?: object, readOnly?: boolean}
   };
-  relationships: {
-    [relName: string]: {
-      type: RelationshipSchema,
-      readOnly?: boolean,
-    },
-  };
+  relationships: Relationships;
   storeData?: StringIndexed<any> & {
     sql?: {
       bulkQuery?: string;

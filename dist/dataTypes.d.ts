@@ -73,6 +73,39 @@ export interface TerminalStore extends BaseStore {
 export interface AllocatingStore extends TerminalStore {
     allocateId(typeName: string): Promise<string | number>;
 }
+export interface Relationships {
+    [relName: string]: {
+        type: RelationshipSchema;
+        readOnly?: boolean;
+    };
+}
+export interface AttributesAuthorize {
+    authorizeCreate(actor: ModelReference, item: ModelReference, data: IndefiniteModelData): any;
+    authorizeRead(actor: ModelReference, item: ModelReference): any;
+    authorizeUpdate(actor: ModelReference, item: ModelReference, data: ModelData): any;
+    authorizeDelete(actor: ModelReference, item: ModelReference): any;
+}
+export interface RelationshipAuthorizeArguments {
+    actor: ModelReference;
+    parent: ModelReference;
+    relationship: string;
+    child: ModelReference;
+    meta?: any;
+    data?: IndefiniteModelData;
+}
+export interface RelationshipAuthorize {
+    authorizeCreate(actor: ModelReference, opts: RelationshipAuthorizeArguments): any;
+    authorizeRead(actor: ModelReference, opts: RelationshipAuthorizeArguments): any;
+    authorizeUpdate(actor: ModelReference, opts: RelationshipAuthorizeArguments): any;
+    authorizeDelete(actor: ModelReference, opts: RelationshipAuthorizeArguments): any;
+}
+export interface AuthorizerDefinition<R extends Relationships> {
+    typeName: string;
+    attributes: AttributesAuthorize;
+    relationships: {
+        [name in keyof R]: RelationshipAuthorize;
+    };
+}
 export interface ModelSchema {
     idAttribute: string;
     name: string;
@@ -103,12 +136,7 @@ export interface ModelSchema {
             readOnly?: boolean;
         };
     };
-    relationships: {
-        [relName: string]: {
-            type: RelationshipSchema;
-            readOnly?: boolean;
-        };
-    };
+    relationships: Relationships;
     storeData?: StringIndexed<any> & {
         sql?: {
             bulkQuery?: string;
