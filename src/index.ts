@@ -9,6 +9,7 @@ export {
   RelationshipSchema,
   RelationshipItem,
   RelationshipDelta,
+  ModelAttributesSchema,
   ModelSchema,
   ModelReference,
   IndefiniteModelData,
