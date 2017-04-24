@@ -4,4 +4,5 @@ export { Storage } from './storage/storage';
 export { MemoryStore } from './storage/memory';
 export { KeyValueStore } from './storage/keyValueStore';
 export { Relationship } from './relationship';
-export { ModelData, RelationshipSchema, RelationshipItem, RelationshipDelta, ModelAttributesSchema, ModelSchema, ModelReference, IndefiniteModelData, ModelDelta, DirtyModel, DirtyValues, CacheStore, TerminalStore, BaseStore, StorageOptions } from './dataTypes';
+export { schema } from './schema';
+export { ModelData, RelationshipSchema, RelationshipItem, RelationshipDelta, NumberAttributeFieldSchema, StringAttributeFieldSchema, BooleanAttributeFieldSchema, DateAttributeFieldSchema, ArrayAttributeFieldSchema, ObjectAttributeFieldSchema, AttributeFieldSchema, ReadOnlyFieldSchema, ModelAttributesSchema, ModelSchema, ModelReference, IndefiniteModelData, ModelDelta, DirtyModel, DirtyValues, CacheStore, TerminalStore, BaseStore, StorageOptions } from './dataTypes';
