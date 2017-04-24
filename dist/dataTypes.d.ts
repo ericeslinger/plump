@@ -73,36 +73,37 @@ export interface TerminalStore extends BaseStore {
 export interface AllocatingStore extends TerminalStore {
     allocateId(typeName: string): Promise<string | number>;
 }
+export interface ModelAttributesSchema {
+    [attrName: string]: {
+        type: 'number';
+        default?: number;
+        readOnly?: boolean;
+    } | {
+        type: 'string';
+        default?: string;
+        readOnly?: boolean;
+    } | {
+        type: 'boolean';
+        default?: boolean;
+        readOnly?: boolean;
+    } | {
+        type: 'date';
+        default?: Date;
+        readOnly?: boolean;
+    } | {
+        type: 'array';
+        default?: string[] | number[];
+        readOnly?: boolean;
+    } | {
+        type: 'object';
+        default?: object;
+        readOnly?: boolean;
+    };
+}
 export interface ModelSchema {
     idAttribute: string;
     name: string;
-    attributes: {
-        [attrName: string]: {
-            type: 'number';
-            default?: number;
-            readOnly?: boolean;
-        } | {
-            type: 'string';
-            default?: string;
-            readOnly?: boolean;
-        } | {
-            type: 'boolean';
-            default?: boolean;
-            readOnly?: boolean;
-        } | {
-            type: 'date';
-            default?: Date;
-            readOnly?: boolean;
-        } | {
-            type: 'array';
-            default?: string[] | number[];
-            readOnly?: boolean;
-        } | {
-            type: 'object';
-            default?: object;
-            readOnly?: boolean;
-        };
-    };
+    attributes: ModelAttributesSchema;
     relationships: {
         [relName: string]: {
             type: RelationshipSchema;
