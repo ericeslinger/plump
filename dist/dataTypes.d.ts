@@ -20,7 +20,7 @@ export interface RelationshipSchema {
 }
 export interface RelationshipItem {
     id: number | string;
-    meta?: StringIndexed<number | string>;
+    meta?: StringIndexed<number | string | boolean>;
 }
 export interface RelationshipDelta {
     op: 'add' | 'modify' | 'remove';
@@ -73,42 +73,59 @@ export interface TerminalStore extends BaseStore {
 export interface AllocatingStore extends TerminalStore {
     allocateId(typeName: string): Promise<string | number>;
 }
+export interface GenericSchemaFieldSchema {
+    type: any;
+    default?: any;
+    readOnly?: boolean;
+}
+export interface GenericAttributeFieldSchema extends GenericSchemaFieldSchema {
+    type: string;
+}
+export interface NumberAttributeFieldSchema extends GenericAttributeFieldSchema {
+    type: 'number';
+    default?: number;
+}
+export interface StringAttributeFieldSchema extends GenericAttributeFieldSchema {
+    type: 'string';
+    default?: string;
+}
+export interface BooleanAttributeFieldSchema extends GenericAttributeFieldSchema {
+    type: 'boolean';
+    default?: boolean;
+}
+export interface DateAttributeFieldSchema extends GenericAttributeFieldSchema {
+    type: 'date';
+    default?: Date;
+}
+export interface ArrayAttributeFieldSchema extends GenericAttributeFieldSchema {
+    type: 'array';
+    default?: string[] | number[];
+}
+export interface ObjectAttributeFieldSchema extends GenericAttributeFieldSchema {
+    type: 'object';
+    default?: object;
+}
+export interface ReferenceAttributeFieldSchema extends GenericAttributeFieldSchema {
+    type: 'reference';
+    default?: {
+        typeName: string;
+        id: number;
+    };
+}
+export declare type AttributeFieldSchema = NumberAttributeFieldSchema | StringAttributeFieldSchema | BooleanAttributeFieldSchema | DateAttributeFieldSchema | ArrayAttributeFieldSchema | ObjectAttributeFieldSchema | ReferenceAttributeFieldSchema;
+export interface RelationshipFieldSchema extends GenericSchemaFieldSchema {
+    type: RelationshipSchema;
+}
+export interface ReadOnlyFieldSchema extends GenericSchemaFieldSchema {
+    readOnly: true;
+}
+export declare type ModelRelationshipsSchema = StringIndexed<RelationshipFieldSchema>;
+export declare type ModelAttributesSchema = StringIndexed<AttributeFieldSchema>;
 export interface ModelSchema {
     idAttribute: string;
     name: string;
-    attributes: {
-        [attrName: string]: {
-            type: 'number';
-            default?: number;
-            readOnly?: boolean;
-        } | {
-            type: 'string';
-            default?: string;
-            readOnly?: boolean;
-        } | {
-            type: 'boolean';
-            default?: boolean;
-            readOnly?: boolean;
-        } | {
-            type: 'date';
-            default?: Date;
-            readOnly?: boolean;
-        } | {
-            type: 'array';
-            default?: string[] | number[];
-            readOnly?: boolean;
-        } | {
-            type: 'object';
-            default?: object;
-            readOnly?: boolean;
-        };
-    };
-    relationships: {
-        [relName: string]: {
-            type: RelationshipSchema;
-            readOnly?: boolean;
-        };
-    };
+    attributes: ModelAttributesSchema;
+    relationships: ModelRelationshipsSchema;
     storeData?: StringIndexed<any> & {
         sql?: {
             bulkQuery?: string;
@@ -121,11 +138,13 @@ export interface ModelReference {
     typeName: string;
     id: number | string;
 }
+export declare type ModelAttributes = StringIndexed<Attribute>;
+export declare type ModelRelationships = StringIndexed<RelationshipItem[]>;
 export interface IndefiniteModelData {
     typeName: string;
     id?: number | string;
-    attributes?: StringIndexed<Attribute>;
-    relationships?: StringIndexed<RelationshipItem[]>;
+    attributes?: ModelAttributes;
+    relationships?: ModelRelationships;
 }
 export interface ModelData extends IndefiniteModelData {
     id: number | string;

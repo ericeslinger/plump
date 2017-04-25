@@ -1,7 +1,7 @@
 import { Observable, Subscription, Observer } from 'rxjs/Rx';
 import { ModelData, ModelSchema, RelationshipDelta, RelationshipItem } from './dataTypes';
 import { Plump } from './plump';
-export declare class Model {
+export declare class Model<T extends ModelData> {
     private plump;
     id: string | number;
     static typeName: string;
@@ -13,13 +13,13 @@ export declare class Model {
     constructor(opts: any, plump: Plump);
     $$copyValuesFrom(opts?: {}): void;
     $$resetDirty(): void;
-    get(opts?: string | string[]): Promise<ModelData>;
-    bulkGet(): Promise<ModelData>;
-    save(): Promise<ModelData>;
+    get(opts?: string | string[]): Promise<T>;
+    bulkGet(): Promise<T>;
+    save(): Promise<T>;
     set(update: any): this;
-    asObservable(opts?: string | string[]): Observable<ModelData>;
-    subscribe(cb: Observer<ModelData>): Subscription;
-    subscribe(fields: string | string[], cb: Observer<ModelData>): Subscription;
+    asObservable(opts?: string | string[]): Observable<T>;
+    subscribe(cb: Observer<T>): Subscription;
+    subscribe(fields: string | string[], cb: Observer<T>): Subscription;
     delete(): Promise<void>;
     add(key: string, item: RelationshipItem): this;
     modifyRelationship(key: string, item: RelationshipItem): this;
