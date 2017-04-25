@@ -105,7 +105,14 @@ export interface ObjectAttributeFieldSchema extends GenericAttributeFieldSchema 
     type: 'object';
     default?: object;
 }
-export declare type AttributeFieldSchema = NumberAttributeFieldSchema | StringAttributeFieldSchema | BooleanAttributeFieldSchema | DateAttributeFieldSchema | ArrayAttributeFieldSchema | ObjectAttributeFieldSchema;
+export interface ReferenceAttributeFieldSchema extends GenericAttributeFieldSchema {
+    type: 'reference';
+    default?: {
+        typeName: string;
+        id: number;
+    };
+}
+export declare type AttributeFieldSchema = NumberAttributeFieldSchema | StringAttributeFieldSchema | BooleanAttributeFieldSchema | DateAttributeFieldSchema | ArrayAttributeFieldSchema | ObjectAttributeFieldSchema | ReferenceAttributeFieldSchema;
 export interface RelationshipFieldSchema extends GenericSchemaFieldSchema {
     type: RelationshipSchema;
 }
@@ -131,11 +138,13 @@ export interface ModelReference {
     typeName: string;
     id: number | string;
 }
+export declare type ModelAttributes = StringIndexed<Attribute>;
+export declare type ModelRelationships = StringIndexed<RelationshipItem[]>;
 export interface IndefiniteModelData {
     typeName: string;
     id?: number | string;
-    attributes?: StringIndexed<Attribute>;
-    relationships?: StringIndexed<RelationshipItem[]>;
+    attributes?: ModelAttributes;
+    relationships?: ModelRelationships;
 }
 export interface ModelData extends IndefiniteModelData {
     id: number | string;

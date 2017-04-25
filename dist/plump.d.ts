@@ -1,6 +1,6 @@
 import { Observable } from 'rxjs/Rx';
 import { Model } from './model';
-import { ModelData, ModelReference, DirtyModel, RelationshipItem, CacheStore, TerminalStore } from './dataTypes';
+import { ModelAttributes, ModelData, ModelReference, DirtyModel, RelationshipItem, CacheStore, TerminalStore } from './dataTypes';
 export declare class Plump {
     destroy$: Observable<string>;
     caches: CacheStore[];
@@ -13,7 +13,9 @@ export declare class Plump {
     setTerminal(store: TerminalStore): Promise<void>;
     addCache(store: CacheStore): Promise<void>;
     find<T extends ModelData>(ref: ModelReference): Model<T>;
-    forge<T extends ModelData>(t: any, val: any): Model<T>;
+    forge<A extends ModelAttributes>(t: string, val: Partial<A>): Model<ModelData & {
+        attributes: A;
+    }>;
     teardown(): void;
     get<T extends ModelData>(value: ModelReference, opts?: string[]): Promise<T>;
     bulkGet<T extends ModelData>(value: ModelReference): Promise<T>;

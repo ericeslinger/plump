@@ -2,6 +2,7 @@ import { Subject, Observable } from 'rxjs/Rx';
 
 import { Model } from './model';
 import {
+  ModelAttributes,
   // IndefiniteModelData,
   ModelData,
   // ModelDelta,
@@ -78,8 +79,8 @@ export class Plump {
     return new Type({ [Type.schema.idAttribute]: ref.id }, this);
   }
 
-  forge<T extends ModelData>(t, val): Model<T> {
-    const Type = typeof t === 'string' ? this.types[t] : t;
+  forge<A extends ModelAttributes>(t: string, val: Partial<A>): Model<ModelData & { attributes: A }> {
+    const Type = this.types[t];
     return new Type(val, this);
   }
 
