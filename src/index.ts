@@ -4,6 +4,7 @@ export { Storage } from './storage/storage';
 export { MemoryStore } from './storage/memory';
 export { KeyValueStore } from './storage/keyValueStore';
 export { Relationship } from './relationship';
+export { schema } from './schema';
 export {
   ModelData,
   RelationshipSchema,
