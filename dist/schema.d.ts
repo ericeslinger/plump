@@ -1,2 +1,2 @@
 import { ModelSchema } from './dataTypes';
-export declare function schema(s: ModelSchema): (target: any) => any;
+export declare function Schema(s: ModelSchema): (target: any) => any;

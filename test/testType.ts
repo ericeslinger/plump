@@ -1,4 +1,4 @@
-import { ModelSchema, RelationshipSchema, Model, schema } from '../src/index';
+import { ModelSchema, RelationshipSchema, Model, ModelData, Schema } from '../src/index';
 
 export const ChildrenSchema: RelationshipSchema = {
   sides: {
@@ -92,6 +92,6 @@ export const TestSchema: ModelSchema = {
   }
 };
 
-// export
-@schema(TestSchema)
-export class TestType extends Model { }
+@Schema(TestSchema)
+export class TestType extends Model<ModelData> {
+}

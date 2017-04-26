@@ -18,7 +18,7 @@ import { Plump } from './plump';
 // TODO: figure out where error events originate (storage or model)
 // and who keeps a roll-backable delta
 
-export class Model {
+export class Model<T extends ModelData> {
   id: string | number;
   static typeName = 'BASE';
   static schema: ModelSchema = {
@@ -74,7 +74,7 @@ export class Model {
   }
 
 
-  get(opts: string | string[] = 'attributes'): Promise<ModelData> {
+  get(opts: string | string[] = 'attributes'): Promise<T> {
     // If opts is falsy (i.e., undefined), get attributes
     // Otherwise, get what was requested,
     // wrapping the request in a Array if it wasn't already one
@@ -92,12 +92,12 @@ export class Model {
     });
   }
 
-  bulkGet(): Promise<ModelData> {
+  bulkGet(): Promise<T> {
     return this.plump.bulkGet(this);
   }
 
   // TODO: Should $save ultimately return this.get()?
-  save(): Promise<ModelData> {
+  save(): Promise<T> {
     const update: DirtyModel = mergeOptions(
       { id: this.id, typeName: this.typeName },
       this.dirty
@@ -127,7 +127,7 @@ export class Model {
     return this;
   }
 
-  asObservable(opts: string | string[] = ['relationships', 'attributes']): Observable<ModelData> {
+  asObservable(opts: string | string[] = ['relationships', 'attributes']): Observable<T> {
     let fields = Array.isArray(opts) ? opts.concat() : [opts];
     if (fields.indexOf('relationships') >= 0) {
       fields = fields.concat(
@@ -177,11 +177,11 @@ export class Model {
     return preload$.merge(watchWrite$);
   }
 
-  subscribe(cb: Observer<ModelData>): Subscription;
-  subscribe(fields: string | string[], cb: Observer<ModelData>): Subscription;
-  subscribe(arg1: Observer<ModelData> | string | string[], arg2?: Observer<ModelData>): Subscription {
+  subscribe(cb: Observer<T>): Subscription;
+  subscribe(fields: string | string[], cb: Observer<T>): Subscription;
+  subscribe(arg1: Observer<T> | string | string[], arg2?: Observer<T>): Subscription {
     let fields: string[] = [];
-    let cb: Observer<ModelData> = null;
+    let cb: Observer<T> = null;
 
     if (arg2) {
       cb = arg2;
@@ -191,7 +191,7 @@ export class Model {
         fields = [arg1 as string];
       }
     } else {
-      cb = arg1 as Observer<ModelData>;
+      cb = arg1 as Observer<T>;
       fields = ['attributes'];
     }
     return this.asObservable(fields)

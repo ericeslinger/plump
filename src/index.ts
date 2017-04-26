@@ -4,15 +4,27 @@ export { Storage } from './storage/storage';
 export { MemoryStore } from './storage/memory';
 export { KeyValueStore } from './storage/keyValueStore';
 export { Relationship } from './relationship';
-export { schema } from './schema';
+export { Schema } from './schema';
 export {
-  ModelData,
   RelationshipSchema,
   RelationshipItem,
   RelationshipDelta,
+  NumberAttributeFieldSchema,
+  StringAttributeFieldSchema,
+  BooleanAttributeFieldSchema,
+  DateAttributeFieldSchema,
+  ArrayAttributeFieldSchema,
+  ObjectAttributeFieldSchema,
+  ReferenceAttributeFieldSchema,
+  AttributeFieldSchema,
+  ReadOnlyFieldSchema,
+  ModelAttributesSchema,
   ModelSchema,
   ModelReference,
+  ModelAttributes,
+  ModelRelationships,
   IndefiniteModelData,
+  ModelData,
   ModelDelta,
   DirtyModel,
   DirtyValues,

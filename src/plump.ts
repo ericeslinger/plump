@@ -2,6 +2,7 @@ import { Subject, Observable } from 'rxjs/Rx';
 
 import { Model } from './model';
 import {
+  ModelAttributes,
   // IndefiniteModelData,
   ModelData,
   // ModelDelta,
@@ -73,13 +74,13 @@ export class Plump {
     );
   }
 
-  find(ref: ModelReference): Model {
+  find<T extends ModelData>(ref: ModelReference): Model<T> {
     const Type = this.types[ref.typeName];
     return new Type({ [Type.schema.idAttribute]: ref.id }, this);
   }
 
-  forge(t, val): Model {
-    const Type = typeof t === 'string' ? this.types[t] : t;
+  forge<A extends ModelAttributes>(t: string, val: Partial<A>): Model<ModelData & { attributes: A }> {
+    const Type = this.types[t];
     return new Type(val, this);
   }
 
@@ -87,7 +88,7 @@ export class Plump {
     this.teardownSubject.next('done');
   }
 
-  get(value: ModelReference, opts: string[] = ['attributes']): Promise<ModelData> {
+  get<T extends ModelData>(value: ModelReference, opts: string[] = ['attributes']): Promise<T> {
     const keys = opts && !Array.isArray(opts) ? [opts] : opts;
     return this.caches.reduce((thenable, storage) => {
       return thenable.then((v) => {
@@ -109,11 +110,11 @@ export class Plump {
     });
   }
 
-  bulkGet(value: ModelReference): Promise<ModelData> {
+  bulkGet<T extends ModelData>(value: ModelReference): Promise<T> {
     return this.terminal.bulkRead(value);
   }
 
-  save(value: DirtyModel): Promise<ModelData> {
+  save<T extends ModelData>(value: DirtyModel): Promise<T> {
     if (this.terminal) {
       return Promise.resolve()
       .then(() => {
