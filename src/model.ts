@@ -297,7 +297,7 @@ export class Model<T extends ModelData> {
     } else {
       return current;
     }
-  };
+  }
 
   static resolveAndOverlay(update, base: {attributes?: any, relationships?: any} = { attributes: {}, relationships: {} }) {
     const attributes = mergeOptions({}, base.attributes, update.attributes);
