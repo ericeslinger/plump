@@ -132,7 +132,7 @@ export interface ReadOnlyFieldSchema extends GenericSchemaFieldSchema {
 }
 
 export type ModelRelationshipsSchema = StringIndexed<RelationshipFieldSchema>;
-export type ModelAttributesSchema = StringIndexed<AttributeFieldSchema>
+export type ModelAttributesSchema = StringIndexed<AttributeFieldSchema>;
 
 export interface ModelSchema {
   idAttribute: string;
