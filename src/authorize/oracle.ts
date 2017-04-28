@@ -1,12 +1,10 @@
-import { AuthorizerDefinition, RelationshipAuthorizeArguments } from './dataTypes';
-import { ModelSchema, ModelReference, ModelData, IndefiniteModelData } from '../dataTypes';
-
-export function Or(...args: Promise<boolean>[]): Promise<boolean> {
-  return Promise.all(args).then((results) => results.some(k => k));
-}
-export function And(...args: Promise<boolean>[]): Promise<boolean> {
-  return Promise.all(args).then((results) => results.every(k => k));
-}
+import {
+  AuthorizerDefinition,
+  AuthorizeRequest,
+  AuthorizeResponse,
+  FinalAuthorizeResponse,
+} from './dataTypes';
+import { ModelSchema } from '../dataTypes';
 
 export class Oracle {
   private authorizers: {[name: string]: AuthorizerDefinition} = {};
@@ -18,33 +16,49 @@ export class Oracle {
     if (missing.length > 0) {
       throw new Error(`Missing relationship authorizer(s) ${missing.join(', ')}`);
     }
-    this.authorizers[auth.typeName] = auth;
+    this.authorizers[forType.name] = auth;
   }
 
-  authorizeAttributesCreate(actor: ModelReference, item: ModelReference, data: IndefiniteModelData) {
-    return this.authorizers[item.typeName].attributes.authorizeCreate(actor, item, data);
-  }
-  authorizeAttributesRead(actor: ModelReference, item: ModelReference) {
-    return this.authorizers[item.typeName].attributes.authorizeRead(actor, item);
-  }
-  authorizeAttributesUpdate(actor: ModelReference, item: ModelReference, data: ModelData) {
-    return this.authorizers[item.typeName].attributes.authorizeUpdate(actor, item, data);
-  }
-  authorizeAttributesDelete(actor: ModelReference, item: ModelReference) {
-    return this.authorizers[item.typeName].attributes.authorizeDelete(actor, item);
+  dispatch(request: AuthorizeRequest): Promise<AuthorizeResponse> {
+    return Promise.resolve()
+    .then<AuthorizeResponse>(() => {
+      if (request.kind === 'relationship') {
+        const relationshipAuthorizer = this.authorizers[request.parent.typeName].relationships[request.relationship];
+        if (request.action === 'create') {
+          return relationshipAuthorizer.authorizeCreate(request);
+        } else if (request.action === 'read') {
+          return relationshipAuthorizer.authorizeRead(request);
+        } else if (request.action === 'update') {
+          return relationshipAuthorizer.authorizeUpdate(request);
+        } else if (request.action === 'delete') {
+          return relationshipAuthorizer.authorizeDelete(request);
+        }
+      } else if (request.kind === 'attributes') {
+        if (request.action === 'create') {
+          return this.authorizers[request.data.typeName].attributes.authorizeCreate(request);
+        } else if (request.action === 'read') {
+          return this.authorizers[request.target.typeName].attributes.authorizeRead(request);
+        } else if (request.action === 'update') {
+          return this.authorizers[request.target.typeName].attributes.authorizeUpdate(request);
+        } else if (request.action === 'delete') {
+          return this.authorizers[request.target.typeName].attributes.authorizeDelete(request);
+        }
+      } else if (request.kind === 'compound') {
+        return Promise.all(request.list.map(v => this.dispatch(v)))
+        .then((res: FinalAuthorizeResponse[]) => request.combinator === 'or' ? res.some(v => v.result) : res.every(v => v.result ))
+        .then<FinalAuthorizeResponse>(f => ({ kind: 'final', result: f }));
+      }
+    }).then((v) => {
+      if (v.kind === 'final') {
+        return v;
+      } else if (v.kind === 'delegated') {
+        return this.dispatch(v.delegate);
+      }
+    });
   }
 
-
-  authorizeRelationshipCreate(actor: ModelReference, opts: RelationshipAuthorizeArguments) {
-    return this.authorizers[opts.parent.typeName].relationships[opts.relationship].authorizeCreate(actor, opts);
-  }
-  authorizeRelationshipRead(actor: ModelReference, opts: RelationshipAuthorizeArguments) {
-    return this.authorizers[opts.parent.typeName].relationships[opts.relationship].authorizeRead(actor, opts);
-  }
-  authorizeRelationshipUpdate(actor: ModelReference, opts: RelationshipAuthorizeArguments) {
-    return this.authorizers[opts.parent.typeName].relationships[opts.relationship].authorizeUpdate(actor, opts);
-  }
-  authorizeRelationshipDelete(actor: ModelReference, opts: RelationshipAuthorizeArguments) {
-    return this.authorizers[opts.parent.typeName].relationships[opts.relationship].authorizeDelete(actor, opts);
+  authorize(request: AuthorizeRequest): Promise<boolean> {
+    return this.dispatch(request)
+    .then((f: FinalAuthorizeResponse) => f.result);
   }
 }
