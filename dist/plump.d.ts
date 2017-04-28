@@ -13,9 +13,9 @@ export declare class Plump {
     setTerminal(store: TerminalStore): Promise<void>;
     addCache(store: CacheStore): Promise<void>;
     find<T extends ModelData>(ref: ModelReference): Model<T>;
-    forge<A extends ModelAttributes>(t: string, val: Partial<A>): Model<ModelData & {
-        attributes: A;
-    }>;
+    forge<A extends ModelAttributes, T extends Model<ModelData & {
+        attributes?: A;
+    }>>(t: string, val: Partial<A>): T;
     teardown(): void;
     get<T extends ModelData>(value: ModelReference, opts?: string[]): Promise<T>;
     bulkGet<T extends ModelData>(value: ModelReference): Promise<T>;

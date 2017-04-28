@@ -79,9 +79,9 @@ export class Plump {
     return new Type({ [Type.schema.idAttribute]: ref.id }, this);
   }
 
-  forge<A extends ModelAttributes>(t: string, val: Partial<A>): Model<ModelData & { attributes: A }> {
+  forge<A extends ModelAttributes, T extends Model<ModelData & { attributes?: A }>>(t: string, val: Partial<A>): T {
     const Type = this.types[t];
-    return new Type(val, this);
+    return new Type(val, this) as T;
   }
 
   teardown(): void {
