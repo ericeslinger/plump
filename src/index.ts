@@ -34,31 +34,7 @@ export {
   StorageOptions
 } from './dataTypes';
 
-export {
-  AbstractAuthorizeRequest,
-  AbstractAttributesAuthorizeRequest,
-  AttributesReadAuthorizeRequest,
-  AttributesDeleteAuthorizeRequest,
-  AttributesCreateAuthorizeRequest,
-  AttributesUpdateAuthorizeRequest,
-  AbstractRelationshipAuthorizeRequest,
-  RelationshipCreateAuthorizeRequest,
-  RelationshipReadAuthorizeRequest,
-  RelationshipUpdateAuthorizeRequest,
-  RelationshipDeleteAuthorizeRequest,
-  CompoundAuthorizeRequest,
-  AbstractAuthorizeResponse,
-  FinalAuthorizeResponse,
-  DelegateAuthorizeResponse,
-  AttributesAuthorize,
-  RelationshipAuthorize,
-  AuthorizerDefinition,
-  AttributesAuthorizeRequest,
-  RelationshipAuthorizeRequest,
-  SimpleAuthorizeRequest,
-  AuthorizeRequest,
-  AuthorizeResponse,
-} from './authorize/dataTypes';
+export * from './authorize/dataTypes';
 
 export {
   Oracle

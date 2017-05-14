@@ -48,6 +48,16 @@ describe('model', () => {
       });
     });
 
+    it('should allow the creation of new models with an existing id', () => {
+      const otherPlump = new Plump();
+      const otherStore = new MemoryStore({ terminal: true });
+      return otherPlump.setTerminal(otherStore)
+      .then(() => otherPlump.addType(TestType))
+      .then(() => new TestType({ name: 'potato', id: '101' }, otherPlump).save())
+      .then(() => otherPlump.find({ typeName: 'tests', id: '101' }).get())
+      .then((v) => expect(v).to.have.property('id', '101'));
+    });
+
     it('should allow data to be deleted', () => {
       const one = new TestType({ name: 'potato' }, plump);
       return one.save()
@@ -117,7 +127,7 @@ describe('model', () => {
         // NOTE: .have.all requires list length equality
         expect(data).to.have.property('attributes')
         .with.all.keys(baseFields);
-        expect(data).to.have.property('relationships').that.is.empty; // eslint-disable-line no-unused-expressions
+        expect(data).to.have.property('relationships').that.is.empty; // tslint:disable-line no-unused-expression
       });
     });
 

@@ -1,7 +1,9 @@
 import { ModifiableKeyValueStore } from './modifiableKeyValueStore';
 import { ModelData, RelationshipItem, ModelReference } from '../dataTypes';
 export declare class MemoryStore extends ModifiableKeyValueStore {
-    private store;
+    store: {
+        [index: string]: ModelData;
+    };
     constructor(opts?: {});
     logStore(): void;
     _keys(typeName: any): Promise<string[]>;

@@ -4,7 +4,7 @@ import * as mergeOptions from 'merge-options';
 
 export class MemoryStore extends ModifiableKeyValueStore {
 
-  private store: {[index: string]: ModelData} = {};
+  store: {[index: string]: ModelData} = {};
 
   constructor(opts = {}) {
     super(opts);

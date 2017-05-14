@@ -51,7 +51,7 @@ export abstract class KeyValueStore extends Storage implements TerminalStore, Ca
         if (saneNumber(thisId) && thisId > this.maxKeys[value.typeName]) {
           this.maxKeys[value.typeName] = thisId;
         }
-        return this._get(this.keyString(value as ModelReference)).then(current => mergeOptions({}, current, value));
+        return this._get(this.keyString(value as ModelReference)).then(current => mergeOptions({}, current || {}, value));
       }
     })
     .then((toSave: ModelData) => {
