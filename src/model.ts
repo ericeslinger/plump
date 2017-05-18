@@ -1,5 +1,6 @@
 import * as mergeOptions from 'merge-options';
 import { Observable, Subscription, Observer } from 'rxjs/Rx';
+import 'reflect-metadata';
 
 import {
   ModelData,
@@ -49,6 +50,7 @@ export class Model<T extends ModelData> {
     if (this.typeName === 'BASE') {
       throw new TypeError('Cannot instantiate base plump Models, please subclass with a schema and valid typeName');
     }
+
     this.dirty = {
       attributes: {}, // Simple key-value
       relationships: {}, // relName: Delta[]
@@ -146,9 +148,7 @@ export class Model<T extends ModelData> {
       if (v !== null) {
         return Observable.of(v);
       } else {
-        const terminal$ = Observable.of(terminal)
-        .flatMap((s: TerminalStore) => Observable.fromPromise(s.read(this, fields)))
-        .share();
+        const terminal$ = Observable.fromPromise(terminal.read(this, fields));
         const cold$ = Observable.from(colds)
         .flatMap((s: CacheStore) => Observable.fromPromise(s.read(this, fields)))
         .startWith(undefined);
@@ -174,7 +174,10 @@ export class Model<T extends ModelData> {
       .flatMap((s: TerminalStore) => Observable.fromPromise(s.read(this, fields)))
     );
     // );
-    return preload$.merge(watchWrite$);
+    return Observable.merge(
+      preload$,
+      watchWrite$
+    );
   }
 
   subscribe(cb: Observer<T>): Subscription;
@@ -272,21 +275,6 @@ export class Model<T extends ModelData> {
     }
   }
 
-
-  // static rest(plump, opts) {
-  //   const restOpts = Object.assign(
-  //     {},
-  //     opts,
-  //     {
-  //       url: `/${this.schema.name}/${opts.url}`,
-  //     }
-  //   );
-  //   return plump.restRequest(restOpts);
-  // }
-
-  // static applyDefaults(v) {
-  //   return validateInput(this.schema, v);
-  // };
 
   static applyDelta(current, delta) {
     if (delta.op === 'add' || delta.op === 'modify') {
