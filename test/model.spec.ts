@@ -31,6 +31,23 @@ describe('model', () => {
     //   return expect(MiniTest.toJSON()).to.deep.equal(TestType.toJSON());
     // });
 
+    it('should let you subscribe to relationships that are empty', (done) => {
+      const thing = new TestType({ name: 'empty' }, plump);
+      let reallyDone = done;
+      thing.save()
+      .then((i) => {
+        thing
+        .asObservable(['attributes', 'relationships'])
+        .subscribe((v) => {
+          if (v && v.relationships && v.relationships.children) {
+            expect(v.relationships.children).to.deep.equal([]);
+            reallyDone();
+            reallyDone = () => 1;
+          }
+        });
+      });
+    });
+
     it('should load data from datastores', () => {
       return memstore2.writeAttributes({ typeName: 'tests', attributes: { name: 'potato' } })
       .then(createdObject => {
@@ -246,6 +263,7 @@ describe('model', () => {
             complete: () => { /* noop */ },
             next: (v) => {
               try {
+                expect(v).to.not.be.undefined;
                 if (!v) {
                   return;
                 }

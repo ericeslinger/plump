@@ -5,4 +5,4 @@ export function Schema(s: ModelSchema) {
     target.schema = s;
     return target;
   };
-};
+}
