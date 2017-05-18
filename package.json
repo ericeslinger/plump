@@ -1,6 +1,6 @@
 {
   "name": "plump",
-  "version": "0.13.2",
+  "version": "0.13.3",
   "description": "Pluggable Datastore",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -43,7 +43,6 @@
   },
   "dependencies": {
     "merge-options": "0.0.64",
-    "reflect-metadata": "^0.1.10",
     "rxjs": "^5.1.0"
   }
 }

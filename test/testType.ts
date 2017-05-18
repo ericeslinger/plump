@@ -1,5 +1,4 @@
 import { ModelSchema, RelationshipSchema, Model, ModelData, Schema } from '../src/index';
-import 'reflect-metadata';
 
 export const ChildrenSchema: RelationshipSchema = {
   sides: {

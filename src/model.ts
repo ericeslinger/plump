@@ -1,6 +1,5 @@
 import * as mergeOptions from 'merge-options';
 import { Observable, Subscription, Observer } from 'rxjs/Rx';
-import 'reflect-metadata';
 
 import {
   ModelData,
@@ -150,8 +149,8 @@ export class Model<T extends ModelData> {
       } else {
         const terminal$ = Observable.fromPromise(terminal.read(this, fields));
         const cold$ = Observable.from(colds)
-        .flatMap((s: CacheStore) => Observable.fromPromise(s.read(this, fields)))
-        .startWith(undefined);
+        .flatMap((s: CacheStore) => Observable.fromPromise(s.read(this, fields)));
+        // .startWith(undefined);
         return Observable.merge(
           terminal$,
           cold$.takeUntil(terminal$)
