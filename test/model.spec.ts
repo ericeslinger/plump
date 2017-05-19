@@ -29,7 +29,9 @@ describe('model', () => {
       @Schema({
         name: 'smallType',
         idAttribute: 'id',
-        attributes: {},
+        attributes: {
+          id: { type: 'number' },
+        },
         relationships: {
           children: {
             type: {
@@ -54,7 +56,7 @@ describe('model', () => {
       const tinyPlump = new Plump();
       return tinyPlump.addType(MiniModel)
       .then(() => tinyPlump.setTerminal(new MemoryStore({ terminal: true })))
-      .then(() => new MiniModel({}, tinyPlump).save())
+      .then(() => new MiniModel({id: 101}, tinyPlump).save())
       .then((i) => {
         return new Promise((resolve, reject) => {
           return tinyPlump.find({typeName: 'smallType', id: i.id})

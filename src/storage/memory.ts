@@ -32,7 +32,7 @@ export class MemoryStore extends ModifiableKeyValueStore {
     .then(() => {
       const k = this.keyString(vals);
       if (this.store[k] === undefined) {
-        this.store[k] = mergeOptions({}, vals);
+        this.store[k] = mergeOptions({ relationships: {} }, vals);
       } else {
         this.store[k] = mergeOptions(this.store[k], vals);
       }
