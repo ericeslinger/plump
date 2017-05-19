@@ -79,10 +79,12 @@ describe('model', () => {
 
     it('should create an id when one is unset', () => {
       const noID = new TestType({ name: 'potato' }, plump);
-      return noID.save().then(() => {
-        return expect(noID.get())
-        .to.eventually.have.property('id')
-        .that.is.not.null;
+      return noID.save()
+      .then(() => noID.get())
+      .then((v) => {
+        expect(v.id).to.not.be.null;
+        expect(v.attributes.id).to.not.be.null;
+        expect(v.id).to.equal(v.attributes.id);
       });
     });
 
@@ -91,9 +93,12 @@ describe('model', () => {
       const otherStore = new MemoryStore({ terminal: true });
       return otherPlump.setTerminal(otherStore)
       .then(() => otherPlump.addType(TestType))
-      .then(() => new TestType({ name: 'potato', id: '101' }, otherPlump).save())
-      .then(() => otherPlump.find({ typeName: 'tests', id: '101' }).get())
-      .then((v) => expect(v).to.have.property('id', '101'));
+      .then(() => new TestType({ name: 'potato', id: 101 }, otherPlump).save())
+      .then(() => otherPlump.find({ typeName: 'tests', id: 101 }).get())
+      .then((v) => {
+        expect(v).to.have.property('id', 101);
+        expect(v.attributes).to.have.property('id', 101);
+      });
     });
 
     it('should allow data to be deleted', () => {
