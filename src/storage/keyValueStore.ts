@@ -37,13 +37,14 @@ export abstract class KeyValueStore extends Storage implements TerminalStore, Ca
     // trim out relationships for a direct write.
     return Promise.resolve()
     .then(() => {
+      const idAttribute = this.getSchema(inputValue.typeName).idAttribute;
       if ((value.id === undefined) || (value.id === null)) {
         if (!this.terminal) {
           throw new Error('Cannot create new content in a non-terminal store');
         }
         return this.allocateId(value.typeName)
         .then((n) => {
-          return mergeOptions({}, value, { id: n, relationships: {} }) as ModelData; // if new.
+          return mergeOptions({}, value, { id: n, relationships: {}, attributes: {[idAttribute]: n } }) as ModelData; // if new.
         });
       } else {
         // if not new, get current (including relationships) and merge

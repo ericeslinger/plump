@@ -35,13 +35,14 @@ export abstract class ModifiableKeyValueStore extends Storage implements Termina
     // trim out relationships for a direct write.
     return Promise.resolve()
     .then(() => {
+      const idAttribute = this.getSchema(inputValue.typeName).idAttribute;
       if ((value.id === undefined) || (value.id === null)) {
         if (!this.terminal) {
           throw new Error('Cannot create new content in a non-terminal store');
         }
         return this.allocateId(value.typeName)
         .then((n) => {
-          return mergeOptions({}, value, { id: n, relationships: {} }) as ModelData; // if new.
+          return mergeOptions({}, value, { id: n, relationships: {}, attributes: {[idAttribute]: n } }) as ModelData; // if new.
         });
       } else {
         return value as ModelData;
@@ -59,7 +60,9 @@ export abstract class ModifiableKeyValueStore extends Storage implements Termina
   readAttributes(value: ModelReference): Promise<ModelData> {
     return this._get(value)
     .then(d => {
-      if (d && d.attributes && Object.keys(d.attributes).length > 0) {
+      // TODO: figure out what happens when there's a
+      // field with no real attributes
+      if (d && d.attributes) {
         return d;
       } else {
         return null;

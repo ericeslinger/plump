@@ -3,7 +3,7 @@
 import * as chai from 'chai';
 import * as chaiAsPromised from 'chai-as-promised';
 
-import { Plump, MemoryStore } from '../src/index';
+import { Plump, MemoryStore, Model, Schema, ModelData } from '../src/index';
 import { TestType } from './testType';
 
 const memstore2 = new MemoryStore({ terminal: true });
@@ -25,26 +25,47 @@ describe('model', () => {
       return expect(one.get()).to.eventually.have.deep.property('attributes.name', 'potato');
     });
 
-    // it('should properly serialize its schema', () => {
-    //   class MiniTest extends Model {}
-    //   MiniTest.fromJSON(TestType.toJSON());
-    //   return expect(MiniTest.toJSON()).to.deep.equal(TestType.toJSON());
-    // });
+    it('should let you subscribe to relationships that are empty', () => {
+      @Schema({
+        name: 'smallType',
+        idAttribute: 'id',
+        attributes: {},
+        relationships: {
+          children: {
+            type: {
+              sides: {
+                parents: { otherType: 'smallType', otherName: 'children' },
+                children: { otherType: 'smallType', otherName: 'parents' },
+              },
+            },
+          },
+          parents: {
+            type: {
+              sides: {
+                parents: { otherType: 'smallType', otherName: 'children' },
+                children: { otherType: 'smallType', otherName: 'parents' },
+              },
+            },
+          },
+        },
+      })
+      class MiniModel extends Model<ModelData> { }
 
-    it('should let you subscribe to relationships that are empty', (done) => {
-      const thing = new TestType({ name: 'empty' }, plump);
-      let reallyDone = done;
-      thing.save()
+      const tinyPlump = new Plump();
+      return tinyPlump.addType(MiniModel)
+      .then(() => tinyPlump.setTerminal(new MemoryStore({ terminal: true })))
+      .then(() => new MiniModel({}, tinyPlump).save())
       .then((i) => {
-        thing
-        .asObservable(['attributes', 'relationships'])
-        .subscribe((v) => {
-          if (v && v.relationships && v.relationships.children) {
-            expect(v.relationships.children).to.deep.equal([]);
-            reallyDone();
-            reallyDone = () => 1;
-          }
-        });
+        return new Promise((resolve, reject) => {
+          return tinyPlump.find({typeName: 'smallType', id: i.id})
+          .asObservable()
+          .subscribe((v) => {
+            if (v && v.relationships && v.relationships.children) {
+              expect(v.relationships.children).to.deep.equal([]);
+              resolve();
+            }
+          });
+        })
       });
     });
 

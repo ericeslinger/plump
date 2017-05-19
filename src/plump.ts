@@ -118,18 +118,18 @@ export class Plump {
     if (this.terminal) {
       return Promise.resolve()
       .then(() => {
-        if (Object.keys(value.attributes).length > 0) {
+        // if (Object.keys(value.attributes).length > 0) {
           return this.terminal.writeAttributes({
             attributes: value.attributes,
             id: value.id,
             typeName: value.typeName,
           });
-        } else {
-          return {
-            id: value.id,
-            typeName: value.typeName,
-          };
-        }
+        // } else {
+          // return {
+            // id: value.id,
+            // typeName: value.typeName,
+          // };
+        // }
       })
       .then((updated) => {
         if (value.relationships && Object.keys(value.relationships).length > 0) {

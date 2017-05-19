@@ -145,6 +145,7 @@ export abstract class Storage implements BaseStore {
     const valAttrs = Object.keys(value.attributes || {});
     const typeRels = Object.keys(schema.relationships || {});
     const valRels = Object.keys(value.relationships || {});
+    const idAttribute = schema.idAttribute;
 
     const invalidAttrs = valAttrs.filter(item => typeAttrs.indexOf(item) < 0);
     const invalidRels = valRels.filter(item => typeRels.indexOf(item) < 0);
@@ -168,6 +169,10 @@ export abstract class Storage implements BaseStore {
           retVal.attributes[attrName] = schema.attributes[attrName].default;
         }
       }
+    }
+
+    if (value.attributes[idAttribute] && !retVal.id) {
+      retVal.id = value.attributes[idAttribute];
     }
 
     for (const relName in schema.relationships) {
