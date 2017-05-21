@@ -210,8 +210,14 @@ export abstract class KeyValueStore extends Storage implements TerminalStore, Ca
       }
       const newChild: RelationshipItem = { id: child.id };
       const newParent: RelationshipItem = { id: value.id };
+      if (!thisItem.relationships) {
+        thisItem.relationships = {};
+      }
       if (!thisItem.relationships[relName]) {
         thisItem.relationships[relName] = [];
+      }
+      if (!otherItem.relationships) {
+        otherItem.relationships = {};
       }
       if (!otherItem.relationships[otherRelName]) {
         otherItem.relationships[otherRelName] = [];
