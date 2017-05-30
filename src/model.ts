@@ -1,5 +1,5 @@
 import * as mergeOptions from 'merge-options';
-import { Observable, Subscription, Observer } from 'rxjs/Rx';
+import { Observable, Subscription, Observer } from 'rxjs';
 
 import {
   ModelData,

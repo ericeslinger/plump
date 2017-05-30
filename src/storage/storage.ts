@@ -2,7 +2,7 @@
 
 import * as mergeOptions from 'merge-options';
 // import { validateInput } from '../util';
-import { Subject, Observable } from 'rxjs/Rx';
+import { Subject, Observable } from 'rxjs';
 import {
   IndefiniteModelData,
   ModelData,

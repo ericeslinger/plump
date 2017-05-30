@@ -1,4 +1,4 @@
-import { Observable } from 'rxjs/Rx';
+import { Observable } from 'rxjs';
 import { IndefiniteModelData, ModelData, ModelDelta, ModelSchema, ModelReference, BaseStore, StorageOptions } from '../dataTypes';
 export declare abstract class Storage implements BaseStore {
     terminal: boolean;

@@ -1,4 +1,4 @@
-import { Observable, Subscription, Observer } from 'rxjs/Rx';
+import { Observable, Subscription, Observer } from 'rxjs';
 import { ModelData, ModelSchema, RelationshipDelta, RelationshipItem } from './dataTypes';
 import { Plump } from './plump';
 export declare class Model<T extends ModelData> {

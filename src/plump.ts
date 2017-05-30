@@ -1,4 +1,4 @@
-import { Subject, Observable } from 'rxjs/Rx';
+import { Subject, Observable } from 'rxjs';
 
 import { Model } from './model';
 import {

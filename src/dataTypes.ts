@@ -1,4 +1,4 @@
-import { Observable } from 'rxjs/Rx';
+import { Observable } from 'rxjs';
 
 export interface StringIndexed<T> {
   [index: string]: T;
