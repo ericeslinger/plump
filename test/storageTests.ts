@@ -9,6 +9,12 @@ import * as chai from 'chai';
 
 const expect = chai.expect;
 
+namespace Chai {
+  interface Assertion {
+    nested: Assertion;
+  }
+}
+
 const sampleObject = {
   type: 'tests',
   attributes: {
@@ -98,10 +104,7 @@ export function testSuite(context, storeOpts ) {
         return actualStore.writeAttributes(sampleObject)
         .then((createdObject) => {
           return actualStore.read({ type: 'tests', id: createdObject.id })
-          .then((v) => {
-            console.log(v);
-            return expect(v).to.have.nested.property('attributes.name', 'potato');
-          })
+          .then((v) => expect(v).to.have.nested.property('attributes.name', 'potato'))
           .then(() => actualStore.delete({ type: 'tests', id: createdObject.id }))
           .then(() => actualStore.read({ type: 'tests', id: createdObject.id }))
           .then(v => expect(v).to.be.null);
