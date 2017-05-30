@@ -39,11 +39,11 @@ export interface BaseStore {
         schema: ModelSchema;
     } | ModelSchema | string): ModelSchema;
     addSchema(t: {
-        typeName: string;
+        type: string;
         schema: ModelSchema;
     }): Promise<void>;
     addSchemas(t: {
-        typeName: string;
+        type: string;
         schema: ModelSchema;
     }[]): Promise<void>;
     validateInput(value: ModelData | IndefiniteModelData): typeof value;
@@ -71,7 +71,7 @@ export interface TerminalStore extends BaseStore {
     bulkRead(value: ModelReference): Promise<ModelData>;
 }
 export interface AllocatingStore extends TerminalStore {
-    allocateId(typeName: string): Promise<string | number>;
+    allocateId(type: string): Promise<string | number>;
 }
 export interface GenericSchemaFieldSchema {
     type: any;
@@ -108,7 +108,7 @@ export interface ObjectAttributeFieldSchema extends GenericAttributeFieldSchema 
 export interface ReferenceAttributeFieldSchema extends GenericAttributeFieldSchema {
     type: 'reference';
     default?: {
-        typeName: string;
+        type: string;
         id: number;
     };
 }
@@ -135,13 +135,13 @@ export interface ModelSchema {
     };
 }
 export interface ModelReference {
-    typeName: string;
+    type: string;
     id: number | string;
 }
 export declare type ModelAttributes = StringIndexed<Attribute>;
 export declare type ModelRelationships = StringIndexed<RelationshipItem[]>;
 export interface IndefiniteModelData {
-    typeName: string;
+    type: string;
     id?: number | string;
     attributes?: ModelAttributes;
     relationships?: ModelRelationships;
@@ -159,5 +159,5 @@ export interface DirtyValues {
 }
 export interface DirtyModel extends DirtyValues {
     id?: string | number;
-    typeName: string;
+    type: string;
 }

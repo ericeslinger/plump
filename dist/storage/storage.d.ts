@@ -13,7 +13,7 @@ export declare abstract class Storage implements BaseStore {
     abstract readAttributes(value: ModelReference): Promise<ModelData>;
     abstract readRelationship(value: ModelReference, relName: string): Promise<ModelData>;
     readRelationships(item: ModelReference, relationships: string[]): Promise<ModelData>;
-    read(item: ModelReference, opts?: string | string[]): Promise<ModelData>;
+    read(item: ModelReference, opts?: string | string[]): Promise<any>;
     bulkRead(item: ModelReference): Promise<ModelData>;
     hot(item: ModelReference): boolean;
     validateInput(value: ModelData | IndefiniteModelData): typeof value;
@@ -21,11 +21,11 @@ export declare abstract class Storage implements BaseStore {
         schema: ModelSchema;
     } | ModelSchema | string): ModelSchema;
     addSchema(t: {
-        typeName: string;
+        type: string;
         schema: ModelSchema;
     }): Promise<void>;
     addSchemas(a: {
-        typeName: string;
+        type: string;
         schema: ModelSchema;
     }[]): Promise<void>;
     fireWriteUpdate(val: ModelDelta): Promise<ModelDelta>;

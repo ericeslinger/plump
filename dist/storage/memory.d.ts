@@ -6,7 +6,7 @@ export declare class MemoryStore extends ModifiableKeyValueStore {
     };
     constructor(opts?: {});
     logStore(): void;
-    _keys(typeName: any): Promise<string[]>;
+    _keys(type: any): Promise<string[]>;
     _get(item: ModelReference): Promise<any>;
     _upsert(vals: ModelData): Promise<ModelData>;
     _updateArray(ref: ModelReference, relName: string, item: RelationshipItem): Promise<ModelReference>;
