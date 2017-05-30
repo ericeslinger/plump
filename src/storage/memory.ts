@@ -14,8 +14,8 @@ export class MemoryStore extends ModifiableKeyValueStore {
     console.log(JSON.stringify(this.store, null, 2));
   }
 
-  _keys(typeName) {
-    return Promise.resolve(Object.keys(this.store).filter((k) => k.indexOf(`${typeName}:`) === 0));
+  _keys(type) {
+    return Promise.resolve(Object.keys(this.store).filter((k) => k.indexOf(`${type}:`) === 0));
   }
 
   _get(item: ModelReference) {
@@ -47,7 +47,7 @@ export class MemoryStore extends ModifiableKeyValueStore {
       if (this.store[k] === undefined) {
         this.store[k] = {
           id: ref.id,
-          typeName: ref.typeName,
+          type: ref.type,
           attributes: {},
           relationships: {
             relName: [item]

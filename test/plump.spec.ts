@@ -2,7 +2,6 @@
 
 
 import * as chai from 'chai';
-import * as chaiAsPromised from 'chai-as-promised';
 
 import { Plump, MemoryStore } from '../src/index';
 import { TestType } from './testType';
@@ -15,7 +14,6 @@ import { TestType } from './testType';
 //   }
 // }
 
-chai.use(chaiAsPromised);
 const expect = chai.expect;
 
 describe('Plump', () => {
@@ -47,7 +45,7 @@ describe('Plump', () => {
       invalidated.save()
       .then(() => {
         let phase = 0;
-        const newOne = otherPlump.find({ typeName: 'tests', id: invalidated.id });
+        const newOne = otherPlump.find({ type: 'tests', id: invalidated.id });
         const subscription = newOne.subscribe({
           next: (v) => {
             // console.log(JSON.stringify(v, null, 2));
@@ -84,12 +82,12 @@ describe('Plump', () => {
           }
         });
         return coldMemstore._upsert(
-          { id: invalidated.id, typeName: TestType.typeName, attributes: { name: 'slowtato' }, relationships: {} }
+          { id: invalidated.id, type: TestType.type, attributes: { name: 'slowtato' }, relationships: {} }
         );
       })
       .then(() => {
         return terminalStore._upsert(
-          { id: invalidated.id, typeName: TestType.typeName, attributes: { name: 'grotato' }, relationships: {} }
+          { id: invalidated.id, type: TestType.type, attributes: { name: 'grotato' }, relationships: {} }
         );
       })
       .then(() => {
@@ -117,7 +115,7 @@ describe('Plump', () => {
     .then((saved) => {
       return Promise.all(
         saved.map((val) => {
-          return plump.find({ typeName: 'tests', id: val.id })
+          return plump.find({ type: 'tests', id: val.id })
           .add('valenceChildren', { id: 1001, meta: { perm: 1 } })
           .add('valenceChildren', { id: 1002, meta: { perm: 2 } })
           .add('valenceChildren', { id: 1003, meta: { perm: 3 } })
@@ -128,7 +126,7 @@ describe('Plump', () => {
     .then((added) => {
       return Promise.all(
         added.map((val) => {
-          return plump.find({ typeName: 'tests', id: val.id }).get(['attributes', 'relationships'])
+          return plump.find({ type: 'tests', id: val.id }).get(['attributes', 'relationships'])
           .then((final) => {
             expect(final.attributes.name).to.equal('mchammer');
             expect(final.relationships.valenceChildren).to.deep.equal(

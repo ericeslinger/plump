@@ -23,7 +23,7 @@ export class Oracle {
     return Promise.resolve()
     .then<AuthorizeResponse>(() => {
       if (request.kind === 'relationship') {
-        const relationshipAuthorizer = this.authorizers[request.parent.typeName].relationships[request.relationship];
+        const relationshipAuthorizer = this.authorizers[request.parent.type].relationships[request.relationship];
         if (request.action === 'create') {
           return relationshipAuthorizer.authorizeCreate(request);
         } else if (request.action === 'read') {
@@ -35,13 +35,13 @@ export class Oracle {
         }
       } else if (request.kind === 'attributes') {
         if (request.action === 'create') {
-          return this.authorizers[request.data.typeName].attributes.authorizeCreate(request);
+          return this.authorizers[request.data.type].attributes.authorizeCreate(request);
         } else if (request.action === 'read') {
-          return this.authorizers[request.target.typeName].attributes.authorizeRead(request);
+          return this.authorizers[request.target.type].attributes.authorizeRead(request);
         } else if (request.action === 'update') {
-          return this.authorizers[request.target.typeName].attributes.authorizeUpdate(request);
+          return this.authorizers[request.target.type].attributes.authorizeUpdate(request);
         } else if (request.action === 'delete') {
-          return this.authorizers[request.target.typeName].attributes.authorizeDelete(request);
+          return this.authorizers[request.target.type].attributes.authorizeDelete(request);
         }
       } else if (request.kind === 'compound') {
         return Promise.all(request.list.map(v => this.dispatch(v)))

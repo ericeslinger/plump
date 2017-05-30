@@ -6,9 +6,6 @@ import { ModelData } from '../src/dataTypes';
 import { testSuite } from './storageTests';
 import { TestType } from './testType';
 import { expect, use } from 'chai';
-import * as chaiAsPromised from 'chai-as-promised';
-
-use(chaiAsPromised);
 
 testSuite({
   describe: describe,
@@ -26,9 +23,9 @@ describe('Memory Storage specific', () => {
     const newStore = new MemoryStore({ terminal: true });
     const idArray = [];
     return newStore.addSchema(TestType)
-    .then(() => newStore.writeAttributes({ typeName: 'tests', attributes: { name: 'potato' } }).then(v => idArray.push(v.id)))
-    .then(() => newStore.writeAttributes({ typeName: 'tests', attributes: { name: 'potato' } }).then(v => idArray.push(v.id)))
-    .then(() => newStore.writeAttributes({ typeName: 'tests', attributes: { name: 'potato' } }).then(v => idArray.push(v.id)))
+    .then(() => newStore.writeAttributes({ type: 'tests', attributes: { name: 'potato' } }).then(v => idArray.push(v.id)))
+    .then(() => newStore.writeAttributes({ type: 'tests', attributes: { name: 'potato' } }).then(v => idArray.push(v.id)))
+    .then(() => newStore.writeAttributes({ type: 'tests', attributes: { name: 'potato' } }).then(v => idArray.push(v.id)))
     .then(() => newStore.query('tests'))
     .then((items) => Promise.all(items.map(item => newStore.readAttributes(item))))
     .then((models: ModelData[]) => {

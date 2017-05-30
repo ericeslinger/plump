@@ -51,7 +51,7 @@ export abstract class Storage implements BaseStore {
 
   // Abstract - all stores must provide below:
 
-  // abstract allocateId(typeName: string): Promise<string | number>;
+  // abstract allocateId(type: string): Promise<string | number>;
   // abstract writeAttributes(value: IndefiniteModelData): Promise<ModelData>;
   abstract readAttributes(value: ModelReference): Promise<ModelData>;
   abstract readRelationship(value: ModelReference, relName: string): Promise<ModelData>;
@@ -73,13 +73,13 @@ export abstract class Storage implements BaseStore {
     .then(rA =>
       rA.reduce(
         (a, r) => mergeOptions(a, r || {}),
-        { typeName: item.typeName, id: item.id, attributes: {}, relationships: {} }
+        { type: item.type, id: item.id, attributes: {}, relationships: {} }
       )
     );
   }
 
   read(item: ModelReference, opts: string | string[] = ['attributes']) {
-    const schema = this.getSchema(item.typeName);
+    const schema = this.getSchema(item.type);
     const keys = (opts && !Array.isArray(opts) ? [opts] : opts) as string[];
     return this.readAttributes(item)
     .then(attributes => {
@@ -139,8 +139,8 @@ export abstract class Storage implements BaseStore {
   }
 
   validateInput(value: ModelData | IndefiniteModelData): typeof value {
-    const schema = this.getSchema(value.typeName);
-    const retVal = { typeName: value.typeName, id: value.id, attributes: {}, relationships: {} };
+    const schema = this.getSchema(value.type);
+    const retVal = { type: value.type, id: value.id, attributes: {}, relationships: {} };
     const typeAttrs = Object.keys(schema.attributes || {});
     const valAttrs = Object.keys(value.attributes || {});
     const typeRels = Object.keys(schema.relationships || {});
@@ -195,12 +195,12 @@ export abstract class Storage implements BaseStore {
     }
   }
 
-  addSchema(t: {typeName: string, schema: ModelSchema}) {
-    this.types[t.typeName] = t.schema;
+  addSchema(t: {type: string, schema: ModelSchema}) {
+    this.types[t.type] = t.schema;
     return Promise.resolve();
   }
 
-  addSchemas(a: {typeName: string, schema: ModelSchema}[]): Promise<void> {
+  addSchemas(a: {type: string, schema: ModelSchema}[]): Promise<void> {
     return Promise.all(
       a.map(t => this.addSchema(t))
     ).then(() => {/* noop */});

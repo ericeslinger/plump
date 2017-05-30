@@ -75,7 +75,7 @@ describe('Authorization Oracle', () => {
       const oracle = new Oracle();
       const testAdd = (a) => () => oracle.addAuthorizer(a, TestType.schema);
       expect(testAdd(incompleteAuthorizer)).to.throw(Error, /Missing relationship/);
-      expect(testAdd(completeAuthorizer)).to.not.throw;
+      expect(testAdd(completeAuthorizer)).to.not.throw;  // tslint:disable-line no-unused-expression
     });
   });
 
@@ -83,7 +83,7 @@ describe('Authorization Oracle', () => {
     it('does basic passing attributes tests', () => {
       const oracle = new Oracle();
       oracle.addAuthorizer(completeAuthorizer, TestType.schema);
-      const person = { id: 1, typeName: 'profiles' };
+      const person = { id: 1, type: 'profiles' };
 
       return Promise.all(
         [
@@ -91,26 +91,26 @@ describe('Authorization Oracle', () => {
             action: 'create',
             kind: 'attributes',
             actor: person,
-            data: { typeName: 'tests' },
+            data: { type: 'tests' },
           }),
           oracle.authorize({
             action: 'read',
             kind: 'attributes',
             actor: person,
-            target: { typeName: 'tests', id: 1 },
+            target: { type: 'tests', id: 1 },
           }),
           oracle.authorize({
             action: 'update',
             kind: 'attributes',
             actor: person,
-            target: { typeName: 'tests', id: 1 },
-            data: { typeName: 'tests', id: 1, attributes: {} },
+            target: { type: 'tests', id: 1 },
+            data: { type: 'tests', id: 1, attributes: {} },
           }),
           oracle.authorize({
             action: 'delete',
             kind: 'attributes',
             actor: person,
-            target: { typeName: 'tests', id: 1 },
+            target: { type: 'tests', id: 1 },
           })
         ]
       ).then(vals => expect(vals.every(v => v)).to.equal(true));
@@ -119,7 +119,7 @@ describe('Authorization Oracle', () => {
     it('does basic failing attributes tests', () => {
       const oracle = new Oracle();
       oracle.addAuthorizer(completeAuthorizer, TestType.schema);
-      const person = { id: 2, typeName: 'profiles' };
+      const person = { id: 2, type: 'profiles' };
 
       return Promise.all(
         [
@@ -127,26 +127,26 @@ describe('Authorization Oracle', () => {
             action: 'create',
             kind: 'attributes',
             actor: person,
-            data: { typeName: 'tests' },
+            data: { type: 'tests' },
           }),
           oracle.authorize({
             action: 'read',
             kind: 'attributes',
             actor: person,
-            target: { typeName: 'tests', id: 1 },
+            target: { type: 'tests', id: 1 },
           }),
           oracle.authorize({
             action: 'update',
             kind: 'attributes',
             actor: person,
-            target: { typeName: 'tests', id: 1 },
-            data: { typeName: 'tests', id: 1, attributes: {} },
+            target: { type: 'tests', id: 1 },
+            data: { type: 'tests', id: 1, attributes: {} },
           }),
           oracle.authorize({
             action: 'delete',
             kind: 'attributes',
             actor: person,
-            target: { typeName: 'tests', id: 1 },
+            target: { type: 'tests', id: 1 },
           })
         ]
       ).then(vals => expect(vals.every(v => v === false)).to.equal(true));
@@ -155,39 +155,39 @@ describe('Authorization Oracle', () => {
     it('does basic passing relationships tests', () => {
       const oracle = new Oracle();
       oracle.addAuthorizer(completeAuthorizer, TestType.schema);
-      const person = { id: 1, typeName: 'profiles' };
+      const person = { id: 1, type: 'profiles' };
       return Promise.all(
         [
           oracle.authorize({
             action: 'create',
             kind: 'relationship',
             actor: person,
-            parent: { typeName: 'tests', id: 1 },
-            child: { typeName: 'tests', id: 2 },
+            parent: { type: 'tests', id: 1 },
+            child: { type: 'tests', id: 2 },
             relationship: 'children',
           }),
           oracle.authorize({
             action: 'read',
             kind: 'relationship',
             actor: person,
-            parent: { typeName: 'tests', id: 1 },
-            child: { typeName: 'tests', id: 2 },
+            parent: { type: 'tests', id: 1 },
+            child: { type: 'tests', id: 2 },
             relationship: 'children',
           }),
           oracle.authorize({
             action: 'update',
             kind: 'relationship',
             actor: person,
-            parent: { typeName: 'tests', id: 1 },
-            child: { typeName: 'tests', id: 2 },
+            parent: { type: 'tests', id: 1 },
+            child: { type: 'tests', id: 2 },
             relationship: 'children',
           }),
           oracle.authorize({
             action: 'delete',
             kind: 'relationship',
             actor: person,
-            parent: { typeName: 'tests', id: 1 },
-            child: { typeName: 'tests', id: 2 },
+            parent: { type: 'tests', id: 1 },
+            child: { type: 'tests', id: 2 },
             relationship: 'children',
           })
         ]
@@ -197,39 +197,39 @@ describe('Authorization Oracle', () => {
     it('does basic failing relationships tests', () => {
       const oracle = new Oracle();
       oracle.addAuthorizer(completeAuthorizer, TestType.schema);
-      const person = { id: 2, typeName: 'profiles' };
+      const person = { id: 2, type: 'profiles' };
       return Promise.all(
         [
           oracle.authorize({
             action: 'create',
             kind: 'relationship',
             actor: person,
-            parent: { typeName: 'tests', id: 1 },
-            child: { typeName: 'tests', id: 2 },
+            parent: { type: 'tests', id: 1 },
+            child: { type: 'tests', id: 2 },
             relationship: 'children',
           }),
           oracle.authorize({
             action: 'read',
             kind: 'relationship',
             actor: person,
-            parent: { typeName: 'tests', id: 1 },
-            child: { typeName: 'tests', id: 2 },
+            parent: { type: 'tests', id: 1 },
+            child: { type: 'tests', id: 2 },
             relationship: 'children',
           }),
           oracle.authorize({
             action: 'update',
             kind: 'relationship',
             actor: person,
-            parent: { typeName: 'tests', id: 1 },
-            child: { typeName: 'tests', id: 2 },
+            parent: { type: 'tests', id: 1 },
+            child: { type: 'tests', id: 2 },
             relationship: 'children',
           }),
           oracle.authorize({
             action: 'delete',
             kind: 'relationship',
             actor: person,
-            parent: { typeName: 'tests', id: 1 },
-            child: { typeName: 'tests', id: 2 },
+            parent: { type: 'tests', id: 1 },
+            child: { type: 'tests', id: 2 },
             relationship: 'children',
           })
         ]
@@ -276,30 +276,30 @@ describe('Authorization Oracle', () => {
         }
       }, TestType.schema);
 
-      const person = { id: 3, typeName: 'profiles' };
+      const person = { id: 3, type: 'profiles' };
       return Promise.all(
         [
           oracle.authorize({
             action: 'create',
             kind: 'relationship',
             actor: person,
-            parent: { typeName: 'tests', id: 1 },
-            child: { typeName: 'tests', id: 2 },
+            parent: { type: 'tests', id: 1 },
+            child: { type: 'tests', id: 2 },
             relationship: 'children',
           }),
           oracle.authorize({
             action: 'read',
             kind: 'relationship',
             actor: person,
-            parent: { typeName: 'tests', id: 1 },
+            parent: { type: 'tests', id: 1 },
             relationship: 'children',
           }),
           oracle.authorize({
             action: 'update',
             kind: 'relationship',
             actor: person,
-            parent: { typeName: 'tests', id: 1 },
-            child: { typeName: 'tests', id: 2 },
+            parent: { type: 'tests', id: 1 },
+            child: { type: 'tests', id: 2 },
             meta: { perm: 1 },
             relationship: 'children',
           }),
@@ -307,8 +307,8 @@ describe('Authorization Oracle', () => {
             action: 'delete',
             kind: 'relationship',
             actor: person,
-            parent: { typeName: 'tests', id: 1 },
-            child: { typeName: 'tests', id: 2 },
+            parent: { type: 'tests', id: 1 },
+            child: { type: 'tests', id: 2 },
             relationship: 'children',
           })
         ]
@@ -377,13 +377,13 @@ describe('Authorization Oracle', () => {
         }
       }, TestType.schema);
 
-      const person = { id: 3, typeName: 'profiles' };
+      const person = { id: 3, type: 'profiles' };
       // return oracle.authorize({
       //   action: 'create',
       //   kind: 'relationship',
       //   actor: person,
-      //   parent: { typeName: 'tests', id: 1 },
-      //   child: { typeName: 'tests', id: 3 },
+      //   parent: { type: 'tests', id: 1 },
+      //   child: { type: 'tests', id: 3 },
       //   relationship: 'children',
       // }).then((v) => expect(v).to.equal(true));
       return Promise.all(
@@ -392,23 +392,23 @@ describe('Authorization Oracle', () => {
             action: 'create',
             kind: 'relationship',
             actor: person,
-            parent: { typeName: 'tests', id: 1 },
-            child: { typeName: 'tests', id: 3 },
+            parent: { type: 'tests', id: 1 },
+            child: { type: 'tests', id: 3 },
             relationship: 'children',
           }),
           oracle.authorize({
             action: 'read',
             kind: 'relationship',
             actor: person,
-            parent: { typeName: 'tests', id: 1 },
+            parent: { type: 'tests', id: 1 },
             relationship: 'children',
           }),
           oracle.authorize({
             action: 'update',
             kind: 'relationship',
             actor: person,
-            parent: { typeName: 'tests', id: 1 },
-            child: { typeName: 'tests', id: 2 },
+            parent: { type: 'tests', id: 1 },
+            child: { type: 'tests', id: 2 },
             meta: { perm: 1 },
             relationship: 'children',
           }),
@@ -416,8 +416,8 @@ describe('Authorization Oracle', () => {
             action: 'delete',
             kind: 'relationship',
             actor: person,
-            parent: { typeName: 'tests', id: 1 },
-            child: { typeName: 'tests', id: 2 },
+            parent: { type: 'tests', id: 1 },
+            child: { type: 'tests', id: 2 },
             relationship: 'children',
           })
         ]
