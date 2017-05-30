@@ -60,8 +60,8 @@ export interface TerminalStore extends BaseStore {
   delete(value: ModelReference): Promise<void>;
   fireReadUpdate(val: ModelData);
   fireWriteUpdate(val: ModelDelta);
-  writeRelationshipItem( value: ModelReference, relName: string, child: {id: string | number} ): Promise<ModelData>;
-  deleteRelationshipItem( value: ModelReference, relName: string, child: {id: string | number} ): Promise<ModelData>;
+  writeRelationshipItem( value: ModelReference, relName: string, child: RelationshipItem ): Promise<ModelData>;
+  deleteRelationshipItem( value: ModelReference, relName: string, child: RelationshipItem ): Promise<ModelData>;
   query(q: any): Promise<ModelReference[]>;
   bulkRead(value: ModelReference): Promise<ModelData>;
 }
