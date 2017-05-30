@@ -27,7 +27,7 @@ const sampleObject = {
   relationships: {},
 };
 
-export function testSuite(context, storeOpts ) {
+export function testSuite(context, storeOpts) {
   const store = Object.assign(
     {},
     {
