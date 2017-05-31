@@ -89,6 +89,22 @@ export abstract class Storage implements BaseStore {
         if (attributes.id && attributes.attributes && !attributes.attributes[schema.idAttribute]) {
           attributes.attributes[schema.idAttribute] = attributes.id; // eslint-disable-line no-param-reassign
         }
+
+        // load in default values
+        if (attributes.attributes) {
+          for (const attrName in schema.attributes) {
+            if (!attributes.attributes[attrName] && (schema.attributes[attrName].default !== undefined)) {
+              if (Array.isArray(schema.attributes[attrName].default)) {
+                attributes.attributes[attrName] = (schema.attributes[attrName].default as any[]).concat();
+              } else if (typeof schema.attributes[attrName].default === 'object') {
+                attributes.attributes[attrName] = Object.assign({}, schema.attributes[attrName].default);
+              } else {
+                attributes.attributes[attrName] = schema.attributes[attrName].default;
+              }
+            }
+          }
+        }
+
         const relsWanted = (keys.indexOf('relationships') >= 0)
           ? Object.keys(schema.relationships)
           : keys.map(k => k.split('.'))
@@ -105,7 +121,8 @@ export abstract class Storage implements BaseStore {
           return attributes;
         }
       }
-    }).then((result) => {
+    })
+    .then((result) => {
       if (result) {
         this.fireReadUpdate(result);
       }
@@ -158,18 +175,18 @@ export abstract class Storage implements BaseStore {
       throw new Error(`Invalid relationships on value object: ${JSON.stringify(invalidRels)}`);
     }
 
-
-    for (const attrName in schema.attributes) {
-      if (!value.attributes[attrName] && (schema.attributes[attrName].default !== undefined)) {
-        if (Array.isArray(schema.attributes[attrName].default)) {
-          retVal.attributes[attrName] = (schema.attributes[attrName].default as any[]).concat();
-        } else if (typeof schema.attributes[attrName].default === 'object') {
-          retVal.attributes[attrName] = Object.assign({}, schema.attributes[attrName].default);
-        } else {
-          retVal.attributes[attrName] = schema.attributes[attrName].default;
-        }
-      }
-    }
+    //
+    // for (const attrName in schema.attributes) {
+    //   if (!value.attributes[attrName] && (schema.attributes[attrName].default !== undefined)) {
+    //     if (Array.isArray(schema.attributes[attrName].default)) {
+    //       retVal.attributes[attrName] = (schema.attributes[attrName].default as any[]).concat();
+    //     } else if (typeof schema.attributes[attrName].default === 'object') {
+    //       retVal.attributes[attrName] = Object.assign({}, schema.attributes[attrName].default);
+    //     } else {
+    //       retVal.attributes[attrName] = schema.attributes[attrName].default;
+    //     }
+    //   }
+    // }
 
     if (value.attributes[idAttribute] && !retVal.id) {
       retVal.id = value.attributes[idAttribute];
