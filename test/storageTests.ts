@@ -9,9 +9,11 @@ import * as chai from 'chai';
 
 const expect = chai.expect;
 
-namespace Chai {
-  interface Assertion {
-    nested: Assertion;
+declare global {
+  namespace Chai {
+    interface Assertion {
+      nested: Assertion;
+    }
   }
 }
 
