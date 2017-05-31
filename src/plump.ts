@@ -1,4 +1,4 @@
-import { Subject, Observable } from 'rxjs/Rx';
+import { Subject, Observable } from 'rxjs';
 
 import { Model } from './model';
 import {
@@ -31,8 +31,8 @@ export class Plump {
   }
 
   addType(T: typeof Model): Promise<void> {
-    if (this.types[T.typeName] === undefined) {
-      this.types[T.typeName] = T;
+    if (this.types[T.type] === undefined) {
+      this.types[T.type] = T;
       return Promise.all(
         this.caches.map(s => s.addSchema(T))
       ).then(() => {
@@ -41,7 +41,7 @@ export class Plump {
         }
       });
     } else {
-      return Promise.reject(`Duplicate Type registered: ${T.typeName}`);
+      return Promise.reject(`Duplicate Type registered: ${T.type}`);
     }
   }
 
@@ -75,7 +75,7 @@ export class Plump {
   }
 
   find<T extends ModelData>(ref: ModelReference): Model<T> {
-    const Type = this.types[ref.typeName];
+    const Type = this.types[ref.type];
     return new Type({ [Type.schema.idAttribute]: ref.id }, this);
   }
 
@@ -118,18 +118,18 @@ export class Plump {
     if (this.terminal) {
       return Promise.resolve()
       .then(() => {
-        if (Object.keys(value.attributes).length > 0) {
+        // if (Object.keys(value.attributes).length > 0) {
           return this.terminal.writeAttributes({
             attributes: value.attributes,
             id: value.id,
-            typeName: value.typeName,
+            type: value.type,
           });
-        } else {
-          return {
-            id: value.id,
-            typeName: value.typeName,
-          };
-        }
+        // } else {
+          // return {
+            // id: value.id,
+            // type: value.type,
+          // };
+        // }
       })
       .then((updated) => {
         if (value.relationships && Object.keys(value.relationships).length > 0) {
@@ -203,7 +203,7 @@ export class Plump {
 
   invalidate(item: ModelReference, field?: string | string[]): void {
     const fields = Array.isArray(field) ? field : [field];
-    this.terminal.fireWriteUpdate({ typeName: item.typeName, id: item.id , invalidate: fields });
+    this.terminal.fireWriteUpdate({ type: item.type, id: item.id , invalidate: fields });
   }
 
   static wire(me: CacheStore, they: TerminalStore, shutdownSignal: Observable<string>) {

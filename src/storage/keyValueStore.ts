@@ -19,16 +19,16 @@ function saneNumber(i) {
 // declare function parseInt(n: string | number, radix: number): number;
 
 export abstract class KeyValueStore extends Storage implements TerminalStore, CacheStore, AllocatingStore {
-  maxKeys: { [typeName: string]: number } = {};
+  maxKeys: { [type: string]: number } = {};
 
-  abstract _keys(typeName: string): Promise<string[]>;
+  abstract _keys(type: string): Promise<string[]>;
   abstract _get(k: string): Promise<ModelData | null>;
   abstract _set(k: string, v: ModelData): Promise<ModelData>;
   abstract _del(k: string): Promise<ModelData>;
 
-  allocateId(typeName: string) {
-    this.maxKeys[typeName] = this.maxKeys[typeName] + 1;
-    return Promise.resolve(this.maxKeys[typeName]);
+  allocateId(type: string) {
+    this.maxKeys[type] = this.maxKeys[type] + 1;
+    return Promise.resolve(this.maxKeys[type]);
   }
 
   writeAttributes(inputValue: IndefiniteModelData) {
@@ -37,21 +37,29 @@ export abstract class KeyValueStore extends Storage implements TerminalStore, Ca
     // trim out relationships for a direct write.
     return Promise.resolve()
     .then(() => {
+      const idAttribute = this.getSchema(inputValue.type).idAttribute;
       if ((value.id === undefined) || (value.id === null)) {
         if (!this.terminal) {
           throw new Error('Cannot create new content in a non-terminal store');
         }
-        return this.allocateId(value.typeName)
+        return this.allocateId(value.type)
         .then((n) => {
-          return mergeOptions({}, value, { id: n, relationships: {} }) as ModelData; // if new.
+          return mergeOptions({}, value, { id: n, relationships: {}, attributes: {[idAttribute]: n } }) as ModelData; // if new.
         });
       } else {
         // if not new, get current (including relationships) and merge
         const thisId = typeof value.id === 'string' ? parseInt(value.id, 10) : value.id;
-        if (saneNumber(thisId) && thisId > this.maxKeys[value.typeName]) {
-          this.maxKeys[value.typeName] = thisId;
+        if (saneNumber(thisId) && thisId > this.maxKeys[value.type]) {
+          this.maxKeys[value.type] = thisId;
         }
-        return this._get(this.keyString(value as ModelReference)).then(current => mergeOptions({}, current || {}, value));
+        return this._get(this.keyString(value as ModelReference))
+        .then(current =>  {
+          if (current) {
+            return mergeOptions({}, current, value);
+          } else {
+            return mergeOptions({ relationships: {}, attributes: {} }, value);
+          }
+        });
       }
     })
     .then((toSave: ModelData) => {
@@ -93,7 +101,7 @@ export abstract class KeyValueStore extends Storage implements TerminalStore, Ca
       return this._get(this.keyString(value))
       .then((current) => {
         return this._set(this.keyString(value), {
-          typeName: value.typeName,
+          type: value.type,
           id: value.id,
           attributes: value.attributes,
           relationships: current.relationships || {},
@@ -109,7 +117,7 @@ export abstract class KeyValueStore extends Storage implements TerminalStore, Ca
       return this._get(this.keyString(value))
       .then((current) => {
         return this._set(this.keyString(value), {
-          typeName: value.typeName,
+          type: value.type,
           id: value.id,
           attributes: current.attributes || {},
           relationships: value.relationships,
@@ -124,7 +132,7 @@ export abstract class KeyValueStore extends Storage implements TerminalStore, Ca
       const retVal = Object.assign({}, v);
       if (!v) {
         if (this.terminal) {
-          return { typeName: value.typeName, id: value.id, relationships: { [relName]: [] } };
+          return { type: value.type, id: value.id, relationships: { [relName]: [] } };
         } else {
           return null;
         }
@@ -141,7 +149,7 @@ export abstract class KeyValueStore extends Storage implements TerminalStore, Ca
     return this._del(this.keyString(value))
     .then(() => {
       if (this.terminal) {
-        this.fireWriteUpdate({ id: value.id, typeName: value.typeName, invalidate: ['attributes', 'relationships'] });
+        this.fireWriteUpdate({ id: value.id, type: value.type, invalidate: ['attributes', 'relationships'] });
       }
     });
   }
@@ -171,12 +179,12 @@ export abstract class KeyValueStore extends Storage implements TerminalStore, Ca
   }
 
   writeRelationshipItem(value: ModelReference, relName: string, child: RelationshipItem) {
-    const schema = this.getSchema(value.typeName);
+    const schema = this.getSchema(value.type);
     const relSchema = schema.relationships[relName].type;
     const otherRelType = relSchema.sides[relName].otherType;
     const otherRelName = relSchema.sides[relName].otherName;
     const thisKeyString = this.keyString(value);
-    const otherKeyString = this.keyString({ typeName: otherRelType, id: child.id });
+    const otherKeyString = this.keyString({ type: otherRelType, id: child.id });
     return Promise.all([
       this._get(thisKeyString),
       this._get(otherKeyString),
@@ -186,7 +194,7 @@ export abstract class KeyValueStore extends Storage implements TerminalStore, Ca
       if (!thisItem) {
         thisItem = {
           id: child.id,
-          typeName: otherRelType,
+          type: otherRelType,
           attributes: {},
           relationships: {},
         };
@@ -195,15 +203,21 @@ export abstract class KeyValueStore extends Storage implements TerminalStore, Ca
       if (!otherItem) {
         otherItem = {
           id: child.id,
-          typeName: otherRelType,
+          type: otherRelType,
           attributes: {},
           relationships: {},
         };
       }
       const newChild: RelationshipItem = { id: child.id };
       const newParent: RelationshipItem = { id: value.id };
+      if (!thisItem.relationships) {
+        thisItem.relationships = {};
+      }
       if (!thisItem.relationships[relName]) {
         thisItem.relationships[relName] = [];
+      }
+      if (!otherItem.relationships) {
+        otherItem.relationships = {};
       }
       if (!otherItem.relationships[otherRelName]) {
         otherItem.relationships[otherRelName] = [];
@@ -244,12 +258,12 @@ export abstract class KeyValueStore extends Storage implements TerminalStore, Ca
   }
 
   deleteRelationshipItem(value: ModelReference, relName: string, child: RelationshipItem) {
-    const schema = this.getSchema(value.typeName);
+    const schema = this.getSchema(value.type);
     const relSchema = schema.relationships[relName].type;
     const otherRelType = relSchema.sides[relName].otherType;
     const otherRelName = relSchema.sides[relName].otherName;
     const thisKeyString = this.keyString(value);
-    const otherKeyString = this.keyString({ typeName: otherRelType, id: child.id });
+    const otherKeyString = this.keyString({ type: otherRelType, id: child.id });
     return Promise.all([
       this._get(thisKeyString),
       this._get(otherKeyString),
@@ -286,21 +300,21 @@ export abstract class KeyValueStore extends Storage implements TerminalStore, Ca
     .then((keys) => {
       return keys.map(k => {
         return {
-          typeName: t,
+          type: t,
           id: parseInt(k.split(':')[1], 10),
         };
       }).filter(v => !isNaN(v.id));
     });
   }
 
-  addSchema(t: {typeName: string, schema: ModelSchema}) {
+  addSchema(t: {type: string, schema: ModelSchema}) {
     return super.addSchema(t)
     .then(() => {
-      this.maxKeys[t.typeName] = 0;
+      this.maxKeys[t.type] = 0;
     });
   }
 
   keyString(value: ModelReference) {
-    return `${value.typeName}:${value.id}`;
+    return `${value.type}:${value.id}`;
   }
 }

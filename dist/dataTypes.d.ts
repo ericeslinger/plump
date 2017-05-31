@@ -1,4 +1,4 @@
-import { Observable } from 'rxjs/Rx';
+import { Observable } from 'rxjs';
 export interface StringIndexed<T> {
     [index: string]: T;
 }
@@ -39,15 +39,15 @@ export interface BaseStore {
         schema: ModelSchema;
     } | ModelSchema | string): ModelSchema;
     addSchema(t: {
-        typeName: string;
+        type: string;
         schema: ModelSchema;
     }): Promise<void>;
     addSchemas(t: {
-        typeName: string;
+        type: string;
         schema: ModelSchema;
     }[]): Promise<void>;
     validateInput(value: ModelData | IndefiniteModelData): typeof value;
-    read(item: ModelReference, opts: string | string[]): Promise<ModelData>;
+    read(item: ModelReference, opts?: string | string[]): Promise<ModelData>;
 }
 export interface CacheStore extends BaseStore {
     cache(value: ModelData): Promise<ModelData>;
@@ -61,17 +61,13 @@ export interface TerminalStore extends BaseStore {
     delete(value: ModelReference): Promise<void>;
     fireReadUpdate(val: ModelData): any;
     fireWriteUpdate(val: ModelDelta): any;
-    writeRelationshipItem(value: ModelReference, relName: string, child: {
-        id: string | number;
-    }): Promise<ModelData>;
-    deleteRelationshipItem(value: ModelReference, relName: string, child: {
-        id: string | number;
-    }): Promise<ModelData>;
+    writeRelationshipItem(value: ModelReference, relName: string, child: RelationshipItem): Promise<ModelData>;
+    deleteRelationshipItem(value: ModelReference, relName: string, child: RelationshipItem): Promise<ModelData>;
     query(q: any): Promise<ModelReference[]>;
     bulkRead(value: ModelReference): Promise<ModelData>;
 }
 export interface AllocatingStore extends TerminalStore {
-    allocateId(typeName: string): Promise<string | number>;
+    allocateId(type: string): Promise<string | number>;
 }
 export interface GenericSchemaFieldSchema {
     type: any;
@@ -108,7 +104,7 @@ export interface ObjectAttributeFieldSchema extends GenericAttributeFieldSchema 
 export interface ReferenceAttributeFieldSchema extends GenericAttributeFieldSchema {
     type: 'reference';
     default?: {
-        typeName: string;
+        type: string;
         id: number;
     };
 }
@@ -135,13 +131,13 @@ export interface ModelSchema {
     };
 }
 export interface ModelReference {
-    typeName: string;
+    type: string;
     id: number | string;
 }
 export declare type ModelAttributes = StringIndexed<Attribute>;
 export declare type ModelRelationships = StringIndexed<RelationshipItem[]>;
 export interface IndefiniteModelData {
-    typeName: string;
+    type: string;
     id?: number | string;
     attributes?: ModelAttributes;
     relationships?: ModelRelationships;
@@ -159,5 +155,5 @@ export interface DirtyValues {
 }
 export interface DirtyModel extends DirtyValues {
     id?: string | number;
-    typeName: string;
+    type: string;
 }

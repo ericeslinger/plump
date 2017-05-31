@@ -1,13 +1,13 @@
-import { Observable, Subscription, Observer } from 'rxjs/Rx';
+import { Observable, Subscription, Observer } from 'rxjs';
 import { ModelData, ModelSchema, RelationshipDelta, RelationshipItem } from './dataTypes';
 import { Plump } from './plump';
 export declare class Model<T extends ModelData> {
     private plump;
     id: string | number;
-    static typeName: string;
+    static type: string;
     static schema: ModelSchema;
     private dirty;
-    readonly typeName: any;
+    readonly type: any;
     readonly schema: any;
     dirtyFields(): string[];
     constructor(opts: any, plump: Plump);

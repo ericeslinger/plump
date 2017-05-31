@@ -15,18 +15,18 @@ import {
 // declare function parseInt(n: string | number, radix: number): number;
 
 export abstract class ModifiableKeyValueStore extends Storage implements TerminalStore, CacheStore, AllocatingStore {
-  protected maxKeys: { [typeName: string]: number } = {};
+  protected maxKeys: { [type: string]: number } = {};
 
-  abstract _keys(typeName: string): Promise<string[]>;
+  abstract _keys(type: string): Promise<string[]>;
   abstract _get(ref: ModelReference): Promise<ModelData | null>;
   abstract _upsert(v: ModelData): Promise<ModelData>;
   abstract _updateArray(ref: ModelReference, relName: string, item: RelationshipItem): Promise<ModelReference>;
   abstract _removeFromArray(ref: ModelReference, relName: string, item: RelationshipItem): Promise<ModelReference>;
   abstract _del(ref: ModelReference, fields: string[]): Promise<ModelData>;
 
-  allocateId(typeName: string) {
-    this.maxKeys[typeName] = this.maxKeys[typeName] + 1;
-    return Promise.resolve(this.maxKeys[typeName]);
+  allocateId(type: string) {
+    this.maxKeys[type] = this.maxKeys[type] + 1;
+    return Promise.resolve(this.maxKeys[type]);
   }
 
   writeAttributes(inputValue: IndefiniteModelData) {
@@ -35,13 +35,14 @@ export abstract class ModifiableKeyValueStore extends Storage implements Termina
     // trim out relationships for a direct write.
     return Promise.resolve()
     .then(() => {
+      const idAttribute = this.getSchema(inputValue.type).idAttribute;
       if ((value.id === undefined) || (value.id === null)) {
         if (!this.terminal) {
           throw new Error('Cannot create new content in a non-terminal store');
         }
-        return this.allocateId(value.typeName)
+        return this.allocateId(value.type)
         .then((n) => {
-          return mergeOptions({}, value, { id: n, relationships: {} }) as ModelData; // if new.
+          return mergeOptions({}, value, { id: n, relationships: {}, attributes: {[idAttribute]: n } }) as ModelData; // if new.
         });
       } else {
         return value as ModelData;
@@ -59,7 +60,9 @@ export abstract class ModifiableKeyValueStore extends Storage implements Termina
   readAttributes(value: ModelReference): Promise<ModelData> {
     return this._get(value)
     .then(d => {
-      if (d && d.attributes && Object.keys(d.attributes).length > 0) {
+      // TODO: figure out what happens when there's a
+      // field with no real attributes
+      if (d && d.attributes) {
         return d;
       } else {
         return null;
@@ -86,7 +89,7 @@ export abstract class ModifiableKeyValueStore extends Storage implements Termina
       return this._get(value)
       .then((current) => {
         return this._upsert({
-          typeName: value.typeName,
+          type: value.type,
           id: value.id,
           attributes: value.attributes,
           relationships: current.relationships || {},
@@ -102,7 +105,7 @@ export abstract class ModifiableKeyValueStore extends Storage implements Termina
       return this._get(value)
       .then((current) => {
         return this._upsert({
-          typeName: value.typeName,
+          type: value.type,
           id: value.id,
           attributes: current.attributes || {},
           relationships: value.relationships,
@@ -117,7 +120,7 @@ export abstract class ModifiableKeyValueStore extends Storage implements Termina
       const retVal = Object.assign({}, v);
       if (!v) {
         if (this.terminal) {
-          return { typeName: value.typeName, id: value.id, relationships: { [relName]: [] } };
+          return { type: value.type, id: value.id, relationships: { [relName]: [] } };
         } else {
           return null;
         }
@@ -134,7 +137,7 @@ export abstract class ModifiableKeyValueStore extends Storage implements Termina
     return this._del(value, ['attributes', 'relationships'])
     .then(() => {
       if (this.terminal) {
-        this.fireWriteUpdate({ id: value.id, typeName: value.typeName, invalidate: ['attributes', 'relationships'] });
+        this.fireWriteUpdate({ id: value.id, type: value.type, invalidate: ['attributes', 'relationships'] });
       }
     });
   }
@@ -144,11 +147,11 @@ export abstract class ModifiableKeyValueStore extends Storage implements Termina
   }
 
   writeRelationshipItem(value: ModelReference, relName: string, child: RelationshipItem) {
-    const schema = this.getSchema(value.typeName);
+    const schema = this.getSchema(value.type);
     const relSchema = schema.relationships[relName].type;
     const otherRelType = relSchema.sides[relName].otherType;
     const otherRelName = relSchema.sides[relName].otherName;
-    const otherReference = { typeName: otherRelType, id: child.id };
+    const otherReference = { type: otherRelType, id: child.id };
 
     const newChild: RelationshipItem = { id: child.id };
     const newParent: RelationshipItem = { id: value.id };
@@ -168,17 +171,17 @@ export abstract class ModifiableKeyValueStore extends Storage implements Termina
     ])
     .then(() => {
       this.fireWriteUpdate(Object.assign(value, { invalidate: [`relationships.${relName}`] }));
-      this.fireWriteUpdate(Object.assign({ typeName: otherRelType, id: child.id }, { invalidate: [`relationships.${otherRelName}`] }));
+      this.fireWriteUpdate(Object.assign({ type: otherRelType, id: child.id }, { invalidate: [`relationships.${otherRelName}`] }));
     })
     .then(() => value);
   }
 
   deleteRelationshipItem(value: ModelReference, relName: string, child: RelationshipItem) {
-    const schema = this.getSchema(value.typeName);
+    const schema = this.getSchema(value.type);
     const relSchema = schema.relationships[relName].type;
     const otherRelType = relSchema.sides[relName].otherType;
     const otherRelName = relSchema.sides[relName].otherName;
-    const otherReference = { typeName: otherRelType, id: child.id };
+    const otherReference = { type: otherRelType, id: child.id };
 
     const newChild: RelationshipItem = { id: child.id };
     const newParent: RelationshipItem = { id: value.id };
@@ -198,7 +201,7 @@ export abstract class ModifiableKeyValueStore extends Storage implements Termina
     ])
     .then(() => {
       this.fireWriteUpdate(Object.assign(value, { invalidate: [`relationships.${relName}`] }));
-      this.fireWriteUpdate(Object.assign({ typeName: otherRelType, id: child.id }, { invalidate: [`relationships.${otherRelName}`] }));
+      this.fireWriteUpdate(Object.assign({ type: otherRelType, id: child.id }, { invalidate: [`relationships.${otherRelName}`] }));
     })
     .then(() => value);
   }
@@ -208,21 +211,21 @@ export abstract class ModifiableKeyValueStore extends Storage implements Termina
     .then((keys) => {
       return keys.map(k => {
         return {
-          typeName: t,
+          type: t,
           id: parseInt(k.split(':')[1], 10),
         };
       }).filter(v => !isNaN(v.id));
     });
   }
 
-  addSchema(t: {typeName: string, schema: ModelSchema}) {
+  addSchema(t: {type: string, schema: ModelSchema}) {
     return super.addSchema(t)
     .then(() => {
-      this.maxKeys[t.typeName] = 0;
+      this.maxKeys[t.type] = 0;
     });
   }
 
   keyString(value: ModelReference) {
-    return `${value.typeName}:${value.id}`;
+    return `${value.type}:${value.id}`;
   }
 }

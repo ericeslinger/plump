@@ -1,5 +1,5 @@
 import * as mergeOptions from 'merge-options';
-import { Observable, Subscription, Observer } from 'rxjs/Rx';
+import { Observable, Subscription, Observer } from 'rxjs';
 
 import {
   ModelData,
@@ -20,7 +20,7 @@ import { Plump } from './plump';
 
 export class Model<T extends ModelData> {
   id: string | number;
-  static typeName = 'BASE';
+  static type = 'BASE';
   static schema: ModelSchema = {
     idAttribute: 'id',
     name: 'BASE',
@@ -30,8 +30,8 @@ export class Model<T extends ModelData> {
 
   private dirty: DirtyValues;
 
-  get typeName() {
-    return this.constructor['typeName'];
+  get type() {
+    return this.constructor['type'];
   }
 
   get schema() {
@@ -46,8 +46,8 @@ export class Model<T extends ModelData> {
 
   constructor(opts, private plump: Plump) {
     // TODO: Define Delta interface
-    if (this.typeName === 'BASE') {
-      throw new TypeError('Cannot instantiate base plump Models, please subclass with a schema and valid typeName');
+    if (this.type === 'BASE') {
+      throw new TypeError('Cannot instantiate base plump Models, please subclass with a schema and valid type');
     }
 
     this.dirty = {
@@ -88,7 +88,7 @@ export class Model<T extends ModelData> {
         return self;
       } else {
         const resolved = Model.resolveAndOverlay(this.dirty, self || undefined);
-        return mergeOptions({}, self || { id: this.id, type: this.typeName }, resolved);
+        return mergeOptions({}, self || { id: this.id, type: this.type }, resolved);
       }
     });
   }
@@ -100,7 +100,7 @@ export class Model<T extends ModelData> {
   // TODO: Should $save ultimately return this.get()?
   save(): Promise<T> {
     const update: DirtyModel = mergeOptions(
-      { id: this.id, typeName: this.typeName },
+      { id: this.id, type: this.type },
       this.dirty
     );
     return this.plump.save(update)
@@ -159,11 +159,11 @@ export class Model<T extends ModelData> {
     });
     // TODO: cacheable reads
     // const watchRead$ = Observable.from(terminal)
-    // .flatMap(s => s.read$.filter(v => v.type === this.typeName && v.id === this.id));
+    // .flatMap(s => s.read$.filter(v => v.type === this.type && v.id === this.id));
     const watchWrite$: Observable<ModelDelta> = terminal.write$
     .filter((v: ModelDelta) => {
       return (
-        (v.typeName === this.typeName) &&
+        (v.type === this.type) &&
         (v.id === this.id) &&
         (v.invalidate.some(i => fields.indexOf(i) >= 0))
       );
