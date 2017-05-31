@@ -5,6 +5,15 @@ import * as chai from 'chai';
 import { Plump, MemoryStore, Model, Schema, ModelData } from '../src/index';
 import { TestType } from './testType';
 
+declare global {
+  namespace Chai {
+    interface Assertion {
+      nested: Assertion;
+    }
+  }
+}
+
+
 const memstore2 = new MemoryStore({ terminal: true });
 
 const plump = new Plump();
@@ -102,6 +111,16 @@ describe('model', () => {
         expect(v.attributes).to.have.property('id', 101);
       });
     });
+
+    it('does not overwrite attributes on child addition', () => {
+      const one = new TestType({ name: 'potato', otherName: 'elephant'}, plump);
+      return one.save()
+      .then(() => plump.find({ type: 'tests', id: one.id }).get())
+      .then((v) => expect(v).to.have.nested.property('attributes.otherName', 'elephant'))
+      .then(() => one.add('children', { id: 100 }).save())
+      .then(() => plump.find({ type: 'tests', id: one.id }).get())
+      .then((v) => expect(v).to.have.nested.property('attributes.otherName', 'elephant'));
+    })
 
     it('should allow data to be deleted', () => {
       const one = new TestType({ name: 'potato' }, plump);
