@@ -49,6 +49,10 @@ export class Plump {
     return this.types[T];
   }
 
+  getTypes(): typeof Model[] {
+    return Object.keys(this.types).map(t => this.type(t));
+  }
+
   setTerminal(store: TerminalStore): Promise<void> {
     if (this.terminal !== undefined) {
       throw new Error('cannot have more than one terminal store');

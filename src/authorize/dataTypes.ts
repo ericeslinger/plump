@@ -123,3 +123,9 @@ export interface AuthorizerDefinition {
     [name: string]: RelationshipAuthorize
   };
 }
+
+export interface KeyService {
+  test(key: string): Promise<boolean>;
+  get<T>(key: string): Promise<T | null>;
+  set<T>(key: string, val: T): Promise<T | null>;
+}
