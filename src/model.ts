@@ -18,7 +18,7 @@ import { Plump } from './plump';
 // TODO: figure out where error events originate (storage or model)
 // and who keeps a roll-backable delta
 
-export class Model<T extends ModelData> {
+export class Model<T extends ModelData = ModelData> {
   id: string | number;
   static type = 'BASE';
   static schema: ModelSchema = {

@@ -1,7 +1,7 @@
 import { Observable, Subscription, Observer } from 'rxjs';
 import { ModelData, ModelSchema, RelationshipDelta, RelationshipItem } from './dataTypes';
 import { Plump } from './plump';
-export declare class Model<T extends ModelData> {
+export declare class Model<T extends ModelData = ModelData> {
     private plump;
     id: string | number;
     static type: string;
