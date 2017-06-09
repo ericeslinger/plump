@@ -19,6 +19,7 @@ export interface RelationshipSchema {
     } & StringIndexed<any>;
 }
 export interface RelationshipItem {
+    type: string;
     id: number | string;
     meta?: StringIndexed<number | string | boolean>;
 }
