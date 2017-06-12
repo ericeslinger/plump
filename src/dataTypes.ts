@@ -20,9 +20,13 @@ export interface RelationshipSchema {
 }
 
 export interface RelationshipItem {
-  type: string;
+  type?: string;
   id: number | string;
   meta?: StringIndexed<number | string | boolean>;
+}
+
+export interface TypedRelationshipItem extends RelationshipItem {
+  type: string;
 }
 
 export interface RelationshipDelta {

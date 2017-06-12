@@ -72,7 +72,8 @@ const completeAuthorizer: AuthorizerDefinition = {
 describe('Authorization Oracle', () => {
   describe('Setup', () => {
     it('requires all child fields', () => {
-      const oracle = new Oracle();
+      const oracle = new Oracle(null);
+      // TODO: KEYSERVER
       const testAdd = (a) => () => oracle.addAuthorizer(a, TestType.schema);
       expect(testAdd(incompleteAuthorizer)).to.throw(Error, /Missing relationship/);
       expect(testAdd(completeAuthorizer)).to.not.throw;  // tslint:disable-line no-unused-expression
@@ -81,7 +82,8 @@ describe('Authorization Oracle', () => {
 
   describe('Basic tests', () => {
     it('does basic passing attributes tests', () => {
-      const oracle = new Oracle();
+      const oracle = new Oracle(null);
+      // TODO: KEYSERVER
       oracle.addAuthorizer(completeAuthorizer, TestType.schema);
       const person = { id: 1, type: 'profiles' };
 
@@ -117,7 +119,7 @@ describe('Authorization Oracle', () => {
     });
 
     it('does basic failing attributes tests', () => {
-      const oracle = new Oracle();
+      const oracle = new Oracle(null);
       oracle.addAuthorizer(completeAuthorizer, TestType.schema);
       const person = { id: 2, type: 'profiles' };
 
@@ -153,7 +155,7 @@ describe('Authorization Oracle', () => {
     });
 
     it('does basic passing relationships tests', () => {
-      const oracle = new Oracle();
+      const oracle = new Oracle(null);
       oracle.addAuthorizer(completeAuthorizer, TestType.schema);
       const person = { id: 1, type: 'profiles' };
       return Promise.all(
@@ -195,7 +197,7 @@ describe('Authorization Oracle', () => {
     });
 
     it('does basic failing relationships tests', () => {
-      const oracle = new Oracle();
+      const oracle = new Oracle(null);
       oracle.addAuthorizer(completeAuthorizer, TestType.schema);
       const person = { id: 2, type: 'profiles' };
       return Promise.all(
@@ -240,7 +242,7 @@ describe('Authorization Oracle', () => {
   describe('Delegated Tests', () => {
 
     it ('handles delegated tests', () => {
-      const oracle = new Oracle();
+      const oracle = new Oracle(null);
       function delegatedAuthorizerTest(request: RelationshipAuthorizeRequest): Promise<AuthorizeResponse> {
         if (request.action === 'update') {
           return authTest(request);
@@ -316,7 +318,7 @@ describe('Authorization Oracle', () => {
 
     });
     it ('handles compound tests', () => {
-      const oracle = new Oracle();
+      const oracle = new Oracle(null);
       function compoundAuthorizerTest(request: RelationshipAuthorizeRequest): Promise<AuthorizeResponse> {
         if (request.action === 'create') {
           return Promise.resolve<DelegateAuthorizeResponse>({

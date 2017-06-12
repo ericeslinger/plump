@@ -10,6 +10,7 @@ export declare class Plump {
     constructor();
     addType(T: typeof Model): Promise<void>;
     type(T: string): typeof Model;
+    getTypes(): typeof Model[];
     setTerminal(store: TerminalStore): Promise<void>;
     addCache(store: CacheStore): Promise<void>;
     find<T extends ModelData>(ref: ModelReference): Model<T>;

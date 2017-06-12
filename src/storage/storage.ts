@@ -124,6 +124,11 @@ export abstract class Storage implements BaseStore {
     })
     .then((result) => {
       if (result) {
+        Object.keys(result.relationships).forEach((relName) => {
+          result.relationships[relName].forEach((relItem) => {
+            relItem.type = this.getSchema(result.type).relationships[relName].type.sides[relName].otherType;
+          });
+        });
         this.fireReadUpdate(result);
       }
       return result;

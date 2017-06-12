@@ -181,9 +181,10 @@ export abstract class KeyValueStore extends Storage implements TerminalStore, Ca
   writeRelationshipItem(value: ModelReference, relName: string, child: RelationshipItem) {
     const schema = this.getSchema(value.type);
     const relSchema = schema.relationships[relName].type;
+    const otherRelType = relSchema.sides[relName].otherType;
     const otherRelName = relSchema.sides[relName].otherName;
     const thisKeyString = this.keyString(value);
-    const otherKeyString = this.keyString(child);
+    const otherKeyString = this.keyString({ type: otherRelType, id: child.id });
     return Promise.all([
       this._get(thisKeyString),
       this._get(otherKeyString),
@@ -192,8 +193,8 @@ export abstract class KeyValueStore extends Storage implements TerminalStore, Ca
       let thisItem = thisItemResolved;
       if (!thisItem) {
         thisItem = {
-          id: value.id,
-          type: value.type,
+          id: child.id,
+          type: otherRelType,
           attributes: {},
           relationships: {},
         };
@@ -202,13 +203,13 @@ export abstract class KeyValueStore extends Storage implements TerminalStore, Ca
       if (!otherItem) {
         otherItem = {
           id: child.id,
-          type: child.type,
+          type: otherRelType,
           attributes: {},
           relationships: {},
         };
       }
-      const newChild: RelationshipItem = { type: child.type, id: child.id };
-      const newParent: RelationshipItem = { type: value.type, id: value.id };
+      const newChild: RelationshipItem = { id: child.id };
+      const newParent: RelationshipItem = { id: value.id };
       if (!thisItem.relationships) {
         thisItem.relationships = {};
       }
