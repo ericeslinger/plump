@@ -121,22 +121,22 @@ export function testSuite(context, storeOpts) {
           return actualStore.writeRelationshipItem(
             { type: TestType.type, id: createdObject.id },
             'children',
-            { type: TestType.type, id: 200 }
+            { id: 200 }
           )
           .then(() => actualStore.writeRelationshipItem(
             { type: TestType.type, id: createdObject.id },
             'children',
-            { type: TestType.type, id: 201 }
+            { id: 201 }
           ))
           .then(() => actualStore.writeRelationshipItem(
             { type: TestType.type, id: createdObject.id },
             'children',
-            { type: TestType.type, id: 202 }
+            { id: 202 }
           ))
           .then(() => actualStore.writeRelationshipItem(
             { type: TestType.type, id: createdObject.id },
             'children',
-            { type: TestType.type, id: 203 }
+            { id: 203 }
           ))
           .then(() => {
             return actualStore.read({ type: TestType.type, id: createdObject.id }, ['attributes', 'relationships.children']);
@@ -154,27 +154,27 @@ export function testSuite(context, storeOpts) {
           return actualStore.writeRelationshipItem(
             { type: TestType.type, id: createdObject.id },
             'children',
-            { type: TestType.type, id: 100 }
+            { id: 100 }
           )
           .then(() => actualStore.writeRelationshipItem(
             { type: TestType.type, id: createdObject.id },
             'children',
-            { type: TestType.type, id: 101 }
+            { id: 101 }
           ))
           .then(() => actualStore.writeRelationshipItem(
             { type: TestType.type, id: createdObject.id },
             'children',
-            { type: TestType.type, id: 102 }
+            { id: 102 }
           ))
           .then(() => actualStore.writeRelationshipItem(
             { type: TestType.type, id: createdObject.id },
             'children',
-            { type: TestType.type, id: 103 }
+            { id: 103 }
           ))
           .then(() => actualStore.writeRelationshipItem(
             { type: TestType.type, id: 100 },
             'children',
-            { type: TestType.type, id: createdObject.id }
+            { id: createdObject.id }
           ))
           .then(() => actualStore.read({ type: TestType.type, id: createdObject.id }, ['relationships.children']))
           .then((v) => {
@@ -196,7 +196,7 @@ export function testSuite(context, storeOpts) {
           return actualStore.writeRelationshipItem(
             { type: TestType.type, id: createdObject.id },
             'valenceChildren',
-            { type: TestType.type, id: 100, meta: { perm: 1 } }
+            { id: 100, meta: { perm: 1 } }
           )
           .then(() => actualStore.read({ type: TestType.type, id: createdObject.id }, 'relationships.valenceChildren'))
           .then((v) => expect(v.relationships.valenceChildren).to.deep.equal([{ type: TestType.type, id: 100, meta: { perm: 1 } }]));
@@ -209,7 +209,7 @@ export function testSuite(context, storeOpts) {
           return actualStore.writeRelationshipItem(
             { type: TestType.type, id: createdObject.id },
             'valenceChildren',
-            { type: TestType.type, id: 100, meta: { perm: 1 } }
+            { id: 100, meta: { perm: 1 } }
           )
           .then(() => actualStore.read({ type: TestType.type, id: createdObject.id }, 'relationships.valenceChildren'))
           .then((v) => expect(v.relationships.valenceChildren).to.deep.equal([
@@ -242,7 +242,7 @@ export function testSuite(context, storeOpts) {
           .then(() => actualStore.deleteRelationshipItem(
             { type: TestType.type, id: createdObject.id },
             'children',
-            { type: TestType.type, id: 100 }
+            { id: 100 }
           ))
           .then(() => actualStore.read({ type: TestType.type, id: createdObject.id }, 'relationships.children'))
           .then((v) => expect(v.relationships.children).to.deep.equal([]));
@@ -355,7 +355,7 @@ export function testSuite(context, storeOpts) {
         .then(() => actualStore.writeRelationshipItem(
           { type: TestType.type, id: testItem.id },
           'children',
-          { type: TestType.type, id: 101 }))
+          { id: 101 }))
         .then(() => new Promise((resolve) => setTimeout(resolve, 100)))
         .then(() => memstore.read({ type: TestType.type, id: testItem.id }))
         .then((v) => expect(v).to.not.have.nested.property('relationships.children'))
