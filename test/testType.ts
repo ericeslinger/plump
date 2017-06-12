@@ -1,4 +1,11 @@
-import { ModelSchema, RelationshipSchema, Model, ModelData, Schema } from '../src/index';
+import {
+  ModelSchema,
+  RelationshipSchema,
+  Model,
+  ModelData,
+  Schema,
+  RelationshipItem,
+} from '../src/index';
 
 export const ChildrenSchema: RelationshipSchema = {
   sides: {
@@ -96,6 +103,32 @@ export const TestSchema: ModelSchema = {
   }
 };
 
+export interface PermRelationshipItem extends RelationshipItem {
+  meta: {
+    perm: number;
+  };
+}
+
+export interface TestData extends ModelData {
+  type: 'tests';
+  id: number;
+  attributes?: {
+    id: number;
+    name: string;
+    otherName: string;
+    extended: { [key: string]: any };
+  };
+  relationships?: {
+    children: RelationshipItem[];
+    parents: RelationshipItem[];
+    valenceChildren: PermRelationshipItem[];
+    valenceParents: PermRelationshipItem[];
+    queryChildren: PermRelationshipItem[];
+    queryParents: PermRelationshipItem[];
+  };
+}
+
 @Schema(TestSchema)
-export class TestType extends Model<ModelData> {
+export class TestType extends Model<TestData> {
+  static type = 'tests';
 }

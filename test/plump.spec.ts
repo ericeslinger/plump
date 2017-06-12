@@ -116,9 +116,9 @@ describe('Plump', () => {
       return Promise.all(
         saved.map((val) => {
           return plump.find({ type: 'tests', id: val.id })
-          .add('valenceChildren', { id: 1001, meta: { perm: 1 } })
-          .add('valenceChildren', { id: 1002, meta: { perm: 2 } })
-          .add('valenceChildren', { id: 1003, meta: { perm: 3 } })
+          .add('valenceChildren', { type: TestType.type, id: 1001, meta: { perm: 1 } })
+          .add('valenceChildren', { type: TestType.type, id: 1002, meta: { perm: 2 } })
+          .add('valenceChildren', { type: TestType.type, id: 1003, meta: { perm: 3 } })
           .save();
         })
       );
@@ -130,7 +130,11 @@ describe('Plump', () => {
           .then((final) => {
             expect(final.attributes.name).to.equal('mchammer');
             expect(final.relationships.valenceChildren).to.deep.equal(
-              [{ id: 1001, meta: { perm: 1 } }, { id: 1002, meta: { perm: 2 } }, { id: 1003, meta: { perm: 3 } }]
+              [
+                { type: TestType.type, id: 1001, meta: { perm: 1 } },
+                { type: TestType.type, id: 1002, meta: { perm: 2 } },
+                { type: TestType.type, id: 1003, meta: { perm: 3 } }
+              ]
             );
           });
         })

@@ -80,9 +80,9 @@ describe('model', () => {
     });
 
     it('should load data from datastores', () => {
-      return memstore2.writeAttributes({ type: 'tests', attributes: { name: 'potato' } })
+      return memstore2.writeAttributes({ type: TestType.type, attributes: { name: 'potato' } })
       .then(createdObject => {
-        const two = plump.find({ type: 'tests', id: createdObject.id });
+        const two = plump.find({ type: TestType.type, id: createdObject.id });
         return two.get()
         .then((v) => expect(v).to.have.nested.property('attributes.name', 'potato'));
       });
@@ -105,7 +105,7 @@ describe('model', () => {
       return otherPlump.setTerminal(otherStore)
       .then(() => otherPlump.addType(TestType))
       .then(() => new TestType({ name: 'potato', id: 101 }, otherPlump).save())
-      .then(() => otherPlump.find({ type: 'tests', id: 101 }).get())
+      .then(() => otherPlump.find({ type: TestType.type, id: 101 }).get())
       .then((v) => {
         expect(v).to.have.property('id', 101);
         expect(v.attributes).to.have.property('id', 101);
@@ -113,33 +113,33 @@ describe('model', () => {
     });
 
     it('does not overwrite attributes on child addition', () => {
-      const one = new TestType({ name: 'potato', otherName: 'elephant'}, plump);
+      const one = new TestType({ name: 'potato', otherName: 'elephant' }, plump);
       return one.save()
-      .then(() => plump.find({ type: 'tests', id: one.id }).get())
+      .then(() => plump.find({ type: TestType.type, id: one.id }).get())
       .then((v) => expect(v).to.have.nested.property('attributes.otherName', 'elephant'))
-      .then(() => one.add('children', { id: 100 }).save())
-      .then(() => plump.find({ type: 'tests', id: one.id }).get())
+      .then(() => one.add('children', { type: TestType.type, id: 100 }).save())
+      .then(() => plump.find({ type: TestType.type, id: one.id }).get())
       .then((v) => expect(v).to.have.nested.property('attributes.otherName', 'elephant'));
-    })
+    });
 
     it('should allow data to be deleted', () => {
       const one = new TestType({ name: 'potato' }, plump);
       return one.save()
-      .then(() => plump.find({ type: 'tests', id: one.id }).get())
+      .then(() => plump.find({ type: TestType.type, id: one.id }).get())
       .then((v) => expect(v).to.have.nested.property('attributes.name', 'potato'))
       .then(() => one.delete())
-      .then(() => plump.find({ type: 'tests', id: one.id }).get())
+      .then(() => plump.find({ type: TestType.type, id: one.id }).get())
       .then((v) => expect(v).to.be.null);
     });
 
     it('should allow fields to be loaded', () => {
       const one = new TestType({ name: 'p', otherName: 'q' }, plump);
       return one.save()
-      .then(() => plump.find({ type: 'tests', id: one.id }).get())
+      .then(() => plump.find({ type: TestType.type, id: one.id }).get())
       .then((v) => expect(v).to.have.nested.property('attributes.name', 'p'))
-      .then(() => plump.find({ type: 'tests', id: one.id }).get(['attributes', 'relationships']))
+      .then(() => plump.find({ type: TestType.type, id: one.id }).get(['attributes', 'relationships']))
       .then((v) => expect(v).to.deep.equal({
-        type: 'tests',
+        type: TestType.type,
         id: one.id,
         attributes: { name: 'p', otherName: 'q', id: one.id, extended: {} },
         relationships: {
@@ -178,7 +178,7 @@ describe('model', () => {
       .then(() => {
         // const hasManys = Object.keys(TestType.$fields).filter(field => TestType.$fields[field].type === 'hasMany');
 
-        return plump.find({ type: 'tests', id: one.id }).get();
+        return plump.find({ type: TestType.type, id: one.id }).get();
       }).then(data => {
         const baseFields = Object.keys(TestType.schema.attributes);
 
@@ -209,34 +209,34 @@ describe('model', () => {
     it('should add hasMany elements', () => {
       const one = new TestType({ name: 'frotato' }, plump);
       return one.save()
-      .then(() => one.add('children', { id: 100 }).save())
+      .then(() => one.add('children', { type: TestType.type, id: 100 }).save())
       .then(() => one.get('relationships.children'))
-      .then((v) => expect(v.relationships.children).to.deep.equal([{ id: 100 }]));
+      .then((v) => expect(v.relationships.children).to.deep.equal([{ type: TestType.type, id: 100 }]));
     });
 
     it('should add hasMany elements by child field', () => {
       const one = new TestType({ name: 'frotato' }, plump);
       return one.save()
-      .then(() => one.add('children', { id: 100 }).save())
+      .then(() => one.add('children', { type: TestType.type, id: 100 }).save())
       .then(() => one.get('relationships.children'))
-      .then((v) => expect(v.relationships.children).to.deep.equal([{ id: 100 }]));
+      .then((v) => expect(v.relationships.children).to.deep.equal([{ type: TestType.type, id: 100 }]));
     });
 
     it('should add several hasMany elements by child field', () => {
       const one = new TestType({ name: 'frotato' }, plump);
       return one.save()
-      .then(() => one.add('children', { id: 100 }).add('children', { id: 101 }).save())
+      .then(() => one.add('children', { type: TestType.type, id: 100 }).add('children', { type: TestType.type, id: 101 }).save())
       .then(() => one.get('relationships.children'))
-      .then((v) => expect(v.relationships.children).to.deep.equal([{ id: 100 }, { id: 101 }]));
+      .then((v) => expect(v.relationships.children).to.deep.equal([100, 101].map(id => ({ type: TestType.type, id }))));
     });
 
     it('should remove hasMany elements', () => {
       const one = new TestType({ name: 'frotato' }, plump);
       return one.save()
-      .then(() => one.add('children', { id: 100 }).save())
+      .then(() => one.add('children', { type: TestType.type, id: 100 }).save())
       .then(() => one.get('relationships.children'))
-      .then((v) => expect(v.relationships.children).to.deep.equal([{ id: 100 }]))
-      .then(() => one.remove('children', { id: 100 }).save())
+      .then((v) => expect(v.relationships.children).to.deep.equal([{ type: TestType.type, id: 100 }]))
+      .then(() => one.remove('children', { type: TestType.type, id: 100 }).save())
       .then(() => one.get('relationships.children'))
       .then((v) => expect(v.relationships.children).to.deep.equal([]));
     });
@@ -244,12 +244,16 @@ describe('model', () => {
     it('should include valence in hasMany operations', () => {
       const one = new TestType({ name: 'grotato' }, plump);
       return one.save()
-      .then(() => one.add('valenceChildren', { id: 100, meta: { perm: 1 } }).save())
+      .then(() => one.add('valenceChildren', { type: TestType.type, id: 100, meta: { perm: 1 } }).save())
       .then(() => one.get('relationships.valenceChildren'))
-      .then((v) => expect(v.relationships.valenceChildren).to.deep.equal([{ id: 100, meta: { perm: 1 } }]))
-      .then(() => one.modifyRelationship('valenceChildren', { id: 100, meta: { perm: 2 } }).save())
+      .then((v) => expect(v.relationships.valenceChildren).to.deep.equal([
+        { type: TestType.type, id: 100, meta: { perm: 1 } },
+      ]))
+      .then(() => one.modifyRelationship('valenceChildren', { type: TestType.type, id: 100, meta: { perm: 2 } }).save())
       .then(() => one.get('relationships.valenceChildren'))
-      .then((v) => expect(v.relationships.valenceChildren).to.deep.equal([{ id: 100, meta: { perm: 2 } }]));
+      .then((v) => expect(v.relationships.valenceChildren).to.deep.equal([
+        { type: TestType.type, id: 100, meta: { perm: 2 } },
+      ]));
     });
   });
 
@@ -265,13 +269,13 @@ describe('model', () => {
         .then(() => onePrime.get('relationships.children'))
         .then((res) => expect(res).to.have.property('relationships')
         .that.deep.equals({ children: [] }))
-        .then(() => one.add('children', { id: 100 }).save())
+        .then(() => one.add('children', { type: TestType.type, id: 100 }).save())
         .then(() => one.get('relationships.children'))
         .then((res) => expect(res).to.have.property('relationships')
-        .that.deep.equals({ children: [{ id: 100 }] }))
+        .that.deep.equals({ children: [{ type: TestType.type, id: 100 }] }))
         .then(() => onePrime.get('relationships.children'))
         .then((res) => expect(res).to.have.property('relationships')
-        .that.deep.equals({ children: [{ id: 100 }] }));
+        .that.deep.equals({ children: [{ type: TestType.type, id: 100 }] }));
       });
     });
 
@@ -343,7 +347,7 @@ describe('model', () => {
         const one = new TestType({ name: 'potato' }, plump);
         let phase = 0;
         one.save()
-        .then(() => one.add('children', { id: 100 }).save())
+        .then(() => one.add('children', { type: TestType.type, id: 100 }).save())
         .then(() => {
           const subscription = one.subscribe(['attributes', 'relationships'], {
             error: (err) => {
@@ -362,14 +366,14 @@ describe('model', () => {
                   }
                 }
                 if (phase === 1 && v.relationships && v.relationships.children) {
-                  expect(v.relationships.children).to.deep.equal([{ id: 100 }]);
+                  expect(v.relationships.children).to.deep.equal([{ type: TestType.type, id: 100 }]);
                   phase = 2;
                 }
                 if (phase === 2) {
                   if ((v.relationships.children) && (v.relationships.children.length > 1)) {
                     expect(v.relationships.children).to.deep.equal([
-                      { id: 100 },
-                      { id: 101 },
+                      { type: TestType.type, id: 100 },
+                      { type: TestType.type, id: 101 },
                     ]);
                     subscription.unsubscribe();
                     resolve();
@@ -381,7 +385,7 @@ describe('model', () => {
             }
           });
         })
-        .then(() => one.add('children', { id: 101 }).save());
+        .then(() => one.add('children', { type: TestType.type, id: 101 }).save());
       });
     });
 
@@ -416,7 +420,7 @@ describe('model', () => {
           .then((val) => {
             return coldMemstore.cache({
               id: val.id,
-              type: 'tests',
+              type: TestType.type,
               attributes: {
                 name: 'potato',
                 id: val.id,
@@ -424,7 +428,7 @@ describe('model', () => {
             })
             .then(() => {
               let phase = 0;
-              const two = otherPlump.find({ type: 'tests', id: val.id });
+              const two = otherPlump.find({ type: TestType.type, id: val.id });
               const subscription = two.subscribe({
                 error: (err) => {
                   throw err;

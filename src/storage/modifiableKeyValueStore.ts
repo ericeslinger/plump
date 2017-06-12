@@ -42,7 +42,7 @@ export abstract class ModifiableKeyValueStore extends Storage implements Termina
         }
         return this.allocateId(value.type)
         .then((n) => {
-          return mergeOptions({}, value, { id: n, relationships: {}, attributes: {[idAttribute]: n } }) as ModelData; // if new.
+          return mergeOptions({}, value, { id: n, relationships: {}, attributes: { [idAttribute]: n } }) as ModelData; // if new.
         });
       } else {
         return value as ModelData;
@@ -149,12 +149,10 @@ export abstract class ModifiableKeyValueStore extends Storage implements Termina
   writeRelationshipItem(value: ModelReference, relName: string, child: RelationshipItem) {
     const schema = this.getSchema(value.type);
     const relSchema = schema.relationships[relName].type;
-    const otherRelType = relSchema.sides[relName].otherType;
     const otherRelName = relSchema.sides[relName].otherName;
-    const otherReference = { type: otherRelType, id: child.id };
 
-    const newChild: RelationshipItem = { id: child.id };
-    const newParent: RelationshipItem = { id: value.id };
+    const newChild: RelationshipItem = { type: child.type, id: child.id };
+    const newParent: RelationshipItem = { type: value.type, id: value.id };
     if (relSchema.extras && child.meta) {
       newParent.meta = {};
       newChild.meta = {};
@@ -167,11 +165,11 @@ export abstract class ModifiableKeyValueStore extends Storage implements Termina
     }
     return Promise.all([
       this._updateArray(value, relName, newChild),
-      this._updateArray(otherReference, otherRelName, newParent)
+      this._updateArray(child, otherRelName, newParent)
     ])
     .then(() => {
       this.fireWriteUpdate(Object.assign(value, { invalidate: [`relationships.${relName}`] }));
-      this.fireWriteUpdate(Object.assign({ type: otherRelType, id: child.id }, { invalidate: [`relationships.${otherRelName}`] }));
+      this.fireWriteUpdate(Object.assign(child, { invalidate: [`relationships.${otherRelName}`] }));
     })
     .then(() => value);
   }
@@ -179,12 +177,10 @@ export abstract class ModifiableKeyValueStore extends Storage implements Termina
   deleteRelationshipItem(value: ModelReference, relName: string, child: RelationshipItem) {
     const schema = this.getSchema(value.type);
     const relSchema = schema.relationships[relName].type;
-    const otherRelType = relSchema.sides[relName].otherType;
     const otherRelName = relSchema.sides[relName].otherName;
-    const otherReference = { type: otherRelType, id: child.id };
 
-    const newChild: RelationshipItem = { id: child.id };
-    const newParent: RelationshipItem = { id: value.id };
+    const newChild: RelationshipItem = { type: child.type, id: child.id };
+    const newParent: RelationshipItem = { type: value.type, id: value.id };
     if (relSchema.extras && child.meta) {
       newParent.meta = {};
       newChild.meta = {};
@@ -197,11 +193,11 @@ export abstract class ModifiableKeyValueStore extends Storage implements Termina
     }
     return Promise.all([
       this._removeFromArray(value, relName, newChild),
-      this._removeFromArray(otherReference, otherRelName, newParent)
+      this._removeFromArray(child, otherRelName, newParent)
     ])
     .then(() => {
       this.fireWriteUpdate(Object.assign(value, { invalidate: [`relationships.${relName}`] }));
-      this.fireWriteUpdate(Object.assign({ type: otherRelType, id: child.id }, { invalidate: [`relationships.${otherRelName}`] }));
+      this.fireWriteUpdate(Object.assign(child, { invalidate: [`relationships.${otherRelName}`] }));
     })
     .then(() => value);
   }
