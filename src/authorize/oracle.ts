@@ -10,7 +10,7 @@ import { ModelSchema } from '../dataTypes';
 export class Oracle {
   private authorizers: {[name: string]: AuthorizerDefinition} = {};
 
-  constructor(public keyService: KeyService) { }
+  constructor(public keyService?: KeyService) { }
 
   addAuthorizer(auth: AuthorizerDefinition, forType: ModelSchema) {
     const authKeys = Object.keys(auth.relationships);
