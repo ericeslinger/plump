@@ -35,10 +35,9 @@ describe('Plump', () => {
     const coldMemstore = new MemoryStore();
     const hotMemstore = new MemoryStore();
     hotMemstore.hot = () => true;
-    const otherPlump = new Plump();
+    const otherPlump = new Plump(delayedMemstore);
     otherPlump.addCache(hotMemstore)
     .then(() => otherPlump.addCache(coldMemstore))
-    .then(() => otherPlump.setTerminal(delayedMemstore))
     .then(() => otherPlump.addType(TestType))
     .then(() => {
       const invalidated = new TestType({ name: 'foo' }, otherPlump);
@@ -99,9 +98,8 @@ describe('Plump', () => {
 
   it('HAMMERTIME', () => {
     const mstore = new MemoryStore({ terminal: true });
-    const plump = new Plump();
-    return plump.setTerminal(mstore)
-    .then(() => plump.addType(TestType))
+    const plump = new Plump(mstore);
+    return plump.addType(TestType)
     .then(() => {
       return new Array(1000).fill(0);
     })

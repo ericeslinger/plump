@@ -1,17 +1,16 @@
 import { Observable } from 'rxjs';
 import { Model } from './model';
 import { ModelAttributes, ModelData, ModelReference, DirtyModel, RelationshipItem, CacheStore, TerminalStore } from './dataTypes';
-export declare class Plump {
+export declare class Plump<TermType extends TerminalStore = TerminalStore> {
+    terminal: TermType;
     destroy$: Observable<string>;
     caches: CacheStore[];
-    terminal: TerminalStore;
     private teardownSubject;
     private types;
-    constructor();
+    constructor(terminal: TermType);
     addType(T: typeof Model): Promise<void>;
     type(T: string): typeof Model;
     getTypes(): typeof Model[];
-    setTerminal(store: TerminalStore): Promise<void>;
     addCache(store: CacheStore): Promise<void>;
     find<T extends ModelData>(ref: ModelReference): Model<T>;
     forge<A extends ModelAttributes, T extends Model<ModelData & {
