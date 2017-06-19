@@ -11,11 +11,10 @@ import {
   DirtyModel,
   RelationshipItem,
   CacheStore,
-  TerminalStore,
+  TerminalStore
 } from './dataTypes';
 
 export class Plump<TermType extends TerminalStore = TerminalStore> {
-
   destroy$: Observable<string>;
   caches: CacheStore[];
 
@@ -33,9 +32,7 @@ export class Plump<TermType extends TerminalStore = TerminalStore> {
   addType(T: typeof Model): Promise<void> {
     if (this.types[T.type] === undefined) {
       this.types[T.type] = T;
-      return Promise.all(
-        this.caches.map(s => s.addSchema(T))
-      ).then(() => {
+      return Promise.all(this.caches.map(s => s.addSchema(T))).then(() => {
         if (this.terminal) {
           this.terminal.addSchema(T);
         }
@@ -58,9 +55,7 @@ export class Plump<TermType extends TerminalStore = TerminalStore> {
     if (this.terminal !== undefined) {
       Plump.wire(store, this.terminal, this.destroy$);
     }
-    return store.addSchemas(
-      Object.keys(this.types).map(k => this.types[k])
-    );
+    return store.addSchemas(Object.keys(this.types).map(k => this.types[k]));
   }
 
   find<T extends ModelData>(ref: ModelReference): Model<T> {
@@ -68,7 +63,10 @@ export class Plump<TermType extends TerminalStore = TerminalStore> {
     return new Type({ [Type.schema.idAttribute]: ref.id }, this);
   }
 
-  forge<A extends ModelAttributes, T extends Model<ModelData & { attributes?: A }>>(t: string, val: Partial<A>): T {
+  forge<
+    A extends ModelAttributes,
+    T extends Model<ModelData & { attributes?: A }>
+  >(t: string, val: Partial<A>): T {
     const Type = this.types[t];
     return new Type(val, this) as T;
   }
@@ -77,26 +75,30 @@ export class Plump<TermType extends TerminalStore = TerminalStore> {
     this.teardownSubject.next('done');
   }
 
-  get<T extends ModelData>(value: ModelReference, opts: string[] = ['attributes']): Promise<T> {
+  get<T extends ModelData>(
+    value: ModelReference,
+    opts: string[] = ['attributes']
+  ): Promise<T> {
     const keys = opts && !Array.isArray(opts) ? [opts] : opts;
-    return this.caches.reduce((thenable, storage) => {
-      return thenable.then((v) => {
-        if (v !== null) {
-          return v;
-        } else if (storage.hot(value)) {
-          return storage.read(value, keys);
+    return this.caches
+      .reduce((thenable, storage) => {
+        return thenable.then(v => {
+          if (v !== null) {
+            return v;
+          } else if (storage.hot(value)) {
+            return storage.read(value, keys);
+          } else {
+            return null;
+          }
+        });
+      }, Promise.resolve(null))
+      .then(v => {
+        if ((v === null || v.attributes === null) && this.terminal) {
+          return this.terminal.read(value, keys);
         } else {
-          return null;
+          return v;
         }
       });
-    }, Promise.resolve(null))
-    .then((v) => {
-      if (((v === null) || (v.attributes === null)) && (this.terminal)) {
-        return this.terminal.read(value, keys);
-      } else {
-        return v;
-      }
-    });
   }
 
   bulkGet<T extends ModelData>(value: ModelReference): Promise<T> {
@@ -106,41 +108,62 @@ export class Plump<TermType extends TerminalStore = TerminalStore> {
   save<T extends ModelData>(value: DirtyModel): Promise<T> {
     if (this.terminal) {
       return Promise.resolve()
-      .then(() => {
-        if (Object.keys(value.attributes).length > 0) {
-          return this.terminal.writeAttributes({
-            attributes: value.attributes,
-            id: value.id,
-            type: value.type,
-          });
-        } else {
-          return {
-            id: value.id,
-            type: value.type,
-          };
-        }
-      })
-      .then((updated) => {
-        if (value.relationships && Object.keys(value.relationships).length > 0) {
-          return Promise.all(Object.keys(value.relationships).map((relName) => {
-            return value.relationships[relName].reduce((thenable: Promise<void | ModelData>, delta) => {
-              return thenable.then(() => {
-                if (delta.op === 'add') {
-                  return this.terminal.writeRelationshipItem(updated, relName, delta.data);
-                } else if (delta.op === 'remove') {
-                  return this.terminal.deleteRelationshipItem(updated, relName, delta.data);
-                } else if (delta.op === 'modify') {
-                  return this.terminal.writeRelationshipItem(updated, relName, delta.data);
-                } else {
-                  throw new Error(`Unknown relationship delta ${JSON.stringify(delta)}`);
-                }
-              });
-            }, Promise.resolve());
-          })).then(() => updated);
-        } else {
-          return updated;
-        }
-      });
+        .then(() => {
+          if (Object.keys(value.attributes).length > 0) {
+            return this.terminal.writeAttributes({
+              attributes: value.attributes,
+              id: value.id,
+              type: value.type
+            });
+          } else {
+            return {
+              id: value.id,
+              type: value.type
+            };
+          }
+        })
+        .then(updated => {
+          if (
+            value.relationships &&
+            Object.keys(value.relationships).length > 0
+          ) {
+            return Promise.all(
+              Object.keys(value.relationships).map(relName => {
+                return value.relationships[
+                  relName
+                ].reduce((thenable: Promise<void | ModelData>, delta) => {
+                  return thenable.then(() => {
+                    if (delta.op === 'add') {
+                      return this.terminal.writeRelationshipItem(
+                        updated,
+                        relName,
+                        delta.data
+                      );
+                    } else if (delta.op === 'remove') {
+                      return this.terminal.deleteRelationshipItem(
+                        updated,
+                        relName,
+                        delta.data
+                      );
+                    } else if (delta.op === 'modify') {
+                      return this.terminal.writeRelationshipItem(
+                        updated,
+                        relName,
+                        delta.data
+                      );
+                    } else {
+                      throw new Error(
+                        `Unknown relationship delta ${JSON.stringify(delta)}`
+                      );
+                    }
+                  });
+                }, Promise.resolve());
+              })
+            ).then(() => updated);
+          } else {
+            return updated;
+          }
+        });
     } else {
       return Promise.reject(new Error('Plump has no terminal store'));
     }
@@ -148,11 +171,18 @@ export class Plump<TermType extends TerminalStore = TerminalStore> {
 
   delete(item: ModelReference): Promise<void> {
     if (this.terminal) {
-      return this.terminal.delete(item).then(() => {
-        return Promise.all(this.caches.map((store) => {
-          return store.wipe(item);
-        }));
-      }).then(() => { /* noop */ } );
+      return this.terminal
+        .delete(item)
+        .then(() => {
+          return Promise.all(
+            this.caches.map(store => {
+              return store.wipe(item);
+            })
+          );
+        })
+        .then(() => {
+          /* noop */
+        });
     } else {
       return Promise.reject(new Error('Plump has no terminal store'));
     }
@@ -174,7 +204,11 @@ export class Plump<TermType extends TerminalStore = TerminalStore> {
   //   }
   // }
 
-  modifyRelationship(item: ModelReference, relName: string, child: RelationshipItem) {
+  modifyRelationship(
+    item: ModelReference,
+    relName: string,
+    child: RelationshipItem
+  ) {
     return this.add(item, relName, child);
   }
 
@@ -182,7 +216,11 @@ export class Plump<TermType extends TerminalStore = TerminalStore> {
     return this.terminal.query(q);
   }
 
-  deleteRelationshipItem(item: ModelReference, relName: string, child: RelationshipItem) {
+  deleteRelationshipItem(
+    item: ModelReference,
+    relName: string,
+    child: RelationshipItem
+  ) {
     if (this.terminal) {
       return this.terminal.deleteRelationshipItem(item, relName, child);
     } else {
@@ -192,24 +230,30 @@ export class Plump<TermType extends TerminalStore = TerminalStore> {
 
   invalidate(item: ModelReference, field?: string | string[]): void {
     const fields = Array.isArray(field) ? field : [field];
-    this.terminal.fireWriteUpdate({ type: item.type, id: item.id , invalidate: fields });
+    this.terminal.fireWriteUpdate({
+      type: item.type,
+      id: item.id,
+      invalidate: fields
+    });
   }
 
-  static wire(me: CacheStore, they: TerminalStore, shutdownSignal: Observable<string>) {
+  static wire(
+    me: CacheStore,
+    they: TerminalStore,
+    shutdownSignal: Observable<string>
+  ) {
     if (me.terminal) {
       throw new Error('Cannot wire a terminal store into another store');
     } else {
       // TODO: figure out where the type data comes from.
-      they.read$.takeUntil(shutdownSignal).subscribe((v) => {
+      they.read$.takeUntil(shutdownSignal).subscribe(v => {
         me.cache(v);
       });
-      they.write$.takeUntil(shutdownSignal).subscribe((v) => {
-        v.invalidate.forEach((invalid) => {
+      they.write$.takeUntil(shutdownSignal).subscribe(v => {
+        v.invalidate.forEach(invalid => {
           me.wipe(v, invalid);
         });
       });
     }
   }
-
-
 }
