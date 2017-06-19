@@ -45,6 +45,7 @@ export abstract class ModifiableKeyValueStore extends Storage implements Termina
           return mergeOptions({}, value, { id: n, relationships: {}, attributes: { [idAttribute]: n } }) as ModelData; // if new.
         });
       } else {
+        this.maxKeys[inputValue.type] = Math.max(this.maxKeys[inputValue.type], value.id as number);
         return value as ModelData;
       }
     })

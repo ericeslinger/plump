@@ -14,17 +14,17 @@ import {
   TerminalStore,
 } from './dataTypes';
 
-export class Plump {
+export class Plump<TermType extends TerminalStore = TerminalStore> {
 
   destroy$: Observable<string>;
   caches: CacheStore[];
-  terminal: TerminalStore;
 
   private teardownSubject: Subject<string>;
   private types: { [type: string]: typeof Model };
 
-  constructor() {
+  constructor(public terminal: TermType) {
     this.teardownSubject = new Subject();
+    this.terminal.terminal = true;
     this.caches = [];
     this.types = {};
     this.destroy$ = this.teardownSubject.asObservable();
@@ -51,21 +51,6 @@ export class Plump {
 
   getTypes(): typeof Model[] {
     return Object.keys(this.types).map(t => this.type(t));
-  }
-
-  setTerminal(store: TerminalStore): Promise<void> {
-    if (this.terminal !== undefined) {
-      throw new Error('cannot have more than one terminal store');
-    } else {
-      store.terminal = true;
-      this.terminal = store;
-      this.caches.forEach((cacheStore) => {
-        Plump.wire(cacheStore, store, this.destroy$);
-      });
-    }
-    return store.addSchemas(
-      Object.keys(this.types).map(k => this.types[k])
-    );
   }
 
   addCache(store: CacheStore): Promise<void> {
@@ -122,18 +107,18 @@ export class Plump {
     if (this.terminal) {
       return Promise.resolve()
       .then(() => {
-        // if (Object.keys(value.attributes).length > 0) {
+        if (Object.keys(value.attributes).length > 0) {
           return this.terminal.writeAttributes({
             attributes: value.attributes,
             id: value.id,
             type: value.type,
           });
-        // } else {
-          // return {
-            // id: value.id,
-            // type: value.type,
-          // };
-        // }
+        } else {
+          return {
+            id: value.id,
+            type: value.type,
+          };
+        }
       })
       .then((updated) => {
         if (value.relationships && Object.keys(value.relationships).length > 0) {

@@ -14,6 +14,7 @@ import {
 } from './dataTypes';
 
 import { Plump } from './plump';
+import { PlumpObservable } from './plumpObservable';
 
 // TODO: figure out where error events originate (storage or model)
 // and who keeps a roll-backable delta
@@ -128,7 +129,7 @@ export class Model<T extends ModelData> {
     return this;
   }
 
-  asObservable(opts: string | string[] = ['relationships', 'attributes']): Observable<T> {
+  asObservable(opts: string | string[] = ['relationships', 'attributes']): PlumpObservable<T> {
     let fields = Array.isArray(opts) ? opts.concat() : [opts];
     if (fields.indexOf('relationships') >= 0) {
       fields = fields.concat(
@@ -176,7 +177,10 @@ export class Model<T extends ModelData> {
     return Observable.merge(
       preload$,
       watchWrite$
-    );
+    )
+    .let((obs) => {
+      return new PlumpObservable(this.plump, obs);
+    }) as PlumpObservable<T>;
   }
 
   subscribe(cb: Observer<T>): Subscription;

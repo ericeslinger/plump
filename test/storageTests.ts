@@ -121,22 +121,22 @@ export function testSuite(context, storeOpts) {
           return actualStore.writeRelationshipItem(
             { type: TestType.type, id: createdObject.id },
             'children',
-            { type: TestType.type, id: 200 }
+            { id: 200 }
           )
           .then(() => actualStore.writeRelationshipItem(
             { type: TestType.type, id: createdObject.id },
             'children',
-            { type: TestType.type, id: 201 }
+            { id: 201 }
           ))
           .then(() => actualStore.writeRelationshipItem(
             { type: TestType.type, id: createdObject.id },
             'children',
-            { type: TestType.type, id: 202 }
+            { id: 202 }
           ))
           .then(() => actualStore.writeRelationshipItem(
             { type: TestType.type, id: createdObject.id },
             'children',
-            { type: TestType.type, id: 203 }
+            { id: 203 }
           ))
           .then(() => {
             return actualStore.read({ type: TestType.type, id: createdObject.id }, ['attributes', 'relationships.children']);
@@ -154,27 +154,27 @@ export function testSuite(context, storeOpts) {
           return actualStore.writeRelationshipItem(
             { type: TestType.type, id: createdObject.id },
             'children',
-            { type: TestType.type, id: 100 }
+            { id: 100 }
           )
           .then(() => actualStore.writeRelationshipItem(
             { type: TestType.type, id: createdObject.id },
             'children',
-            { type: TestType.type, id: 101 }
+            { id: 101 }
           ))
           .then(() => actualStore.writeRelationshipItem(
             { type: TestType.type, id: createdObject.id },
             'children',
-            { type: TestType.type, id: 102 }
+            { id: 102 }
           ))
           .then(() => actualStore.writeRelationshipItem(
             { type: TestType.type, id: createdObject.id },
             'children',
-            { type: TestType.type, id: 103 }
+            { id: 103 }
           ))
           .then(() => actualStore.writeRelationshipItem(
             { type: TestType.type, id: 100 },
             'children',
-            { type: TestType.type, id: createdObject.id }
+            { id: createdObject.id }
           ))
           .then(() => actualStore.read({ type: TestType.type, id: createdObject.id }, ['relationships.children']))
           .then((v) => {
@@ -196,7 +196,7 @@ export function testSuite(context, storeOpts) {
           return actualStore.writeRelationshipItem(
             { type: TestType.type, id: createdObject.id },
             'valenceChildren',
-            { type: TestType.type, id: 100, meta: { perm: 1 } }
+            { id: 100, meta: { perm: 1 } }
           )
           .then(() => actualStore.read({ type: TestType.type, id: createdObject.id }, 'relationships.valenceChildren'))
           .then((v) => expect(v.relationships.valenceChildren).to.deep.equal([{ type: TestType.type, id: 100, meta: { perm: 1 } }]));
@@ -209,7 +209,7 @@ export function testSuite(context, storeOpts) {
           return actualStore.writeRelationshipItem(
             { type: TestType.type, id: createdObject.id },
             'valenceChildren',
-            { type: TestType.type, id: 100, meta: { perm: 1 } }
+            { id: 100, meta: { perm: 1 } }
           )
           .then(() => actualStore.read({ type: TestType.type, id: createdObject.id }, 'relationships.valenceChildren'))
           .then((v) => expect(v.relationships.valenceChildren).to.deep.equal([
@@ -242,7 +242,7 @@ export function testSuite(context, storeOpts) {
           .then(() => actualStore.deleteRelationshipItem(
             { type: TestType.type, id: createdObject.id },
             'children',
-            { type: TestType.type, id: 100 }
+            { id: 100 }
           ))
           .then(() => actualStore.read({ type: TestType.type, id: createdObject.id }, 'relationships.children'))
           .then((v) => expect(v.relationships.children).to.deep.equal([]));
@@ -253,9 +253,8 @@ export function testSuite(context, storeOpts) {
     context.describe('events', () => {
       context.it('should pass basic write-invalidation events to other datastores', () => {
         const memstore = new MemoryStore();
-        const testPlump = new Plump();
+        const testPlump = new Plump(actualStore);
         return testPlump.addCache(memstore)
-        .then(() => testPlump.setTerminal(actualStore))
         .then(() => testPlump.addType(TestType))
         .then(() => actualStore.writeAttributes({ type: TestType.type, attributes: { name: 'potato' } }))
         .then((createdObject) => {
@@ -288,22 +287,18 @@ export function testSuite(context, storeOpts) {
       });
 
       context.it('should pass basic cacheable-read events up the stack', () => {
-        const testPlump = new Plump();
         let testItem;
-        let memstore;
-        return testPlump.addType(TestType)
-        .then(() => actualStore.writeAttributes({ type: TestType.type, attributes: { name: 'potato' } }))
+        const memstore = new MemoryStore();
+        return actualStore.writeAttributes({ type: TestType.type, attributes: { name: 'potato' } })
         .then((createdObject) => {
           testItem = createdObject;
           return actualStore.read({ type: TestType.type, id: testItem.id });
         })
         .then((v) => expect(v).to.have.nested.property('attributes.name', 'potato'))
         .then(() => {
-          memstore = new MemoryStore();
-          return Promise.all([
-            testPlump.addCache(memstore),
-            testPlump.setTerminal(actualStore),
-          ]);
+          const testPlump = new Plump(actualStore);
+          return testPlump.addType(TestType)
+          .then(() => testPlump.addCache(memstore));
         })
         .then(() => memstore.read({ type: TestType.type, id: testItem.id }))
         .then(v => expect(v).to.be.null)
@@ -315,21 +310,15 @@ export function testSuite(context, storeOpts) {
           return new Promise((resolve) => setTimeout(resolve, 100));
         })
         .then(() => memstore.read({ type: TestType.type, id: testItem.id }))
-        .then((v) => expect(v).to.have.nested.property('attributes.name', 'potato'))
-        .then(() => testPlump.teardown())
-        .catch((err) => {
-          testPlump.teardown();
-          throw err;
-        });
+        .then((v) => expect(v).to.have.nested.property('attributes.name', 'potato'));
       });
 
       context.it('should pass write-invalidation events on hasMany relationships to other datastores', () => {
         let testItem;
         const memstore = new MemoryStore();
-        const testPlump = new Plump();
+        const testPlump = new Plump(actualStore);
         return testPlump.addType(TestType)
         .then(() => testPlump.addCache(memstore))
-        .then(() => testPlump.setTerminal(actualStore))
         .then(() => actualStore.writeAttributes({ type: TestType.type, attributes: { name: 'potato' } }))
         .then((createdObject) => {
           testItem = createdObject;
@@ -355,7 +344,7 @@ export function testSuite(context, storeOpts) {
         .then(() => actualStore.writeRelationshipItem(
           { type: TestType.type, id: testItem.id },
           'children',
-          { type: TestType.type, id: 101 }))
+          { id: 101 }))
         .then(() => new Promise((resolve) => setTimeout(resolve, 100)))
         .then(() => memstore.read({ type: TestType.type, id: testItem.id }))
         .then((v) => expect(v).to.not.have.nested.property('relationships.children'))
@@ -369,9 +358,7 @@ export function testSuite(context, storeOpts) {
       context.it('should pass cacheable-read events on hasMany relationships to other datastores', () => {
         let testItem;
         let memstore;
-        const testPlump = new Plump();
-        return testPlump.addType(TestType)
-        .then(() => actualStore.writeAttributes({ type: TestType.type, attributes: { name: 'potato' } }))
+        return actualStore.writeAttributes({ type: TestType.type, attributes: { name: 'potato' } })
         .then((createdObject) => {
           testItem = createdObject;
           return actualStore.read({ type: TestType.type, id: testItem.id });
@@ -383,20 +370,23 @@ export function testSuite(context, storeOpts) {
           { type: TestType.type, id: 100 }
         ))
         .then(() => {
+          const testPlump = new Plump(actualStore);
           memstore = new MemoryStore();
-          return testPlump.setTerminal(actualStore)
-          .then(() => testPlump.addCache(memstore))
-          .then(() => memstore.read({ type: TestType.type, id: testItem.id }))
-          .then((v) => expect(v).to.be.null);
-        }).then(() => {
-          return actualStore.read({ type: TestType.type, id: testItem.id }, 'children');
-        }).then(() => new Promise((resolve) => setTimeout(resolve, 100)))
-        .then(() => memstore.read({ type: TestType.type, id: testItem.id }, 'children'))
-        .then((v) => expect(v.relationships.children).to.deep.equal([{ type: TestType.type, id: 100 }]))
-        .then(() => testPlump.teardown())
-        .catch((err) => {
-          testPlump.teardown();
-          throw err;
+          return testPlump.addType(TestType)
+          .then(() => {
+            return testPlump.addCache(memstore)
+            .then(() => memstore.read({ type: TestType.type, id: testItem.id }))
+            .then((v) => expect(v).to.be.null);
+          }).then(() => {
+            return actualStore.read({ type: TestType.type, id: testItem.id }, 'children');
+          }).then(() => new Promise((resolve) => setTimeout(resolve, 100)))
+          .then(() => memstore.read({ type: TestType.type, id: testItem.id }, 'children'))
+          .then((v) => expect(v.relationships.children).to.deep.equal([{ type: TestType.type, id: 100 }]))
+          .then(() => testPlump.teardown())
+          .catch((err) => {
+            testPlump.teardown();
+            throw err;
+          });
         });
       });
     });

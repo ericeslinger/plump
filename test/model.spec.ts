@@ -15,15 +15,10 @@ declare global {
 
 
 const memstore2 = new MemoryStore({ terminal: true });
-
-const plump = new Plump();
-
+const plump = new Plump(memstore2);
 const expect = chai.expect;
 
-before(() => {
-  return plump.setTerminal(memstore2)
-  .then(() => plump.addType(TestType));
-});
+before(() => plump.addType(TestType));
 
 describe('model', () => {
   describe('basic functionality', () => {
@@ -61,9 +56,8 @@ describe('model', () => {
       })
       class MiniModel extends Model<ModelData> { }
 
-      const tinyPlump = new Plump();
+      const tinyPlump = new Plump(new MemoryStore({ terminal: true }));
       return tinyPlump.addType(MiniModel)
-      .then(() => tinyPlump.setTerminal(new MemoryStore({ terminal: true })))
       .then(() => new MiniModel({ id: 101 }, tinyPlump).save())
       .then((i) => {
         return new Promise((resolve, reject) => {
@@ -75,6 +69,9 @@ describe('model', () => {
               resolve();
             }
           });
+        }).catch((err) => {
+          console.log(err);
+          console.log(err.stack);
         });
       });
     });
@@ -100,10 +97,9 @@ describe('model', () => {
     });
 
     it('should allow the creation of new models with an existing id', () => {
-      const otherPlump = new Plump();
       const otherStore = new MemoryStore({ terminal: true });
-      return otherPlump.setTerminal(otherStore)
-      .then(() => otherPlump.addType(TestType))
+      const otherPlump = new Plump(otherStore);
+      return otherPlump.addType(TestType)
       .then(() => new TestType({ name: 'potato', id: 101 }, otherPlump).save())
       .then(() => otherPlump.find({ type: TestType.type, id: 101 }).get())
       .then((v) => {
@@ -342,6 +338,35 @@ describe('model', () => {
       });
     });
 
+    it('should allow inflatable subscription to model sideloads', () => {
+      return new Promise((resolve, reject) => {
+        const one = new TestType({ name: 'potato' }, plump);
+        const children = [
+          new TestType({ name: 'potato one' }, plump),
+          new TestType({ name: 'potato two' }, plump),
+          new TestType({ name: 'potato three' }, plump),
+          new TestType({ name: 'potato four' }, plump),
+          new TestType({ name: 'potato five' }, plump),
+        ];
+        let phase = 0;
+        one.save()
+        .then(() => Promise.all(children.map(c => c.save())))
+        .then(() => Promise.all(children.map(c => one.add('children', c))))
+        .then(() => {
+          const subscription = one.asObservable(['attributes', 'relationships'])
+          .inflateRelationship('children')
+          .subscribe(v => {
+            if (v.length === children.length) {
+              expect(v.map(i => i.attributes.name))
+              .to.have.members(['potato one', 'potato two', 'potato three', 'potato four', 'potato five']);
+              resolve();
+            }
+          });
+        })
+        .then(() => one.save());
+      });
+    });
+
     it('should allow subscription to model sideloads', () => {
       return new Promise((resolve, reject) => {
         const one = new TestType({ name: 'potato' }, plump);
@@ -405,14 +430,13 @@ describe('model', () => {
         };
         const delayedMemstore = new Proxy(new MemoryStore({ terminal: true }), DelayProxy);
         const coldMemstore = new MemoryStore();
-        const otherPlump = new Plump();
+        const otherPlump = new Plump(delayedMemstore);
         // {
         //   storage: [coldMemstore, delayedMemstore],
         //   types: [TestType],
         // });
         otherPlump.addType(TestType)
         .then(() => otherPlump.addCache(coldMemstore))
-        .then(() => otherPlump.setTerminal(delayedMemstore))
         .then(() => {
           const one = new TestType({ name: 'slowtato' }, otherPlump);
           one.save()
