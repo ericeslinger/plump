@@ -17,14 +17,14 @@ export declare class Plump<TermType extends TerminalStore = TerminalStore> {
         attributes?: A;
     }>>(t: string, val: Partial<A>): T;
     teardown(): void;
-    get<T extends ModelData>(value: ModelReference, opts?: string[]): Promise<T>;
-    bulkGet<T extends ModelData>(value: ModelReference): Promise<T>;
-    save<T extends ModelData>(value: DirtyModel): Promise<T>;
+    get(value: ModelReference, opts?: string[]): Promise<ModelData>;
+    bulkGet(value: ModelReference): Promise<ModelData>;
+    save(value: DirtyModel): Promise<ModelData>;
     delete(item: ModelReference): Promise<void>;
-    add(item: ModelReference, relName: string, child: RelationshipItem): Promise<never>;
-    modifyRelationship(item: ModelReference, relName: string, child: RelationshipItem): Promise<never>;
+    add(item: ModelReference, relName: string, child: RelationshipItem): Promise<ModelData>;
+    modifyRelationship(item: ModelReference, relName: string, child: RelationshipItem): Promise<ModelData>;
     query(q: any): Promise<ModelReference[]>;
-    deleteRelationshipItem(item: ModelReference, relName: string, child: RelationshipItem): Promise<never>;
+    deleteRelationshipItem(item: ModelReference, relName: string, child: RelationshipItem): Promise<ModelData>;
     invalidate(item: ModelReference, field?: string | string[]): void;
     static wire(me: CacheStore, they: TerminalStore, shutdownSignal: Observable<string>): void;
 }

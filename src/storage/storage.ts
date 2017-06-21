@@ -31,8 +31,8 @@ export abstract class Storage implements BaseStore {
   read$: Observable<ModelData>;
   write$: Observable<ModelDelta>;
   protected types: { [type: string]: ModelSchema} = {};
-  private readSubject = new Subject();
-  private writeSubject = new Subject();
+  private readSubject = new Subject<ModelData>();
+  private writeSubject = new Subject<ModelDelta>();
   // protected types: Model[]; TODO: figure this out
 
   constructor(opts: StorageOptions = {}) {

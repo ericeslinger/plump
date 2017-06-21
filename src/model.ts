@@ -99,7 +99,7 @@ export class Model<T extends ModelData> {
   }
 
   bulkGet(): Promise<T> {
-    return this.plump.bulkGet(this);
+    return this.plump.bulkGet(this) as Promise<T>;
   }
 
   // TODO: Should $save ultimately return this.get()?
@@ -169,7 +169,7 @@ export class Model<T extends ModelData> {
     // TODO: cacheable reads
     // const watchRead$ = Observable.from(terminal)
     // .flatMap(s => s.read$.filter(v => v.type === this.type && v.id === this.id));
-    const watchWrite$: Observable<ModelDelta> = terminal.write$
+    const watchWrite$: Observable<ModelData> = terminal.write$
       .filter((v: ModelDelta) => {
         return (
           v.type === this.type &&

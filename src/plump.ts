@@ -75,10 +75,10 @@ export class Plump<TermType extends TerminalStore = TerminalStore> {
     this.teardownSubject.next('done');
   }
 
-  get<T extends ModelData>(
+  get(
     value: ModelReference,
     opts: string[] = ['attributes']
-  ): Promise<T> {
+  ): Promise<ModelData> {
     const keys = opts && !Array.isArray(opts) ? [opts] : opts;
     return this.caches
       .reduce((thenable, storage) => {
@@ -101,11 +101,11 @@ export class Plump<TermType extends TerminalStore = TerminalStore> {
       });
   }
 
-  bulkGet<T extends ModelData>(value: ModelReference): Promise<T> {
+  bulkGet(value: ModelReference): Promise<ModelData> {
     return this.terminal.bulkRead(value);
   }
 
-  save<T extends ModelData>(value: DirtyModel): Promise<T> {
+  save(value: DirtyModel): Promise<ModelData> {
     if (this.terminal) {
       return Promise.resolve()
         .then(() => {
