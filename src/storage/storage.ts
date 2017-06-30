@@ -3,6 +3,7 @@
 import * as mergeOptions from 'merge-options';
 // import { validateInput } from '../util';
 import { Subject, Observable } from 'rxjs';
+import { PlumpError, NotFoundError } from '../errors';
 import {
   IndefiniteModelData,
   ModelData,
@@ -10,7 +11,7 @@ import {
   ModelSchema,
   ModelReference,
   BaseStore,
-  StorageOptions,
+  StorageOptions
   // RelationshipItem,
 } from '../dataTypes';
 
@@ -21,16 +22,14 @@ import {
 //    and NOT the actual id field (e.g., in most cases, Type.$id === 'id').
 // id: unique id. Often an integer, but not necessary (could be an oid)
 
-
 // hasMany relationships are treated like id arrays. So, add / remove / has
 // just stores and removes integers.
 
 export abstract class Storage implements BaseStore {
-
   terminal: boolean;
   read$: Observable<ModelData>;
   write$: Observable<ModelDelta>;
-  protected types: { [type: string]: ModelSchema} = {};
+  protected types: { [type: string]: ModelSchema } = {};
   private readSubject = new Subject<ModelData>();
   private writeSubject = new Subject<ModelDelta>();
   // protected types: Model[]; TODO: figure this out
@@ -54,7 +53,10 @@ export abstract class Storage implements BaseStore {
   // abstract allocateId(type: string): Promise<string | number>;
   // abstract writeAttributes(value: IndefiniteModelData): Promise<ModelData>;
   abstract readAttributes(value: ModelReference): Promise<ModelData>;
-  abstract readRelationship(value: ModelReference, relName: string): Promise<ModelData>;
+  abstract readRelationship(
+    value: ModelReference,
+    relName: string
+  ): Promise<ModelData>;
   // abstract delete(value: ModelReference): Promise<void>;
   // abstract writeRelationshipItem( value: ModelReference, relName: string, child: {id: string | number} ): Promise<ModelData>;
   // abstract deleteRelationshipItem( value: ModelReference, relName: string, child: {id: string | number} ): Promise<ModelData>;
@@ -69,12 +71,15 @@ export abstract class Storage implements BaseStore {
   // convenience function used internally
   // read a bunch of relationships and merge them together.
   readRelationships(item: ModelReference, relationships: string[]) {
-    return Promise.all(relationships.map(r => this.readRelationship(item, r)))
-    .then(rA =>
-      rA.reduce(
-        (a, r) => mergeOptions(a, r || {}),
-        { type: item.type, id: item.id, attributes: {}, relationships: {} }
-      )
+    return Promise.all(
+      relationships.map(r => this.readRelationship(item, r))
+    ).then(rA =>
+      rA.reduce((a, r) => mergeOptions(a, r || {}), {
+        type: item.type,
+        id: item.id,
+        attributes: {},
+        relationships: {}
+      })
     );
   }
 
@@ -82,57 +87,76 @@ export abstract class Storage implements BaseStore {
     const schema = this.getSchema(item.type);
     const keys = (opts && !Array.isArray(opts) ? [opts] : opts) as string[];
     return this.readAttributes(item)
-    .then(attributes => {
-      if (!attributes) {
-        return null;
-      } else {
-        if (attributes.id && attributes.attributes && !attributes.attributes[schema.idAttribute]) {
-          attributes.attributes[schema.idAttribute] = attributes.id; // eslint-disable-line no-param-reassign
-        }
+      .then(attributes => {
+        if (!attributes) {
+          throw new NotFoundError();
+        } else {
+          if (
+            attributes.id &&
+            attributes.attributes &&
+            !attributes.attributes[schema.idAttribute]
+          ) {
+            attributes.attributes[schema.idAttribute] = attributes.id; // eslint-disable-line no-param-reassign
+          }
 
-        // load in default values
-        if (attributes.attributes) {
-          for (const attrName in schema.attributes) {
-            if (!attributes.attributes[attrName] && (schema.attributes[attrName].default !== undefined)) {
-              if (Array.isArray(schema.attributes[attrName].default)) {
-                attributes.attributes[attrName] = (schema.attributes[attrName].default as any[]).concat();
-              } else if (typeof schema.attributes[attrName].default === 'object') {
-                attributes.attributes[attrName] = Object.assign({}, schema.attributes[attrName].default);
-              } else {
-                attributes.attributes[attrName] = schema.attributes[attrName].default;
+          // load in default values
+          if (attributes.attributes) {
+            for (const attrName in schema.attributes) {
+              if (
+                !attributes.attributes[attrName] &&
+                schema.attributes[attrName].default !== undefined
+              ) {
+                if (Array.isArray(schema.attributes[attrName].default)) {
+                  attributes.attributes[attrName] = (schema.attributes[attrName]
+                    .default as any[]).concat();
+                } else if (
+                  typeof schema.attributes[attrName].default === 'object'
+                ) {
+                  attributes.attributes[attrName] = Object.assign(
+                    {},
+                    schema.attributes[attrName].default
+                  );
+                } else {
+                  attributes.attributes[attrName] =
+                    schema.attributes[attrName].default;
+                }
               }
             }
           }
-        }
 
-        const relsWanted = (keys.indexOf('relationships') >= 0)
-          ? Object.keys(schema.relationships)
-          : keys.map(k => k.split('.'))
-            .filter(ka => ka[0] === 'relationships')
-            .map(ka => ka[1]);
-        const relsToFetch = relsWanted.filter(relName => !attributes.relationships[relName]);
-        // readAttributes can return relationship data, so don't fetch those
-        if (relsToFetch.length > 0) {
-          return this.readRelationships(item, relsToFetch)
-          .then(rels => {
-            return mergeOptions(attributes, rels);
-          });
-        } else {
-          return attributes;
+          const relsWanted =
+            keys.indexOf('relationships') >= 0
+              ? Object.keys(schema.relationships)
+              : keys
+                  .map(k => k.split('.'))
+                  .filter(ka => ka[0] === 'relationships')
+                  .map(ka => ka[1]);
+          const relsToFetch = relsWanted.filter(
+            relName => !attributes.relationships[relName]
+          );
+          // readAttributes can return relationship data, so don't fetch those
+          if (relsToFetch.length > 0) {
+            return this.readRelationships(item, relsToFetch).then(rels => {
+              return mergeOptions(attributes, rels);
+            });
+          } else {
+            return attributes;
+          }
         }
-      }
-    })
-    .then((result) => {
-      if (result) {
-        Object.keys(result.relationships).forEach((relName) => {
-          result.relationships[relName].forEach((relItem) => {
-            relItem.type = this.getSchema(result.type).relationships[relName].type.sides[relName].otherType;
+      })
+      .then(result => {
+        if (result) {
+          Object.keys(result.relationships).forEach(relName => {
+            result.relationships[relName].forEach(relItem => {
+              relItem.type = this.getSchema(result.type).relationships[
+                relName
+              ].type.sides[relName].otherType;
+            });
           });
-        });
-        this.fireReadUpdate(result);
-      }
-      return result;
-    });
+          this.fireReadUpdate(result);
+        }
+        return result;
+      });
   }
 
   bulkRead(item: ModelReference): Promise<ModelData> {
@@ -145,7 +169,6 @@ export abstract class Storage implements BaseStore {
       return data;
     });
   }
-
 
   hot(item: ModelReference): boolean {
     // t: type, id: id (integer).
@@ -162,7 +185,12 @@ export abstract class Storage implements BaseStore {
 
   validateInput(value: ModelData | IndefiniteModelData): typeof value {
     const schema = this.getSchema(value.type);
-    const retVal = { type: value.type, id: value.id, attributes: {}, relationships: {} };
+    const retVal = {
+      type: value.type,
+      id: value.id,
+      attributes: {},
+      relationships: {}
+    };
     const typeAttrs = Object.keys(schema.attributes || {});
     const valAttrs = Object.keys(value.attributes || {});
     const typeRels = Object.keys(schema.relationships || {});
@@ -173,11 +201,15 @@ export abstract class Storage implements BaseStore {
     const invalidRels = valRels.filter(item => typeRels.indexOf(item) < 0);
 
     if (invalidAttrs.length > 0) {
-      throw new Error(`Invalid attributes on value object: ${JSON.stringify(invalidAttrs)}`);
+      throw new Error(
+        `Invalid attributes on value object: ${JSON.stringify(invalidAttrs)}`
+      );
     }
 
     if (invalidRels.length > 0) {
-      throw new Error(`Invalid relationships on value object: ${JSON.stringify(invalidRels)}`);
+      throw new Error(
+        `Invalid relationships on value object: ${JSON.stringify(invalidRels)}`
+      );
     }
 
     //
@@ -198,7 +230,11 @@ export abstract class Storage implements BaseStore {
     }
 
     for (const relName in schema.relationships) {
-      if (value.relationships && value.relationships[relName] && !Array.isArray(value.relationships[relName])) {
+      if (
+        value.relationships &&
+        value.relationships[relName] &&
+        !Array.isArray(value.relationships[relName])
+      ) {
         throw new Error(`relation ${relName} is not an array`);
       }
     }
@@ -207,27 +243,26 @@ export abstract class Storage implements BaseStore {
 
   // store type info data on the store itself
 
-  getSchema(t: {schema: ModelSchema} | ModelSchema | string): ModelSchema {
+  getSchema(t: { schema: ModelSchema } | ModelSchema | string): ModelSchema {
     if (typeof t === 'string') {
       return this.types[t];
     } else if (t['schema']) {
-      return (t as {schema: ModelSchema}).schema;
+      return (t as { schema: ModelSchema }).schema;
     } else {
       return t as ModelSchema;
     }
   }
 
-  addSchema(t: {type: string, schema: ModelSchema}) {
+  addSchema(t: { type: string; schema: ModelSchema }) {
     this.types[t.type] = t.schema;
     return Promise.resolve();
   }
 
-  addSchemas(a: {type: string, schema: ModelSchema}[]): Promise<void> {
-    return Promise.all(
-      a.map(t => this.addSchema(t))
-    ).then(() => {/* noop */});
+  addSchemas(a: { type: string; schema: ModelSchema }[]): Promise<void> {
+    return Promise.all(a.map(t => this.addSchema(t))).then(() => {
+      /* noop */
+    });
   }
-
 
   fireWriteUpdate(val: ModelDelta) {
     this.writeSubject.next(val);

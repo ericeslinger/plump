@@ -2,11 +2,13 @@ import { Subscription, Observer } from 'rxjs';
 import { ModelData, ModelSchema, RelationshipDelta, RelationshipItem } from './dataTypes';
 import { Plump } from './plump';
 import { PlumpObservable } from './plumpObservable';
+import { PlumpError } from './errors';
 export declare class Model<T extends ModelData> {
     private plump;
     id: string | number;
     static type: string;
     static schema: ModelSchema;
+    error: PlumpError;
     private dirty;
     readonly type: any;
     readonly schema: any;

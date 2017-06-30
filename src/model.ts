@@ -15,6 +15,7 @@ import {
 
 import { Plump } from './plump';
 import { PlumpObservable } from './plumpObservable';
+import { PlumpError } from './errors';
 
 // TODO: figure out where error events originate (storage or model)
 // and who keeps a roll-backable delta
@@ -28,6 +29,8 @@ export class Model<T extends ModelData> {
     attributes: {},
     relationships: {}
   };
+
+  public error: PlumpError;
 
   private dirty: DirtyValues;
 
@@ -47,6 +50,7 @@ export class Model<T extends ModelData> {
 
   constructor(opts, private plump: Plump) {
     // TODO: Define Delta interface
+    this.error = null;
     if (this.type === 'BASE') {
       throw new TypeError(
         'Cannot instantiate base plump Models, please subclass with a schema and valid type'
@@ -82,20 +86,29 @@ export class Model<T extends ModelData> {
     // Otherwise, get what was requested,
     // wrapping the request in a Array if it wasn't already one
     const keys = opts && !Array.isArray(opts) ? [opts] : opts as string[];
-    return this.plump.get(this, keys).then(self => {
-      if (!self && this.dirtyFields().length === 0) {
+    return this.plump
+      .get(this, keys)
+      .catch((e: PlumpError) => {
+        this.error = e;
         return null;
-      } else if (this.dirtyFields().length === 0) {
-        return self;
-      } else {
-        const resolved = Model.resolveAndOverlay(this.dirty, self || undefined);
-        return mergeOptions(
-          {},
-          self || { id: this.id, type: this.type },
-          resolved
-        );
-      }
-    });
+      })
+      .then(self => {
+        if (!self && this.dirtyFields().length === 0) {
+          return null;
+        } else if (this.dirtyFields().length === 0) {
+          return self;
+        } else {
+          const resolved = Model.resolveAndOverlay(
+            this.dirty,
+            self || undefined
+          );
+          return mergeOptions(
+            {},
+            self || { id: this.id, type: this.type },
+            resolved
+          );
+        }
+      });
   }
 
   bulkGet(): Promise<T> {
