@@ -1,10 +1,11 @@
-import { AuthorizerDefinition, AuthorizeRequest, AuthorizeResponse, KeyService } from './dataTypes';
-import { ModelSchema } from '../dataTypes';
+import { AuthorizerDefinition, AuthorizeRequest, FinalAuthorizeResponse, KeyService } from './dataTypes';
 export declare class Oracle {
     keyService: KeyService;
-    private authorizers;
+    authorizers: {
+        [name: string]: AuthorizerDefinition;
+    };
     constructor(keyService?: KeyService);
-    addAuthorizer(auth: AuthorizerDefinition, forType: ModelSchema): void;
-    dispatch(request: AuthorizeRequest): Promise<AuthorizeResponse>;
+    addAuthorizer(auth: AuthorizerDefinition, forType: string): void;
+    dispatch(request: AuthorizeRequest): Promise<FinalAuthorizeResponse>;
     authorize(request: AuthorizeRequest): Promise<boolean>;
 }

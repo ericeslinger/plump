@@ -3,65 +3,46 @@ import {
   AuthorizeRequest,
   AuthorizeResponse,
   FinalAuthorizeResponse,
-  KeyService
+  KeyService,
 } from './dataTypes';
-import { ModelSchema } from '../dataTypes';
 
 export class Oracle {
-  private authorizers: {[name: string]: AuthorizerDefinition} = {};
+  public authorizers: { [name: string]: AuthorizerDefinition } = {};
 
-  constructor(public keyService?: KeyService) { }
+  constructor(public keyService?: KeyService) {}
 
-  addAuthorizer(auth: AuthorizerDefinition, forType: ModelSchema) {
-    const authKeys = Object.keys(auth.relationships);
-    const forKeys = Object.keys(forType.relationships);
-    const missing = forKeys.filter(k => authKeys.indexOf(k) < 0);
-    if (missing.length > 0) {
-      throw new Error(`Missing relationship authorizer(s) ${missing.join(', ')}`);
-    }
-    this.authorizers[forType.name] = auth;
+  addAuthorizer(auth: AuthorizerDefinition, forType: string) {
+    this.authorizers[forType] = auth;
   }
 
-  dispatch(request: AuthorizeRequest): Promise<AuthorizeResponse> {
+  dispatch(request: AuthorizeRequest): Promise<FinalAuthorizeResponse> {
     return Promise.resolve()
-    .then<AuthorizeResponse>(() => {
-      if (request.kind === 'relationship') {
-        const relationshipAuthorizer = this.authorizers[request.parent.type].relationships[request.relationship];
-        if (request.action === 'create') {
-          return relationshipAuthorizer.authorizeCreate(request);
-        } else if (request.action === 'read') {
-          return relationshipAuthorizer.authorizeRead(request);
-        } else if (request.action === 'update') {
-          return relationshipAuthorizer.authorizeUpdate(request);
-        } else if (request.action === 'delete') {
-          return relationshipAuthorizer.authorizeDelete(request);
+      .then<AuthorizeResponse>(() => {
+        if (request.kind === 'relationship') {
+          return this.authorizers[request.parent.type].authorize(request);
+        } else if (request.kind === 'attributes') {
+          return this.authorizers[request.target.type].authorize(request);
+        } else if (request.kind === 'compound') {
+          return Promise.all(request.list.map(v => this.dispatch(v)))
+            .then(
+              (res: FinalAuthorizeResponse[]) =>
+                request.combinator === 'or'
+                  ? res.some(v => v.result)
+                  : res.every(v => v.result),
+            )
+            .then<FinalAuthorizeResponse>(f => ({ kind: 'final', result: f }));
         }
-      } else if (request.kind === 'attributes') {
-        if (request.action === 'create') {
-          return this.authorizers[request.data.type].attributes.authorizeCreate(request);
-        } else if (request.action === 'read') {
-          return this.authorizers[request.target.type].attributes.authorizeRead(request);
-        } else if (request.action === 'update') {
-          return this.authorizers[request.target.type].attributes.authorizeUpdate(request);
-        } else if (request.action === 'delete') {
-          return this.authorizers[request.target.type].attributes.authorizeDelete(request);
+      })
+      .then(v => {
+        if (v.kind === 'final') {
+          return v;
+        } else if (v.kind === 'delegated') {
+          return this.dispatch(v.delegate);
         }
-      } else if (request.kind === 'compound') {
-        return Promise.all(request.list.map(v => this.dispatch(v)))
-        .then((res: FinalAuthorizeResponse[]) => request.combinator === 'or' ? res.some(v => v.result) : res.every(v => v.result ))
-        .then<FinalAuthorizeResponse>(f => ({ kind: 'final', result: f }));
-      }
-    }).then((v) => {
-      if (v.kind === 'final') {
-        return v;
-      } else if (v.kind === 'delegated') {
-        return this.dispatch(v.delegate);
-      }
-    });
+      });
   }
 
   authorize(request: AuthorizeRequest): Promise<boolean> {
-    return this.dispatch(request)
-    .then((f: FinalAuthorizeResponse) => f.result);
+    return this.dispatch(request).then((f: FinalAuthorizeResponse) => f.result);
   }
 }

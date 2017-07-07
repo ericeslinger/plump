@@ -18,6 +18,9 @@ export interface AttributesDeleteAuthorizeRequest extends AbstractAttributesAuth
 export interface AttributesCreateAuthorizeRequest extends AbstractAttributesAuthorizeRequest {
     action: 'create';
     data?: IndefiniteModelData;
+    target: {
+        type: string;
+    };
 }
 export interface AttributesUpdateAuthorizeRequest extends AbstractAttributesAuthorizeRequest {
     action: 'update';
@@ -56,6 +59,7 @@ export interface CompoundAuthorizeRequest extends AbstractAuthorizeRequest {
     combinator: 'and' | 'or';
     list: (AttributesAuthorizeRequest | RelationshipAuthorizeRequest | CompoundAuthorizeRequest)[];
 }
+export declare type ConcreteAuthorizeRequest = RelationshipAuthorizeRequest | AttributesAuthorizeRequest;
 export declare type AuthorizeRequest = RelationshipAuthorizeRequest | AttributesAuthorizeRequest | CompoundAuthorizeRequest;
 export interface AbstractAuthorizeResponse {
     kind: string;
@@ -82,10 +86,7 @@ export interface RelationshipAuthorize {
     authorizeDelete(RelationshipDeleteAuthorizeRequest: any): Promise<AuthorizeResponse>;
 }
 export interface AuthorizerDefinition {
-    attributes: AttributesAuthorize;
-    relationships: {
-        [name: string]: RelationshipAuthorize;
-    };
+    authorize(req: AuthorizeRequest): Promise<AuthorizeResponse>;
 }
 export interface KeyService {
     test(key: string): Promise<boolean>;

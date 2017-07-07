@@ -1,43 +1,57 @@
-import { ModelReference, IndefiniteModelData, ModelData } from '../dataTypes';
+import {
+  ModelReference,
+  IndefiniteModelData,
+  ModelData,
+  ModelSchema,
+} from '../dataTypes';
 
 export interface AbstractAuthorizeRequest {
   kind: 'attributes' | 'relationship' | 'compound';
 }
 
-export interface AbstractAttributesAuthorizeRequest extends AbstractAuthorizeRequest {
+export interface AbstractAttributesAuthorizeRequest
+  extends AbstractAuthorizeRequest {
   action: 'create' | 'read' | 'update' | 'delete';
   kind: 'attributes';
   actor: ModelReference;
 }
 
-export interface AttributesReadAuthorizeRequest extends AbstractAttributesAuthorizeRequest {
+export interface AttributesReadAuthorizeRequest
+  extends AbstractAttributesAuthorizeRequest {
   action: 'read';
   target: ModelReference;
 }
 
-export interface AttributesDeleteAuthorizeRequest extends AbstractAttributesAuthorizeRequest {
+export interface AttributesDeleteAuthorizeRequest
+  extends AbstractAttributesAuthorizeRequest {
   action: 'delete';
   target: ModelReference;
 }
 
-export interface AttributesCreateAuthorizeRequest extends AbstractAttributesAuthorizeRequest {
+export interface AttributesCreateAuthorizeRequest
+  extends AbstractAttributesAuthorizeRequest {
   action: 'create';
   data?: IndefiniteModelData;
+  target: {
+    type: string;
+  };
 }
 
-export interface AttributesUpdateAuthorizeRequest extends AbstractAttributesAuthorizeRequest {
+export interface AttributesUpdateAuthorizeRequest
+  extends AbstractAttributesAuthorizeRequest {
   action: 'update';
   target: ModelReference;
   data?: ModelData;
 }
 
-export type AttributesAuthorizeRequest
-  = AttributesCreateAuthorizeRequest
+export type AttributesAuthorizeRequest =
+  | AttributesCreateAuthorizeRequest
   | AttributesReadAuthorizeRequest
   | AttributesUpdateAuthorizeRequest
   | AttributesDeleteAuthorizeRequest;
 
-export interface AbstractRelationshipAuthorizeRequest extends AbstractAuthorizeRequest {
+export interface AbstractRelationshipAuthorizeRequest
+  extends AbstractAuthorizeRequest {
   kind: 'relationship';
   action: 'create' | 'read' | 'update' | 'delete';
   actor: ModelData;
@@ -45,45 +59,57 @@ export interface AbstractRelationshipAuthorizeRequest extends AbstractAuthorizeR
   parent: ModelReference;
 }
 
-export interface RelationshipCreateAuthorizeRequest extends AbstractRelationshipAuthorizeRequest {
+export interface RelationshipCreateAuthorizeRequest
+  extends AbstractRelationshipAuthorizeRequest {
   action: 'create';
   child: ModelReference;
   meta?: any;
 }
 
-export interface RelationshipReadAuthorizeRequest extends AbstractRelationshipAuthorizeRequest {
+export interface RelationshipReadAuthorizeRequest
+  extends AbstractRelationshipAuthorizeRequest {
   action: 'read';
 }
 
-export interface RelationshipUpdateAuthorizeRequest extends AbstractRelationshipAuthorizeRequest {
+export interface RelationshipUpdateAuthorizeRequest
+  extends AbstractRelationshipAuthorizeRequest {
   action: 'update';
   child: ModelReference;
   meta?: any;
 }
 
-export interface RelationshipDeleteAuthorizeRequest extends AbstractRelationshipAuthorizeRequest {
+export interface RelationshipDeleteAuthorizeRequest
+  extends AbstractRelationshipAuthorizeRequest {
   action: 'delete';
   child: ModelReference;
 }
 
-export type RelationshipAuthorizeRequest
-  = RelationshipCreateAuthorizeRequest
+export type RelationshipAuthorizeRequest =
+  | RelationshipCreateAuthorizeRequest
   | RelationshipReadAuthorizeRequest
   | RelationshipUpdateAuthorizeRequest
   | RelationshipDeleteAuthorizeRequest;
 
-export type SimpleAuthorizeRequest
-  = RelationshipAuthorizeRequest
+export type SimpleAuthorizeRequest =
+  | RelationshipAuthorizeRequest
   | AttributesAuthorizeRequest;
-
 
 export interface CompoundAuthorizeRequest extends AbstractAuthorizeRequest {
   kind: 'compound';
   combinator: 'and' | 'or';
-  list: (AttributesAuthorizeRequest | RelationshipAuthorizeRequest | CompoundAuthorizeRequest)[];
+  list: (
+    | AttributesAuthorizeRequest
+    | RelationshipAuthorizeRequest
+    | CompoundAuthorizeRequest)[];
 }
 
-export type AuthorizeRequest = RelationshipAuthorizeRequest | AttributesAuthorizeRequest | CompoundAuthorizeRequest;
+export type ConcreteAuthorizeRequest =
+  | RelationshipAuthorizeRequest
+  | AttributesAuthorizeRequest;
+export type AuthorizeRequest =
+  | RelationshipAuthorizeRequest
+  | AttributesAuthorizeRequest
+  | CompoundAuthorizeRequest;
 
 export interface AbstractAuthorizeResponse {
   kind: string;
@@ -99,8 +125,8 @@ export interface DelegateAuthorizeResponse extends AbstractAuthorizeResponse {
   delegate: AuthorizeRequest;
 }
 
-export type AuthorizeResponse
-  = FinalAuthorizeResponse
+export type AuthorizeResponse =
+  | FinalAuthorizeResponse
   | DelegateAuthorizeResponse;
 
 export interface AttributesAuthorize {
@@ -111,17 +137,20 @@ export interface AttributesAuthorize {
 }
 
 export interface RelationshipAuthorize {
-  authorizeCreate(RelationshipCreateAuthorizeRequest): Promise<AuthorizeResponse>;
+  authorizeCreate(
+    RelationshipCreateAuthorizeRequest,
+  ): Promise<AuthorizeResponse>;
   authorizeRead(RelationshipReadAuthorizeRequest): Promise<AuthorizeResponse>;
-  authorizeUpdate(RelationshipUpdateAuthorizeRequest): Promise<AuthorizeResponse>;
-  authorizeDelete(RelationshipDeleteAuthorizeRequest): Promise<AuthorizeResponse>;
+  authorizeUpdate(
+    RelationshipUpdateAuthorizeRequest,
+  ): Promise<AuthorizeResponse>;
+  authorizeDelete(
+    RelationshipDeleteAuthorizeRequest,
+  ): Promise<AuthorizeResponse>;
 }
 
 export interface AuthorizerDefinition {
-  attributes: AttributesAuthorize;
-  relationships: {
-    [name: string]: RelationshipAuthorize
-  };
+  authorize(req: AuthorizeRequest): Promise<AuthorizeResponse>;
 }
 
 export interface KeyService {
