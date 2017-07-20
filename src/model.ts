@@ -10,7 +10,7 @@ import {
   RelationshipDelta,
   RelationshipItem,
   CacheStore,
-  TerminalStore
+  TerminalStore,
 } from './dataTypes';
 
 import { Plump } from './plump';
@@ -20,14 +20,14 @@ import { PlumpError } from './errors';
 // TODO: figure out where error events originate (storage or model)
 // and who keeps a roll-backable delta
 
-export class Model<T extends ModelData> {
+export class Model<MD extends ModelData> {
   id: string | number;
   static type = 'BASE';
   static schema: ModelSchema = {
     idAttribute: 'id',
     name: 'BASE',
     attributes: {},
-    relationships: {}
+    relationships: {},
   };
 
   public error: PlumpError;
@@ -53,13 +53,13 @@ export class Model<T extends ModelData> {
     this.error = null;
     if (this.type === 'BASE') {
       throw new TypeError(
-        'Cannot instantiate base plump Models, please subclass with a schema and valid type'
+        'Cannot instantiate base plump Models, please subclass with a schema and valid type',
       );
     }
 
     this.dirty = {
       attributes: {}, // Simple key-value
-      relationships: {} // relName: Delta[]
+      relationships: {}, // relName: Delta[]
     };
     this.$$copyValuesFrom(opts);
     // this.$$fireUpdate(opts);
@@ -77,11 +77,11 @@ export class Model<T extends ModelData> {
   $$resetDirty(): void {
     this.dirty = {
       attributes: {}, // Simple key-value
-      relationships: {} // relName: Delta[]
+      relationships: {}, // relName: Delta[]
     };
   }
 
-  get(opts: string | string[] = 'attributes'): Promise<T> {
+  get<T extends ModelData>(opts: string | string[] = 'attributes'): Promise<T> {
     // If opts is falsy (i.e., undefined), get attributes
     // Otherwise, get what was requested,
     // wrapping the request in a Array if it wasn't already one
@@ -92,7 +92,7 @@ export class Model<T extends ModelData> {
         this.error = e;
         return null;
       })
-      .then(self => {
+      .then<T>(self => {
         if (!self && this.dirtyFields().length === 0) {
           return null;
         } else if (this.dirtyFields().length === 0) {
@@ -100,30 +100,30 @@ export class Model<T extends ModelData> {
         } else {
           const resolved = Model.resolveAndOverlay(
             this.dirty,
-            self || undefined
+            self || undefined,
           );
           return mergeOptions(
             {},
             self || { id: this.id, type: this.type },
-            resolved
+            resolved,
           );
         }
       });
   }
 
-  bulkGet(): Promise<T> {
+  bulkGet<T extends ModelData>(): Promise<T> {
     return this.plump.bulkGet(this) as Promise<T>;
   }
 
   // TODO: Should $save ultimately return this.get()?
-  save(): Promise<T> {
+  save<T extends ModelData>(): Promise<T> {
     const update: DirtyModel = mergeOptions(
       { id: this.id, type: this.type },
-      this.dirty
+      this.dirty,
     );
     return this.plump
       .save(update)
-      .then(updated => {
+      .then<T>(updated => {
         this.$$resetDirty();
         if (updated.id) {
           this.id = updated.id;
@@ -135,7 +135,7 @@ export class Model<T extends ModelData> {
       });
   }
 
-  set(update): this {
+  set(update) {
     const flat = update.attributes || update;
     // Filter out non-attribute keys
     const sanitized = Object.keys(flat)
@@ -151,12 +151,12 @@ export class Model<T extends ModelData> {
   }
 
   asObservable(
-    opts: string | string[] = ['relationships', 'attributes']
-  ): PlumpObservable<T> {
+    opts: string | string[] = ['relationships', 'attributes'],
+  ): PlumpObservable<MD> {
     let fields = Array.isArray(opts) ? opts.concat() : [opts];
     if (fields.indexOf('relationships') >= 0) {
       fields = fields.concat(
-        Object.keys(this.schema.relationships).map(k => `relationships.${k}`)
+        Object.keys(this.schema.relationships).map(k => `relationships.${k}`),
       );
     }
 
@@ -173,7 +173,7 @@ export class Model<T extends ModelData> {
         } else {
           const terminal$ = Observable.fromPromise(terminal.read(this, fields));
           const cold$ = Observable.from(colds).flatMap((s: CacheStore) =>
-            Observable.fromPromise(s.read(this, fields))
+            Observable.fromPromise(s.read(this, fields)),
           );
           // .startWith(undefined);
           return Observable.merge(terminal$, cold$.takeUntil(terminal$));
@@ -192,23 +192,23 @@ export class Model<T extends ModelData> {
       })
       .flatMapTo(
         Observable.of(terminal).flatMap((s: TerminalStore) =>
-          Observable.fromPromise(s.read(this, fields))
-        )
+          Observable.fromPromise(s.read(this, fields)),
+        ),
       );
     // );
     return Observable.merge(preload$, watchWrite$).let(obs => {
       return new PlumpObservable(this.plump, obs);
-    }) as PlumpObservable<T>;
+    }) as PlumpObservable<MD>;
   }
 
-  subscribe(cb: Observer<T>): Subscription;
-  subscribe(fields: string | string[], cb: Observer<T>): Subscription;
+  subscribe(cb: Observer<MD>): Subscription;
+  subscribe(fields: string | string[], cb: Observer<MD>): Subscription;
   subscribe(
-    arg1: Observer<T> | string | string[],
-    arg2?: Observer<T>
+    arg1: Observer<MD> | string | string[],
+    arg2?: Observer<MD>,
   ): Subscription {
     let fields: string[] = [];
-    let cb: Observer<T> = null;
+    let cb: Observer<MD> = null;
 
     if (arg2) {
       cb = arg2;
@@ -218,7 +218,7 @@ export class Model<T extends ModelData> {
         fields = [arg1 as string];
       }
     } else {
-      cb = arg1 as Observer<T>;
+      cb = arg1 as Observer<MD>;
       fields = ['attributes'];
     }
     return this.asObservable(fields).subscribe(cb);
@@ -248,7 +248,7 @@ export class Model<T extends ModelData> {
 
         this.dirty.relationships[key].push({
           op: 'add',
-          data: item
+          data: item,
         });
         // this.$$fireUpdate();
         return this;
@@ -266,7 +266,7 @@ export class Model<T extends ModelData> {
         this.dirty.relationships[key] = this.dirty.relationships[key] || [];
         this.dirty.relationships[key].push({
           op: 'modify',
-          data: item
+          data: item,
         });
         // this.$$fireUpdate();
         return this;
@@ -286,7 +286,7 @@ export class Model<T extends ModelData> {
         }
         this.dirty.relationships[key].push({
           op: 'remove',
-          data: item
+          data: item,
         });
         // this.$$fireUpdate();
         return this;
@@ -313,13 +313,13 @@ export class Model<T extends ModelData> {
     update,
     base: { attributes?: any; relationships?: any } = {
       attributes: {},
-      relationships: {}
-    }
+      relationships: {},
+    },
   ) {
     const attributes = mergeOptions({}, base.attributes, update.attributes);
     const resolvedRelationships = this.resolveRelationships(
       update.relationships,
-      base.relationships
+      base.relationships,
     );
     return { attributes, relationships: resolvedRelationships };
   }
@@ -329,7 +329,7 @@ export class Model<T extends ModelData> {
       .map(relName => {
         const resolved = this.resolveRelationship(
           deltas[relName],
-          base[relName]
+          base[relName],
         );
         return { [relName]: resolved };
       })
@@ -339,7 +339,7 @@ export class Model<T extends ModelData> {
 
   static resolveRelationship(
     deltas: RelationshipDelta[],
-    base: RelationshipItem[] = []
+    base: RelationshipItem[] = [],
   ) {
     const retVal = base.concat();
     deltas.forEach(delta => {

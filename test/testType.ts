@@ -20,7 +20,7 @@ export const ChildrenSchema: RelationshipSchema = {
         children: 'parent_id',
       },
     },
-  }
+  },
 };
 
 export const ValenceChildrenSchema: RelationshipSchema = {
@@ -45,7 +45,6 @@ export const ValenceChildrenSchema: RelationshipSchema = {
 };
 
 export const QueryChildrenSchema: RelationshipSchema = {
-
   sides: {
     queryParents: { otherType: 'tests', otherName: 'queryChildren' },
     queryChildren: { otherType: 'tests', otherName: 'queryParents' },
@@ -66,8 +65,10 @@ export const QueryChildrenSchema: RelationshipSchema = {
         ) from "query_children" where "tests"."id" = "query_children"."parent_id" and "query_children"."perm" >= 2`,
       },
       where: {
-        queryParents: '"query_children"."child_id" = ? and "query_children"."perm" >= 2',
-        queryChildren: '"query_children"."parent_id" = ? and "query_children"."perm" >= 2',
+        queryParents:
+          '"query_children"."child_id" = ? and "query_children"."perm" >= 2',
+        queryChildren:
+          '"query_children"."parent_id" = ? and "query_children"."perm" >= 2',
       },
     },
   },
@@ -100,7 +101,7 @@ export const TestSchema: ModelSchema = {
       tableName: 'tests',
       bulkQuery: 'where "tests"."id" >= ?',
     },
-  }
+  },
 };
 
 export interface PermRelationshipItem extends RelationshipItem {

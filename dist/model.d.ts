@@ -3,7 +3,7 @@ import { ModelData, ModelSchema, RelationshipDelta, RelationshipItem } from './d
 import { Plump } from './plump';
 import { PlumpObservable } from './plumpObservable';
 import { PlumpError } from './errors';
-export declare class Model<T extends ModelData> {
+export declare class Model<MD extends ModelData> {
     private plump;
     id: string | number;
     static type: string;
@@ -16,13 +16,13 @@ export declare class Model<T extends ModelData> {
     constructor(opts: any, plump: Plump);
     $$copyValuesFrom(opts?: {}): void;
     $$resetDirty(): void;
-    get(opts?: string | string[]): Promise<T>;
-    bulkGet(): Promise<T>;
-    save(): Promise<T>;
+    get<T extends ModelData>(opts?: string | string[]): Promise<T>;
+    bulkGet<T extends ModelData>(): Promise<T>;
+    save<T extends ModelData>(): Promise<T>;
     set(update: any): this;
-    asObservable(opts?: string | string[]): PlumpObservable<T>;
-    subscribe(cb: Observer<T>): Subscription;
-    subscribe(fields: string | string[], cb: Observer<T>): Subscription;
+    asObservable(opts?: string | string[]): PlumpObservable<MD>;
+    subscribe(cb: Observer<MD>): Subscription;
+    subscribe(fields: string | string[], cb: Observer<MD>): Subscription;
     delete(): Promise<void>;
     add(key: string, item: RelationshipItem): this;
     modifyRelationship(key: string, item: RelationshipItem): this;

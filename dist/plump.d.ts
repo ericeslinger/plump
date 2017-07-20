@@ -8,7 +8,7 @@ export declare class Plump<TermType extends TerminalStore = TerminalStore> {
     private teardownSubject;
     private types;
     constructor(terminal: TermType);
-    addType(T: typeof Model): Promise<void>;
+    addType(T: any): Promise<void>;
     type(T: string): typeof Model;
     getTypes(): typeof Model[];
     addCache(store: CacheStore): Promise<void>;

@@ -22,13 +22,13 @@ describe('Plump', () => {
         if (['read', 'write', 'add', 'remove'].indexOf(name) >= 0) {
           return (...args) => {
             return new Promise(resolve => setTimeout(resolve, 200)).then(() =>
-              target[name](...args)
+              target[name](...args),
             );
           };
         } else {
           return target[name];
         }
-      }
+      },
     };
     const terminalStore = new MemoryStore({ terminal: true });
     const delayedMemstore = new Proxy(terminalStore, DelayProxy);
@@ -49,7 +49,7 @@ describe('Plump', () => {
               let phase = 0;
               const newOne = otherPlump.find({
                 type: 'tests',
-                id: invalidated.id
+                id: invalidated.id,
               });
               const subscription = newOne.subscribe({
                 next: v => {
@@ -90,13 +90,13 @@ describe('Plump', () => {
                 },
                 error: err => {
                   throw err;
-                }
+                },
               });
               return coldMemstore._upsert({
                 id: invalidated.id,
                 type: TestType.type,
                 attributes: { name: 'slowtato' },
-                relationships: {}
+                relationships: {},
               });
             });
           })
@@ -105,7 +105,7 @@ describe('Plump', () => {
               id: invalidated.id,
               type: TestType.type,
               attributes: { name: 'grotato' },
-              relationships: {}
+              relationships: {},
             });
           })
           .then(() => {
@@ -126,7 +126,7 @@ describe('Plump', () => {
         return Promise.all(
           init.map(() => {
             return new TestType({ name: 'mchammer' }, plump).save();
-          })
+          }),
         );
       })
       .then(saved => {
@@ -137,20 +137,20 @@ describe('Plump', () => {
               .add('valenceChildren', {
                 type: TestType.type,
                 id: 1001,
-                meta: { perm: 1 }
+                meta: { perm: 1 },
               })
               .add('valenceChildren', {
                 type: TestType.type,
                 id: 1002,
-                meta: { perm: 2 }
+                meta: { perm: 2 },
               })
               .add('valenceChildren', {
                 type: TestType.type,
                 id: 1003,
-                meta: { perm: 3 }
+                meta: { perm: 3 },
               })
               .save();
-          })
+          }),
         );
       })
       .then(added => {
@@ -164,10 +164,10 @@ describe('Plump', () => {
                 expect(final.relationships.valenceChildren).to.deep.equal([
                   { type: TestType.type, id: 1001, meta: { perm: 1 } },
                   { type: TestType.type, id: 1002, meta: { perm: 2 } },
-                  { type: TestType.type, id: 1003, meta: { perm: 3 } }
+                  { type: TestType.type, id: 1003, meta: { perm: 3 } },
                 ]);
               });
-          })
+          }),
         );
       });
   });

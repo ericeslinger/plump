@@ -34,8 +34,4 @@ export {
   StorageOptions,
 } from './dataTypes';
 
-export * from './authorize/dataTypes';
-
 export { HotCache } from './storage/hotCache';
-
-export { Oracle } from './authorize/oracle';
