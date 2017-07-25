@@ -5,8 +5,10 @@ export declare class Plump<TermType extends TerminalStore = TerminalStore> {
     terminal: TermType;
     destroy$: Observable<string>;
     caches: CacheStore[];
+    types: {
+        [type: string]: typeof Model;
+    };
     private teardownSubject;
-    private types;
     constructor(terminal: TermType);
     addType(T: any): Promise<void>;
     type(T: string): typeof Model;

@@ -15,11 +15,11 @@ import {
 } from './dataTypes';
 
 export class Plump<TermType extends TerminalStore = TerminalStore> {
-  destroy$: Observable<string>;
-  caches: CacheStore[];
+  public destroy$: Observable<string>;
+  public caches: CacheStore[];
+  public types: { [type: string]: typeof Model };
 
   private teardownSubject: Subject<string>;
-  private types: { [type: string]: typeof Model };
 
   constructor(public terminal: TermType) {
     this.teardownSubject = new Subject();
@@ -78,7 +78,7 @@ export class Plump<TermType extends TerminalStore = TerminalStore> {
 
   get(
     value: ModelReference,
-    opts: string[] = ['attributes'],
+    opts: string[] = ['attributes']
   ): Promise<ModelData> {
     const keys = opts && !Array.isArray(opts) ? [opts] : opts;
     return this.caches
@@ -138,28 +138,28 @@ export class Plump<TermType extends TerminalStore = TerminalStore> {
                       return this.terminal.writeRelationshipItem(
                         updated,
                         relName,
-                        delta.data,
+                        delta.data
                       );
                     } else if (delta.op === 'remove') {
                       return this.terminal.deleteRelationshipItem(
                         updated,
                         relName,
-                        delta.data,
+                        delta.data
                       );
                     } else if (delta.op === 'modify') {
                       return this.terminal.writeRelationshipItem(
                         updated,
                         relName,
-                        delta.data,
+                        delta.data
                       );
                     } else {
                       throw new Error(
-                        `Unknown relationship delta ${JSON.stringify(delta)}`,
+                        `Unknown relationship delta ${JSON.stringify(delta)}`
                       );
                     }
                   });
                 }, Promise.resolve());
-              }),
+              })
             ).then(() => updated);
           } else {
             return updated;
@@ -178,7 +178,7 @@ export class Plump<TermType extends TerminalStore = TerminalStore> {
           return Promise.all(
             this.caches.map(store => {
               return store.wipe(item);
-            }),
+            })
           );
         })
         .then(() => {
@@ -208,7 +208,7 @@ export class Plump<TermType extends TerminalStore = TerminalStore> {
   modifyRelationship(
     item: ModelReference,
     relName: string,
-    child: RelationshipItem,
+    child: RelationshipItem
   ) {
     return this.add(item, relName, child);
   }
@@ -220,7 +220,7 @@ export class Plump<TermType extends TerminalStore = TerminalStore> {
   deleteRelationshipItem(
     item: ModelReference,
     relName: string,
-    child: RelationshipItem,
+    child: RelationshipItem
   ) {
     if (this.terminal) {
       return this.terminal.deleteRelationshipItem(item, relName, child);
@@ -241,7 +241,7 @@ export class Plump<TermType extends TerminalStore = TerminalStore> {
   static wire(
     me: CacheStore,
     they: TerminalStore,
-    shutdownSignal: Observable<string>,
+    shutdownSignal: Observable<string>
   ) {
     if (me.terminal) {
       throw new Error('Cannot wire a terminal store into another store');
