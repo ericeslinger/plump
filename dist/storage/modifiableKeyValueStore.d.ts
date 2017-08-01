@@ -13,9 +13,9 @@ export declare abstract class ModifiableKeyValueStore extends Storage implements
     allocateId(type: string): Promise<number>;
     writeAttributes(inputValue: IndefiniteModelData): Promise<ModelData>;
     readAttributes(value: ModelReference): Promise<ModelData>;
-    cache(value: ModelData): Promise<never>;
-    cacheAttributes(value: ModelData): Promise<never>;
-    cacheRelationship(value: ModelData): Promise<never>;
+    cache(value: ModelData): Promise<ModelData>;
+    cacheAttributes(value: ModelData): Promise<ModelData>;
+    cacheRelationship(value: ModelData): Promise<ModelData>;
     readRelationship(value: ModelReference, relName: string): Promise<ModelData>;
     delete(value: ModelReference): Promise<void>;
     wipe(value: ModelReference, field: string): Promise<ModelData>;

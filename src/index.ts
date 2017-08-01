@@ -31,11 +31,7 @@ export {
   CacheStore,
   TerminalStore,
   BaseStore,
-  StorageOptions
+  StorageOptions,
 } from './dataTypes';
 
-export * from './authorize/dataTypes';
-
-export {
-  Oracle
-} from './authorize/oracle';
+export { HotCache } from './storage/hotCache';
