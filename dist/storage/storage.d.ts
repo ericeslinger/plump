@@ -12,7 +12,7 @@ export declare abstract class Storage implements BaseStore {
     constructor(opts?: StorageOptions);
     abstract readAttributes(value: ModelReference): Promise<ModelData>;
     abstract readRelationship(value: ModelReference, relName: string): Promise<ModelData>;
-    readRelationships(item: ModelReference, relationships: string[]): Promise<any>;
+    readRelationships(item: ModelReference, relationships: string[]): Promise<ModelData>;
     read(item: ModelReference, opts?: string | string[]): Promise<any>;
     bulkRead(item: ModelReference): Promise<ModelData>;
     hot(item: ModelReference): boolean;
