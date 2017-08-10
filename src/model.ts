@@ -135,7 +135,7 @@ export class Model<MD extends ModelData> {
       });
   }
 
-  set(update) {
+  set(update): this {
     const flat = update.attributes || update;
     // Filter out non-attribute keys
     const sanitized = Object.keys(flat)

@@ -1,13 +1,17 @@
 import { Observable } from 'rxjs';
 import { Model } from './model';
 import { ModelAttributes, ModelData, ModelReference, DirtyModel, RelationshipItem, CacheStore, TerminalStore } from './dataTypes';
+export declare const types: {
+    [type: string]: typeof Model;
+};
+export interface TypeMap {
+    [type: string]: any;
+}
 export declare class Plump<TermType extends TerminalStore = TerminalStore> {
     terminal: TermType;
     destroy$: Observable<string>;
     caches: CacheStore[];
-    types: {
-        [type: string]: typeof Model;
-    };
+    types: TypeMap;
     private teardownSubject;
     constructor(terminal: TermType);
     addType(T: any): Promise<void>;
