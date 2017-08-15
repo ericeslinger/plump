@@ -9,16 +9,19 @@ import {
   RelationshipItem,
   TerminalStore,
   CacheStore,
-  AllocatingStore
+  AllocatingStore,
 } from '../dataTypes';
 
 function saneNumber(i) {
-  return ((typeof i === 'number') && (!isNaN(i)) && (i !== Infinity) && (i !== -Infinity));
+  return (
+    typeof i === 'number' && !isNaN(i) && i !== Infinity && i !== -Infinity
+  );
 }
 
 // declare function parseInt(n: string | number, radix: number): number;
 
-export abstract class KeyValueStore extends Storage implements TerminalStore, CacheStore, AllocatingStore {
+export abstract class KeyValueStore extends Storage
+  implements TerminalStore, CacheStore, AllocatingStore {
   maxKeys: { [type: string]: number } = {};
 
   abstract _keys(type: string): Promise<string[]>;
@@ -36,44 +39,51 @@ export abstract class KeyValueStore extends Storage implements TerminalStore, Ca
     delete value.relationships;
     // trim out relationships for a direct write.
     return Promise.resolve()
-    .then(() => {
-      const idAttribute = this.getSchema(inputValue.type).idAttribute;
-      if ((value.id === undefined) || (value.id === null)) {
-        if (!this.terminal) {
-          throw new Error('Cannot create new content in a non-terminal store');
-        }
-        return this.allocateId(value.type)
-        .then((n) => {
-          return mergeOptions({}, value, { id: n, relationships: {}, attributes: { [idAttribute]: n } }) as ModelData; // if new.
-        });
-      } else {
-        // if not new, get current (including relationships) and merge
-        const thisId = typeof value.id === 'string' ? parseInt(value.id, 10) : value.id;
-        if (saneNumber(thisId) && thisId > this.maxKeys[value.type]) {
-          this.maxKeys[value.type] = thisId;
-        }
-        return this._get(this.keyString(value as ModelReference))
-        .then(current =>  {
-          if (current) {
-            return mergeOptions({}, current, value);
-          } else {
-            return mergeOptions({ relationships: {}, attributes: {} }, value);
-          }
-        });
-      }
-    })
-    .then((toSave: ModelData) => {
-      return this._set(this.keyString(toSave), toSave)
       .then(() => {
-        this.fireWriteUpdate(Object.assign({}, toSave, { invalidate: ['attributes'] }));
-        return toSave;
+        const idAttribute = this.getSchema(inputValue.type).idAttribute;
+        if (value.id === undefined || value.id === null) {
+          if (!this.terminal) {
+            throw new Error(
+              'Cannot create new content in a non-terminal store',
+            );
+          }
+          return this.allocateId(value.type).then(n => {
+            return mergeOptions({}, value, {
+              id: n,
+              relationships: {},
+              attributes: { [idAttribute]: n },
+            }) as ModelData; // if new.
+          });
+        } else {
+          // if not new, get current (including relationships) and merge
+          const thisId =
+            typeof value.id === 'string' ? parseInt(value.id, 10) : value.id;
+          if (saneNumber(thisId) && thisId > this.maxKeys[value.type]) {
+            this.maxKeys[value.type] = thisId;
+          }
+          return this._get(
+            this.keyString(value as ModelReference),
+          ).then(current => {
+            if (current) {
+              return mergeOptions({}, current, value);
+            } else {
+              return mergeOptions({ relationships: {}, attributes: {} }, value);
+            }
+          });
+        }
+      })
+      .then((toSave: ModelData) => {
+        return this._set(this.keyString(toSave), toSave).then(() => {
+          this.fireWriteUpdate(
+            Object.assign({}, toSave, { invalidate: ['attributes'] }),
+          );
+          return toSave;
+        });
       });
-    });
   }
 
   readAttributes(value: ModelReference): Promise<ModelData> {
-    return this._get(this.keyString(value))
-    .then(d => {
+    return this._get(this.keyString(value)).then(d => {
       if (d && d.attributes && Object.keys(d.attributes).length > 0) {
         return d;
       } else {
@@ -83,11 +93,12 @@ export abstract class KeyValueStore extends Storage implements TerminalStore, Ca
   }
 
   cache(value: ModelData) {
-    if ((value.id === undefined) || (value.id === null)) {
-      return Promise.reject('Cannot cache data without an id - write it to a terminal first');
+    if (value.id === undefined || value.id === null) {
+      return Promise.reject(
+        'Cannot cache data without an id - write it to a terminal first',
+      );
     } else {
-      return this._get(this.keyString(value))
-      .then((current) => {
+      return this._get(this.keyString(value)).then(current => {
         const newVal = mergeOptions(current || {}, value);
         return this._set(this.keyString(value), newVal);
       });
@@ -95,11 +106,12 @@ export abstract class KeyValueStore extends Storage implements TerminalStore, Ca
   }
 
   cacheAttributes(value: ModelData) {
-    if ((value.id === undefined) || (value.id === null)) {
-      return Promise.reject('Cannot cache data without an id - write it to a terminal first');
+    if (value.id === undefined || value.id === null) {
+      return Promise.reject(
+        'Cannot cache data without an id - write it to a terminal first',
+      );
     } else {
-      return this._get(this.keyString(value))
-      .then((current) => {
+      return this._get(this.keyString(value)).then(current => {
         return this._set(this.keyString(value), {
           type: value.type,
           id: value.id,
@@ -111,11 +123,12 @@ export abstract class KeyValueStore extends Storage implements TerminalStore, Ca
   }
 
   cacheRelationship(value: ModelData) {
-    if ((value.id === undefined) || (value.id === null)) {
-      return Promise.reject('Cannot cache data without an id - write it to a terminal first');
+    if (value.id === undefined || value.id === null) {
+      return Promise.reject(
+        'Cannot cache data without an id - write it to a terminal first',
+      );
     } else {
-      return this._get(this.keyString(value))
-      .then((current) => {
+      return this._get(this.keyString(value)).then(current => {
         return this._set(this.keyString(value), {
           type: value.type,
           id: value.id,
@@ -127,12 +140,15 @@ export abstract class KeyValueStore extends Storage implements TerminalStore, Ca
   }
 
   readRelationship(value: ModelReference, relName: string): Promise<ModelData> {
-    return this._get(this.keyString(value))
-    .then((v) => {
+    return this._get(this.keyString(value)).then(v => {
       const retVal = Object.assign({}, v);
       if (!v) {
         if (this.terminal) {
-          return { type: value.type, id: value.id, relationships: { [relName]: [] } };
+          return {
+            type: value.type,
+            id: value.id,
+            relationships: { [relName]: [] },
+          };
         } else {
           return null;
         }
@@ -146,18 +162,20 @@ export abstract class KeyValueStore extends Storage implements TerminalStore, Ca
   }
 
   delete(value: ModelReference) {
-    return this._del(this.keyString(value))
-    .then(() => {
+    return this._del(this.keyString(value)).then(() => {
       if (this.terminal) {
-        this.fireWriteUpdate({ id: value.id, type: value.type, invalidate: ['attributes', 'relationships'] });
+        this.fireWriteUpdate({
+          id: value.id,
+          type: value.type,
+          invalidate: ['attributes', 'relationships'],
+        });
       }
     });
   }
 
   wipe(value: ModelReference, field: string) {
     const ks = this.keyString(value);
-    return this._get(ks)
-    .then((val) => {
+    return this._get(ks).then(val => {
       if (val === null) {
         return null;
       }
@@ -178,7 +196,11 @@ export abstract class KeyValueStore extends Storage implements TerminalStore, Ca
     });
   }
 
-  writeRelationshipItem(value: ModelReference, relName: string, child: RelationshipItem) {
+  writeRelationshipItem(
+    value: ModelReference,
+    relName: string,
+    child: RelationshipItem,
+  ) {
     const schema = this.getSchema(value.type);
     const relSchema = schema.relationships[relName].type;
     const otherRelType = relSchema.sides[relName].otherType;
@@ -188,8 +210,7 @@ export abstract class KeyValueStore extends Storage implements TerminalStore, Ca
     return Promise.all([
       this._get(thisKeyString),
       this._get(otherKeyString),
-    ])
-    .then(([thisItemResolved, otherItemResolved]) => {
+    ]).then(([thisItemResolved, otherItemResolved]) => {
       let thisItem = thisItemResolved;
       if (!thisItem) {
         thisItem = {
@@ -233,8 +254,12 @@ export abstract class KeyValueStore extends Storage implements TerminalStore, Ca
         }
       }
 
-      const thisIdx = thisItem.relationships[relName].findIndex(item => item.id === child.id);
-      const otherIdx = otherItem.relationships[otherRelName].findIndex(item => item.id === value.id);
+      const thisIdx = thisItem.relationships[relName].findIndex(
+        item => item.id === child.id,
+      );
+      const otherIdx = otherItem.relationships[otherRelName].findIndex(
+        item => item.id === value.id,
+      );
       if (thisIdx < 0) {
         thisItem.relationships[relName].push(newChild);
       } else {
@@ -249,15 +274,28 @@ export abstract class KeyValueStore extends Storage implements TerminalStore, Ca
       return Promise.all([
         this._set(this.keyString(thisItem), thisItem),
         this._set(this.keyString(otherItem), otherItem),
-      ]).then(() => {
-        this.fireWriteUpdate(Object.assign(thisItem, { invalidate: [`relationships.${relName}`] }));
-        this.fireWriteUpdate(Object.assign(otherItem, { invalidate: [`relationships.${otherRelName}`] }));
-      })
-      .then(() => thisItem);
+      ])
+        .then(() => {
+          this.fireWriteUpdate(
+            Object.assign(thisItem, {
+              invalidate: [`relationships.${relName}`],
+            }),
+          );
+          this.fireWriteUpdate(
+            Object.assign(otherItem, {
+              invalidate: [`relationships.${otherRelName}`],
+            }),
+          );
+        })
+        .then(() => thisItem);
     });
   }
 
-  deleteRelationshipItem(value: ModelReference, relName: string, child: RelationshipItem) {
+  deleteRelationshipItem(
+    value: ModelReference,
+    relName: string,
+    child: RelationshipItem,
+  ) {
     const schema = this.getSchema(value.type);
     const relSchema = schema.relationships[relName].type;
     const otherRelType = relSchema.sides[relName].otherType;
@@ -267,16 +305,19 @@ export abstract class KeyValueStore extends Storage implements TerminalStore, Ca
     return Promise.all([
       this._get(thisKeyString),
       this._get(otherKeyString),
-    ])
-    .then(([thisItem, otherItem]) => {
+    ]).then(([thisItem, otherItem]) => {
       if (!thisItem.relationships[relName]) {
         thisItem.relationships[relName] = [];
       }
       if (!otherItem.relationships[otherRelName]) {
         otherItem.relationships[otherRelName] = [];
       }
-      const thisIdx = thisItem.relationships[relName].findIndex(item => item.id === child.id);
-      const otherIdx = otherItem.relationships[otherRelName].findIndex(item => item.id === value.id);
+      const thisIdx = thisItem.relationships[relName].findIndex(
+        item => item.id === child.id,
+      );
+      const otherIdx = otherItem.relationships[otherRelName].findIndex(
+        item => item.id === value.id,
+      );
       if (thisIdx >= 0) {
         thisItem.relationships[relName].splice(thisIdx, 1);
       }
@@ -287,29 +328,38 @@ export abstract class KeyValueStore extends Storage implements TerminalStore, Ca
       return Promise.all([
         this._set(this.keyString(thisItem), thisItem),
         this._set(this.keyString(otherItem), otherItem),
-      ]).then(() => {
-        this.fireWriteUpdate(Object.assign(thisItem, { invalidate: [`relationships.${relName}`] }));
-        this.fireWriteUpdate(Object.assign(otherItem, { invalidate: [`relationships.${otherRelName}`] }));
-      })
-      .then(() => thisItem);
+      ])
+        .then(() => {
+          this.fireWriteUpdate(
+            Object.assign(thisItem, {
+              invalidate: [`relationships.${relName}`],
+            }),
+          );
+          this.fireWriteUpdate(
+            Object.assign(otherItem, {
+              invalidate: [`relationships.${otherRelName}`],
+            }),
+          );
+        })
+        .then(() => thisItem);
     });
   }
 
-  query(t: string): Promise<ModelReference[]> {
-    return this._keys(t)
-    .then((keys) => {
-      return keys.map(k => {
-        return {
-          type: t,
-          id: parseInt(k.split(':')[1], 10),
-        };
-      }).filter(v => !isNaN(v.id));
+  query(t: string, q?: any): Promise<ModelReference[]> {
+    return this._keys(t).then(keys => {
+      return keys
+        .map(k => {
+          return {
+            type: t,
+            id: parseInt(k.split(':')[1], 10),
+          };
+        })
+        .filter(v => !isNaN(v.id));
     });
   }
 
-  addSchema(t: {type: string, schema: ModelSchema}) {
-    return super.addSchema(t)
-    .then(() => {
+  addSchema(t: { type: string; schema: ModelSchema }) {
+    return super.addSchema(t).then(() => {
       this.maxKeys[t.type] = 0;
     });
   }

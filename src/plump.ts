@@ -225,8 +225,8 @@ export class Plump<TermType extends TerminalStore = TerminalStore> {
     return this.add(item, relName, child);
   }
 
-  query(q: any): Promise<ModelReference[]> {
-    return this.terminal.query(q);
+  query(type: string, q?: any): Promise<ModelReference[]> {
+    return this.terminal.query(type, q);
   }
 
   deleteRelationshipItem(

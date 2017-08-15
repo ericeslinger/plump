@@ -29,7 +29,7 @@ export declare class Plump<TermType extends TerminalStore = TerminalStore> {
     delete(item: ModelReference): Promise<void>;
     add(item: ModelReference, relName: string, child: RelationshipItem): Promise<ModelData>;
     modifyRelationship(item: ModelReference, relName: string, child: RelationshipItem): Promise<ModelData>;
-    query(q: any): Promise<ModelReference[]>;
+    query(type: string, q?: any): Promise<ModelReference[]>;
     deleteRelationshipItem(item: ModelReference, relName: string, child: RelationshipItem): Promise<ModelData>;
     invalidate(item: ModelReference, field?: string | string[]): void;
     static wire(me: CacheStore, they: TerminalStore, shutdownSignal: Observable<string>): void;

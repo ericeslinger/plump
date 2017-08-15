@@ -71,7 +71,7 @@ export interface TerminalStore extends BaseStore {
     fireWriteUpdate(val: ModelDelta): any;
     writeRelationshipItem(value: ModelReference, relName: string, child: UntypedRelationshipItem): Promise<ModelData>;
     deleteRelationshipItem(value: ModelReference, relName: string, child: UntypedRelationshipItem): Promise<ModelData>;
-    query(q: any): Promise<ModelReference[]>;
+    query(type: string, q?: any): Promise<ModelReference[]>;
     bulkRead(value: ModelReference): Promise<ModelData>;
 }
 export interface AllocatingStore extends TerminalStore {
