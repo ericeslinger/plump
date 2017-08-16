@@ -1,4 +1,6 @@
-export { Plump } from './plump';
+import { Plump as P } from './plump';
+export default P;
+export { P as Plump };
 export { Model } from './model';
 export { Storage } from './storage/storage';
 export { MemoryStore } from './storage/memory';
