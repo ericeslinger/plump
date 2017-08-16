@@ -21,7 +21,7 @@ export declare abstract class ModifiableKeyValueStore extends Storage implements
     wipe(value: ModelReference, field: string): Promise<ModelData>;
     writeRelationshipItem(value: ModelReference, relName: string, child: RelationshipItem): Promise<ModelReference>;
     deleteRelationshipItem(value: ModelReference, relName: string, child: RelationshipItem): Promise<ModelReference>;
-    query(t: string): Promise<ModelReference[]>;
+    query(t: string, q?: any): Promise<ModelReference[]>;
     addSchema(t: {
         type: string;
         schema: ModelSchema;

@@ -19,7 +19,7 @@ export declare abstract class KeyValueStore extends Storage implements TerminalS
     wipe(value: ModelReference, field: string): Promise<ModelData>;
     writeRelationshipItem(value: ModelReference, relName: string, child: RelationshipItem): Promise<ModelData>;
     deleteRelationshipItem(value: ModelReference, relName: string, child: RelationshipItem): Promise<ModelData>;
-    query(t: string): Promise<ModelReference[]>;
+    query(t: string, q?: any): Promise<ModelReference[]>;
     addSchema(t: {
         type: string;
         schema: ModelSchema;

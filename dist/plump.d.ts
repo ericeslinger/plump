@@ -1,13 +1,17 @@
 import { Observable } from 'rxjs';
 import { Model } from './model';
 import { ModelAttributes, ModelData, ModelReference, DirtyModel, RelationshipItem, CacheStore, TerminalStore } from './dataTypes';
+export declare const types: {
+    [type: string]: typeof Model;
+};
+export interface TypeMap {
+    [type: string]: any;
+}
 export declare class Plump<TermType extends TerminalStore = TerminalStore> {
     terminal: TermType;
     destroy$: Observable<string>;
     caches: CacheStore[];
-    types: {
-        [type: string]: typeof Model;
-    };
+    types: TypeMap;
     private teardownSubject;
     constructor(terminal: TermType);
     addType(T: any): Promise<void>;
@@ -25,7 +29,7 @@ export declare class Plump<TermType extends TerminalStore = TerminalStore> {
     delete(item: ModelReference): Promise<void>;
     add(item: ModelReference, relName: string, child: RelationshipItem): Promise<ModelData>;
     modifyRelationship(item: ModelReference, relName: string, child: RelationshipItem): Promise<ModelData>;
-    query(q: any): Promise<ModelReference[]>;
+    query(type: string, q?: any): Promise<ModelReference[]>;
     deleteRelationshipItem(item: ModelReference, relName: string, child: RelationshipItem): Promise<ModelData>;
     invalidate(item: ModelReference, field?: string | string[]): void;
     static wire(me: CacheStore, they: TerminalStore, shutdownSignal: Observable<string>): void;

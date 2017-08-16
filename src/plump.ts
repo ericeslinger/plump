@@ -14,10 +14,16 @@ import {
   TerminalStore,
 } from './dataTypes';
 
+export const types: { [type: string]: typeof Model } = {};
+
+export interface TypeMap {
+  [type: string]: any;
+}
+
 export class Plump<TermType extends TerminalStore = TerminalStore> {
   public destroy$: Observable<string>;
   public caches: CacheStore[];
-  public types: { [type: string]: typeof Model };
+  public types: TypeMap = {};
 
   private teardownSubject: Subject<string>;
 
@@ -25,7 +31,6 @@ export class Plump<TermType extends TerminalStore = TerminalStore> {
     this.teardownSubject = new Subject();
     this.terminal.terminal = true;
     this.caches = [];
-    this.types = {};
     this.destroy$ = this.teardownSubject.asObservable();
   }
 
@@ -59,6 +64,13 @@ export class Plump<TermType extends TerminalStore = TerminalStore> {
     return store.addSchemas(Object.keys(this.types).map(k => this.types[k]));
   }
 
+  // find<X extends TypeMap, K extends keyof typeof X>(
+  //   ref: ModelReference,
+  // ): typeof types[K]['prototype'] {
+  //   const Type = this.types[ref.type];
+  //   return new Type({ [Type.schema.idAttribute]: ref.id }, this);
+  // }
+
   find<T extends ModelData>(ref: ModelReference): Model<T> {
     const Type = this.types[ref.type];
     return new Type({ [Type.schema.idAttribute]: ref.id }, this);
@@ -78,7 +90,7 @@ export class Plump<TermType extends TerminalStore = TerminalStore> {
 
   get(
     value: ModelReference,
-    opts: string[] = ['attributes']
+    opts: string[] = ['attributes'],
   ): Promise<ModelData> {
     const keys = opts && !Array.isArray(opts) ? [opts] : opts;
     return this.caches
@@ -138,28 +150,28 @@ export class Plump<TermType extends TerminalStore = TerminalStore> {
                       return this.terminal.writeRelationshipItem(
                         updated,
                         relName,
-                        delta.data
+                        delta.data,
                       );
                     } else if (delta.op === 'remove') {
                       return this.terminal.deleteRelationshipItem(
                         updated,
                         relName,
-                        delta.data
+                        delta.data,
                       );
                     } else if (delta.op === 'modify') {
                       return this.terminal.writeRelationshipItem(
                         updated,
                         relName,
-                        delta.data
+                        delta.data,
                       );
                     } else {
                       throw new Error(
-                        `Unknown relationship delta ${JSON.stringify(delta)}`
+                        `Unknown relationship delta ${JSON.stringify(delta)}`,
                       );
                     }
                   });
                 }, Promise.resolve());
-              })
+              }),
             ).then(() => updated);
           } else {
             return updated;
@@ -178,7 +190,7 @@ export class Plump<TermType extends TerminalStore = TerminalStore> {
           return Promise.all(
             this.caches.map(store => {
               return store.wipe(item);
-            })
+            }),
           );
         })
         .then(() => {
@@ -208,19 +220,19 @@ export class Plump<TermType extends TerminalStore = TerminalStore> {
   modifyRelationship(
     item: ModelReference,
     relName: string,
-    child: RelationshipItem
+    child: RelationshipItem,
   ) {
     return this.add(item, relName, child);
   }
 
-  query(q: any): Promise<ModelReference[]> {
-    return this.terminal.query(q);
+  query(type: string, q?: any): Promise<ModelReference[]> {
+    return this.terminal.query(type, q);
   }
 
   deleteRelationshipItem(
     item: ModelReference,
     relName: string,
-    child: RelationshipItem
+    child: RelationshipItem,
   ) {
     if (this.terminal) {
       return this.terminal.deleteRelationshipItem(item, relName, child);
@@ -241,7 +253,7 @@ export class Plump<TermType extends TerminalStore = TerminalStore> {
   static wire(
     me: CacheStore,
     they: TerminalStore,
-    shutdownSignal: Observable<string>
+    shutdownSignal: Observable<string>,
   ) {
     if (me.terminal) {
       throw new Error('Cannot wire a terminal store into another store');

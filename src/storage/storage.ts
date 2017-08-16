@@ -11,7 +11,7 @@ import {
   ModelSchema,
   ModelReference,
   BaseStore,
-  StorageOptions
+  StorageOptions,
   // RelationshipItem,
 } from '../dataTypes';
 
@@ -55,7 +55,7 @@ export abstract class Storage implements BaseStore {
   abstract readAttributes(value: ModelReference): Promise<ModelData>;
   abstract readRelationship(
     value: ModelReference,
-    relName: string
+    relName: string,
   ): Promise<ModelData>;
   // abstract delete(value: ModelReference): Promise<void>;
   // abstract writeRelationshipItem( value: ModelReference, relName: string, child: {id: string | number} ): Promise<ModelData>;
@@ -72,14 +72,14 @@ export abstract class Storage implements BaseStore {
   // read a bunch of relationships and merge them together.
   readRelationships(item: ModelReference, relationships: string[]) {
     return Promise.all(
-      relationships.map(r => this.readRelationship(item, r))
+      relationships.map(r => this.readRelationship(item, r)),
     ).then(rA =>
       rA.reduce((a, r) => mergeOptions(a, r || {}), {
         type: item.type,
         id: item.id,
         attributes: {},
-        relationships: {}
-      })
+        relationships: {},
+      }),
     );
   }
 
@@ -89,7 +89,8 @@ export abstract class Storage implements BaseStore {
     return this.readAttributes(item)
       .then(attributes => {
         if (!attributes) {
-          throw new NotFoundError();
+          return null;
+          // throw new NotFoundError();
         } else {
           if (
             attributes.id &&
@@ -114,7 +115,7 @@ export abstract class Storage implements BaseStore {
                 ) {
                   attributes.attributes[attrName] = Object.assign(
                     {},
-                    schema.attributes[attrName].default
+                    schema.attributes[attrName].default,
                   );
                 } else {
                   attributes.attributes[attrName] =
@@ -132,7 +133,7 @@ export abstract class Storage implements BaseStore {
                   .filter(ka => ka[0] === 'relationships')
                   .map(ka => ka[1]);
           const relsToFetch = relsWanted.filter(
-            relName => !attributes.relationships[relName]
+            relName => !attributes.relationships[relName],
           );
           // readAttributes can return relationship data, so don't fetch those
           if (relsToFetch.length > 0) {
@@ -189,7 +190,7 @@ export abstract class Storage implements BaseStore {
       type: value.type,
       id: value.id,
       attributes: {},
-      relationships: {}
+      relationships: {},
     };
     const typeAttrs = Object.keys(schema.attributes || {});
     const valAttrs = Object.keys(value.attributes || {});
@@ -202,13 +203,13 @@ export abstract class Storage implements BaseStore {
 
     if (invalidAttrs.length > 0) {
       throw new Error(
-        `Invalid attributes on value object: ${JSON.stringify(invalidAttrs)}`
+        `Invalid attributes on value object: ${JSON.stringify(invalidAttrs)}`,
       );
     }
 
     if (invalidRels.length > 0) {
       throw new Error(
-        `Invalid relationships on value object: ${JSON.stringify(invalidRels)}`
+        `Invalid relationships on value object: ${JSON.stringify(invalidRels)}`,
       );
     }
 

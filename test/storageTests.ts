@@ -107,8 +107,7 @@ export function testSuite(context, storeOpts) {
             .then(() =>
               actualStore.read({ type: TestType.type, id: createdObject.id }),
             )
-            .then(() => expect(true).to.equal(false))
-            .catch((err: Error) => expect(err.message).to.equal('not found'));
+            .then(v => expect(v).to.be.null);
         });
       });
     });
@@ -368,8 +367,7 @@ export function testSuite(context, storeOpts) {
                         id: createdObject.id,
                       }),
                     )
-                    .then(() => expect(true).to.equal(false))
-                    .catch(e => expect(e.message).to.equal('not found'));
+                    .then(v => expect(v).to.be.null);
                 });
             })
             .then(() => {
@@ -404,8 +402,7 @@ export function testSuite(context, storeOpts) {
               .then(() => testPlump.addCache(memstore));
           })
           .then(() => memstore.read({ type: TestType.type, id: testItem.id }))
-          .then(() => expect(true).to.equal(false))
-          .catch(e => expect(e.message).to.equal('not found'))
+          .then(v => expect(v).to.be.null)
           .then(() =>
             actualStore.read({ type: TestType.type, id: testItem.id }),
           )
@@ -532,8 +529,7 @@ export function testSuite(context, storeOpts) {
                     .then(() =>
                       memstore.read({ type: TestType.type, id: testItem.id }),
                     )
-                    .then(() => expect(true).to.equal(false))
-                    .catch(e => expect(e.message).to.equal('not found'));
+                    .then(v => expect(v).to.be.null);
                 })
                 .then(() => {
                   return actualStore.read(

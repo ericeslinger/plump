@@ -15,7 +15,7 @@ import {
 
 import { Plump } from './plump';
 import { PlumpObservable } from './plumpObservable';
-import { PlumpError } from './errors';
+import { PlumpError, NotFoundError } from './errors';
 
 // TODO: figure out where error events originate (storage or model)
 // and who keeps a roll-backable delta
@@ -94,6 +94,9 @@ export class Model<MD extends ModelData> {
       })
       .then<T>(self => {
         if (!self && this.dirtyFields().length === 0) {
+          if (this.id) {
+            this.error = new NotFoundError();
+          }
           return null;
         } else if (this.dirtyFields().length === 0) {
           return self;
@@ -135,7 +138,7 @@ export class Model<MD extends ModelData> {
       });
   }
 
-  set(update) {
+  set(update): this {
     const flat = update.attributes || update;
     // Filter out non-attribute keys
     const sanitized = Object.keys(flat)
@@ -171,7 +174,15 @@ export class Model<MD extends ModelData> {
         if (v !== null) {
           return Observable.of(v);
         } else {
-          const terminal$ = Observable.fromPromise(terminal.read(this, fields));
+          const terminal$ = Observable.fromPromise(
+            terminal.read(this, fields).then(terminalValue => {
+              if (terminalValue === null) {
+                throw new NotFoundError();
+              } else {
+                return terminalValue;
+              }
+            }),
+          );
           const cold$ = Observable.from(colds).flatMap((s: CacheStore) =>
             Observable.fromPromise(s.read(this, fields)),
           );
