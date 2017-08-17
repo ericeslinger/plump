@@ -203,7 +203,7 @@ export class Model<MD extends ModelData> {
       })
       .flatMapTo(
         Observable.of(terminal).flatMap((s: TerminalStore) =>
-          Observable.fromPromise(s.read(this, fields)),
+          Observable.fromPromise(s.read(this, fields, true)),
         ),
       );
     // );
