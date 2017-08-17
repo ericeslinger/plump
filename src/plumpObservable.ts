@@ -8,8 +8,8 @@ export class PlumpObservable<T extends ModelData> extends Observable<T> {
     this.source = observable;
   }
 
-  lift<T extends ModelData>(operator) {
-    const observable = new PlumpObservable(this.plump, this) as Observable<T>;
+  lift<U extends ModelData>(operator) {
+    const observable = new PlumpObservable(this.plump, this) as Observable<U>;
     observable.operator = operator;
     return observable;
   }

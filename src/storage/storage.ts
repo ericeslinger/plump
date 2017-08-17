@@ -29,7 +29,10 @@ export abstract class Storage implements BaseStore {
   terminal: boolean;
   read$: Observable<ModelData>;
   write$: Observable<ModelDelta>;
-  protected types: { [type: string]: ModelSchema } = {};
+  inProgress: {
+    [key: string]: Promise<ModelData>;
+  } = {};
+  public types: { [type: string]: ModelSchema } = {};
   private readSubject = new Subject<ModelData>();
   private writeSubject = new Subject<ModelDelta>();
   // protected types: Model[]; TODO: figure this out
@@ -83,7 +86,32 @@ export abstract class Storage implements BaseStore {
     );
   }
 
-  read(item: ModelReference, opts: string | string[] = ['attributes']) {
+  // debounces reads so multiple requests for the same thing return the same promise.
+  read(
+    item: ModelReference,
+    opts: string | string[] = ['attributes'],
+    force: boolean = false,
+  ): Promise<ModelData> {
+    const keys = (opts && !Array.isArray(opts) ? [opts] : opts) as string[];
+    const reqKey = `${item.type}:${item.id} - ${keys.join('.')}`;
+    if (force) {
+      return this._read(item, opts);
+    } else {
+      if (
+        this.inProgress[reqKey] === undefined ||
+        this.inProgress[reqKey] === null
+      ) {
+        this.inProgress[reqKey] = this._read(item, opts).then(result => {
+          this.inProgress[reqKey] = null;
+          return result;
+        });
+      }
+      return this.inProgress[reqKey];
+    }
+  }
+
+  // does the actual read
+  _read(item: ModelReference, opts: string | string[] = ['attributes']) {
     const schema = this.getSchema(item.type);
     const keys = (opts && !Array.isArray(opts) ? [opts] : opts) as string[];
     return this.readAttributes(item)
@@ -212,19 +240,6 @@ export abstract class Storage implements BaseStore {
         `Invalid relationships on value object: ${JSON.stringify(invalidRels)}`,
       );
     }
-
-    //
-    // for (const attrName in schema.attributes) {
-    //   if (!value.attributes[attrName] && (schema.attributes[attrName].default !== undefined)) {
-    //     if (Array.isArray(schema.attributes[attrName].default)) {
-    //       retVal.attributes[attrName] = (schema.attributes[attrName].default as any[]).concat();
-    //     } else if (typeof schema.attributes[attrName].default === 'object') {
-    //       retVal.attributes[attrName] = Object.assign({}, schema.attributes[attrName].default);
-    //     } else {
-    //       retVal.attributes[attrName] = schema.attributes[attrName].default;
-    //     }
-    //   }
-    // }
 
     if (value.attributes[idAttribute] && !retVal.id) {
       retVal.id = value.attributes[idAttribute];

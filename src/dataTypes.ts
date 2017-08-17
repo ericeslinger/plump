@@ -60,7 +60,11 @@ export interface BaseStore {
   addSchema(t: { type: string; schema: ModelSchema }): Promise<void>;
   addSchemas(t: { type: string; schema: ModelSchema }[]): Promise<void>;
   validateInput(value: ModelData | IndefiniteModelData): typeof value;
-  read(item: ModelReference, opts?: string | string[]): Promise<ModelData>;
+  read(
+    item: ModelReference,
+    opts?: string | string[],
+    force?: boolean,
+  ): Promise<ModelData>;
 }
 
 export interface CacheStore extends BaseStore {

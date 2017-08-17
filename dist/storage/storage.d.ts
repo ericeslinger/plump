@@ -4,7 +4,10 @@ export declare abstract class Storage implements BaseStore {
     terminal: boolean;
     read$: Observable<ModelData>;
     write$: Observable<ModelDelta>;
-    protected types: {
+    inProgress: {
+        [key: string]: Promise<ModelData>;
+    };
+    types: {
         [type: string]: ModelSchema;
     };
     private readSubject;
@@ -13,7 +16,8 @@ export declare abstract class Storage implements BaseStore {
     abstract readAttributes(value: ModelReference): Promise<ModelData>;
     abstract readRelationship(value: ModelReference, relName: string): Promise<ModelData>;
     readRelationships(item: ModelReference, relationships: string[]): Promise<any>;
-    read(item: ModelReference, opts?: string | string[]): Promise<any>;
+    read(item: ModelReference, opts?: string | string[], force?: boolean): Promise<ModelData>;
+    _read(item: ModelReference, opts?: string | string[]): Promise<any>;
     bulkRead(item: ModelReference): Promise<ModelData>;
     hot(item: ModelReference): boolean;
     validateInput(value: ModelData | IndefiniteModelData): typeof value;
