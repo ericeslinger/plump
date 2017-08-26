@@ -25,7 +25,10 @@ export declare class Plump<TermType extends TerminalStore = TerminalStore> {
     teardown(): void;
     get(value: ModelReference, opts?: string[]): Promise<ModelData>;
     bulkGet(value: ModelReference): Promise<ModelData>;
-    save(value: DirtyModel): Promise<ModelData>;
+    forceCreate(value: DirtyModel): Promise<ModelData>;
+    save(value: DirtyModel, options?: {
+        stripId: boolean;
+    }): Promise<ModelData>;
     delete(item: ModelReference): Promise<void>;
     add(item: ModelReference, relName: string, child: RelationshipItem): Promise<ModelData>;
     modifyRelationship(item: ModelReference, relName: string, child: RelationshipItem): Promise<ModelData>;

@@ -68,7 +68,13 @@ describe('model', () => {
       const tinyPlump = new Plump(new MemoryStore({ terminal: true }));
       return tinyPlump
         .addType(MiniModel)
-        .then(() => new MiniModel({ id: 101 }, tinyPlump).save())
+        .then(() =>
+          tinyPlump.forceCreate({
+            id: 101,
+            type: 'smallType',
+            attributes: { id: 101 },
+          }),
+        )
         .then(i => {
           return new Promise((resolve, reject) => {
             return tinyPlump
