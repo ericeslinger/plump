@@ -20,10 +20,9 @@ export interface TypeMap {
   [type: string]: any;
 }
 
-function pathExists(obj: any, path: string) {
+export function pathExists(obj: any, path: string) {
   return (
     path.split('.').reduce<boolean>((acc, next) => {
-      console.log(`testing ${next} // ${path} in ${Object.keys(acc)}`);
       if (acc === false) {
         return false;
       } else {
@@ -110,6 +109,14 @@ export class Plump<TermType extends TerminalStore = TerminalStore> {
     opts: string[] = ['attributes'],
   ): Promise<ModelData> {
     const keys = opts && !Array.isArray(opts) ? [opts] : opts;
+    if (keys.indexOf('relationships') >= 0) {
+      keys.splice(keys.indexOf('relationships'), 1);
+      keys.unshift(
+        ...Object.keys(this.types[value.type].schema.relationships).map(
+          v => `relationships.${v}`,
+        ),
+      );
+    }
     return this.caches
       .reduce((thenable, storage) => {
         return thenable.then(v => {
@@ -125,9 +132,8 @@ export class Plump<TermType extends TerminalStore = TerminalStore> {
       .then(v => {
         if (
           this.terminal &&
-          (v === null || opts.some(path => pathExists(v, path)))
+          (v === null || !opts.every(path => pathExists(v, path)))
         ) {
-          // if ((v === null || v.attributes === null) && this.terminal) {
           return this.terminal.read(value, keys);
         } else {
           return v;

@@ -7,6 +7,7 @@ export declare const types: {
 export interface TypeMap {
     [type: string]: any;
 }
+export declare function pathExists(obj: any, path: string): boolean;
 export declare class Plump<TermType extends TerminalStore = TerminalStore> {
     terminal: TermType;
     destroy$: Observable<string>;

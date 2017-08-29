@@ -93,7 +93,7 @@ export abstract class Storage implements BaseStore {
     force: boolean = false,
   ): Promise<ModelData> {
     const keys = (opts && !Array.isArray(opts) ? [opts] : opts) as string[];
-    const reqKey = `${item.type}:${item.id} - ${keys.join('.')}`;
+    const reqKey = `${item.type}:${item.id} - ${keys.join(';')}`;
     if (force) {
       return this._read(item, opts);
     } else {
@@ -102,7 +102,7 @@ export abstract class Storage implements BaseStore {
         this.inProgress[reqKey] === null
       ) {
         this.inProgress[reqKey] = this._read(item, opts).then(result => {
-          this.inProgress[reqKey] = null;
+          delete this.inProgress[reqKey];
           return result;
         });
       }
