@@ -2,7 +2,13 @@
 
 import * as chai from 'chai';
 
-import { Plump, MemoryStore } from '../src/index';
+import {
+  Plump,
+  MemoryStore,
+  ModelData,
+  HotCache,
+  ModelReference,
+} from '../src/index';
 import { TestType } from './testType';
 
 // import { ITest } from 'mocha';
@@ -53,12 +59,11 @@ describe('Plump', () => {
               });
               const subscription = newOne.subscribe({
                 next: v => {
-                  // console.log(JSON.stringify(v, null, 2));
                   try {
                     if (phase === 0) {
                       if (v.attributes.name) {
-                        expect(v).to.have
-                          .property('attributes')
+                        expect(v)
+                          .to.have.property('attributes')
                           .with.property('name', 'foo');
                         phase = 1;
                       }
@@ -73,8 +78,8 @@ describe('Plump', () => {
                     }
                     if (phase === 2) {
                       if (v.attributes.name !== 'slowtato') {
-                        expect(v).to.have
-                          .property('attributes')
+                        expect(v)
+                          .to.have.property('attributes')
                           .with.property('name', 'grotato');
                         subscription.unsubscribe();
                         resolve();
@@ -111,6 +116,122 @@ describe('Plump', () => {
           .then(() => {
             return otherPlump.invalidate(invalidated, ['attributes']);
           });
+      });
+  });
+
+  it('handles invalidated or unloaded values in hot cache reads', () => {
+    const DelayProxy = {
+      get: (target, name) => {
+        if (['read', 'write', 'add', 'remove'].indexOf(name) >= 0) {
+          return (...args) => {
+            return new Promise(resolve => setTimeout(resolve, 200)).then(() =>
+              target[name](...args),
+            );
+          };
+        } else {
+          return target[name];
+        }
+      },
+    };
+
+    const terminalStore = new MemoryStore({ terminal: true });
+    const delayedMemstore = new Proxy(terminalStore, DelayProxy);
+    const hotMemstore = new HotCache();
+    const otherPlump = new Plump(delayedMemstore);
+    return otherPlump
+      .addCache(hotMemstore)
+      .then(() => otherPlump.addType(TestType))
+      .then(() => {
+        const testItem = new TestType({ name: 'potato' }, otherPlump);
+        return testItem.save();
+      })
+      .then(i => {
+        const savedItem = new TestType({ id: i.id }, otherPlump);
+        return savedItem
+          .add('children', { type: 'tests', id: 101 })
+          .save()
+          .then(() => savedItem.get(['attributes', 'relationships']))
+          .then(val => expect(val.relationships.children).to.have.length(1))
+          .then(() =>
+            savedItem.add('children', { type: 'tests', id: 102 }).save(),
+          )
+          .then(() => savedItem.get(['attributes', 'relationships']))
+          .then(val => expect(val.relationships.children).to.have.length(2))
+          .then(() => savedItem.get(['attributes', 'relationships']))
+          .then(val => expect(val.relationships.children).to.have.length(2))
+          .then(() => i);
+      });
+  });
+
+  it('handles invalidated or unloaded values in hot cache subscribes', () => {
+    const DelayProxy = {
+      get: (target, name) => {
+        if (['read', 'write', 'add', 'remove'].indexOf(name) >= 0) {
+          return (...args) => {
+            return new Promise(resolve => setTimeout(resolve, 200)).then(() =>
+              target[name](...args),
+            );
+          };
+        } else {
+          return target[name];
+        }
+      },
+    };
+
+    function test(val: ModelData, p: number) {
+      const phase = p;
+      let retPhase = phase;
+      if (phase === 0) {
+        if (!!val) {
+          retPhase = 1;
+          return test(val, retPhase);
+        }
+      } else if (phase === 1) {
+        expect(val.attributes).to.have.property('name', 'potato');
+        retPhase = 2;
+        return test(val, retPhase);
+      } else if (phase === 2) {
+        if (val.relationships && val.relationships.children) {
+          expect(val.relationships.children.length).to.be.greaterThan(0);
+          retPhase = 3;
+          return test(val, retPhase);
+        }
+      } else if (phase === 3) {
+        expect(val.relationships.children).to.have.length(2);
+        retPhase = 99;
+      }
+      return retPhase;
+    }
+
+    const terminalStore = new MemoryStore({ terminal: true });
+    const delayedMemstore = new Proxy(terminalStore, DelayProxy);
+    const hotMemstore = new HotCache();
+    const otherPlump = new Plump(delayedMemstore);
+    return otherPlump
+      .addCache(hotMemstore)
+      .then(() => otherPlump.addType(TestType))
+      .then(() => {
+        const testItem = new TestType({ name: 'potato' }, otherPlump);
+        return testItem.save();
+      })
+      .then(i => hotMemstore.cache(i).then(() => i))
+      .then(i => {
+        const savedItem = new TestType({ id: i.id }, otherPlump);
+        return new Promise((resolve, reject) => {
+          let outerPhase = 0;
+          savedItem
+            .asObservable(['attributes', 'relationships'])
+            .subscribe(val => {
+              outerPhase = test(val, outerPhase);
+              if (outerPhase === 99) {
+                resolve();
+              } else if (outerPhase < 0) {
+                reject();
+              }
+            });
+          savedItem.add('children', { type: 'tests', id: 102 }).save();
+          savedItem.add('children', { type: 'tests', id: 103 }).save();
+        });
       });
   });
 

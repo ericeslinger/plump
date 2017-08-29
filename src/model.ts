@@ -13,7 +13,7 @@ import {
   TerminalStore,
 } from './dataTypes';
 
-import { Plump } from './plump';
+import { Plump, pathExists } from './plump';
 import { PlumpObservable } from './plumpObservable';
 import { PlumpError, NotFoundError } from './errors';
 
@@ -158,6 +158,7 @@ export class Model<MD extends ModelData> {
   ): PlumpObservable<MD> {
     let fields = Array.isArray(opts) ? opts.concat() : [opts];
     if (fields.indexOf('relationships') >= 0) {
+      fields.splice(fields.indexOf('relationships'), 1);
       fields = fields.concat(
         Object.keys(this.schema.relationships).map(k => `relationships.${k}`),
       );
@@ -171,7 +172,7 @@ export class Model<MD extends ModelData> {
       .flatMap((s: CacheStore) => Observable.fromPromise(s.read(this, fields)))
       .defaultIfEmpty(null)
       .flatMap(v => {
-        if (v !== null) {
+        if (v !== null && fields.every(f => pathExists(v, f))) {
           return Observable.of(v);
         } else {
           const terminal$ = Observable.fromPromise(

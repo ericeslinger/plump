@@ -20,6 +20,22 @@ export interface TypeMap {
   [type: string]: any;
 }
 
+export function pathExists(obj: any, path: string) {
+  return (
+    path.split('.').reduce<boolean>((acc, next) => {
+      if (acc === false) {
+        return false;
+      } else {
+        if (!!acc[next]) {
+          return acc[next];
+        } else {
+          return false;
+        }
+      }
+    }, obj) !== false
+  );
+}
+
 export class Plump<TermType extends TerminalStore = TerminalStore> {
   public destroy$: Observable<string>;
   public caches: CacheStore[];
@@ -93,6 +109,14 @@ export class Plump<TermType extends TerminalStore = TerminalStore> {
     opts: string[] = ['attributes'],
   ): Promise<ModelData> {
     const keys = opts && !Array.isArray(opts) ? [opts] : opts;
+    if (keys.indexOf('relationships') >= 0) {
+      keys.splice(keys.indexOf('relationships'), 1);
+      keys.unshift(
+        ...Object.keys(this.types[value.type].schema.relationships).map(
+          v => `relationships.${v}`,
+        ),
+      );
+    }
     return this.caches
       .reduce((thenable, storage) => {
         return thenable.then(v => {
@@ -106,7 +130,10 @@ export class Plump<TermType extends TerminalStore = TerminalStore> {
         });
       }, Promise.resolve(null))
       .then(v => {
-        if ((v === null || v.attributes === null) && this.terminal) {
+        if (
+          this.terminal &&
+          (v === null || !opts.every(path => pathExists(v, path)))
+        ) {
           return this.terminal.read(value, keys);
         } else {
           return v;
@@ -118,11 +145,26 @@ export class Plump<TermType extends TerminalStore = TerminalStore> {
     return this.terminal.bulkRead(value);
   }
 
-  save(value: DirtyModel): Promise<ModelData> {
+  forceCreate(value: DirtyModel) {
+    return this.save(value, { stripId: false });
+  }
+
+  save(
+    value: DirtyModel,
+    options: { stripId: boolean } = { stripId: true },
+  ): Promise<ModelData> {
     if (this.terminal) {
       return Promise.resolve()
         .then(() => {
-          if (Object.keys(value.attributes).length > 0) {
+          const attrs = Object.assign({}, value.attributes);
+          if (options.stripId) {
+            const idAttribute = (this.types[value.type] as typeof Model).schema
+              .idAttribute;
+            if (attrs[idAttribute]) {
+              delete attrs[idAttribute];
+            }
+          }
+          if (Object.keys(attrs).length > 0) {
             return this.terminal.writeAttributes({
               attributes: value.attributes,
               id: value.id,
