@@ -57,52 +57,56 @@ describe('Plump', () => {
                 type: 'tests',
                 id: invalidated.id,
               });
-              const subscription = newOne.subscribe({
-                next: v => {
-                  try {
-                    if (phase === 0) {
-                      if (v.attributes.name) {
-                        expect(v)
-                          .to.have.property('attributes')
-                          .with.property('name', 'foo');
-                        phase = 1;
+              const subscription = newOne
+                .asObservable(['attributes', 'relationships'])
+                .subscribe({
+                  next: v => {
+                    try {
+                      if (phase === 0) {
+                        if (v.attributes.name) {
+                          expect(v)
+                            .to.have.property('attributes')
+                            .with.property('name', 'foo');
+                          phase = 1;
+                        }
                       }
-                    }
-                    if (phase === 1) {
-                      if (v.attributes.name === 'slowtato') {
-                        phase = 2;
-                      } else if (v.attributes.name === 'grotato') {
-                        subscription.unsubscribe();
-                        resolve();
+                      if (phase === 1) {
+                        if (v.attributes.name === 'slowtato') {
+                          phase = 2;
+                        } else if (v.attributes.name === 'grotato') {
+                          subscription.unsubscribe();
+                          resolve();
+                        }
                       }
-                    }
-                    if (phase === 2) {
-                      if (v.attributes.name !== 'slowtato') {
-                        expect(v)
-                          .to.have.property('attributes')
-                          .with.property('name', 'grotato');
-                        subscription.unsubscribe();
-                        resolve();
+                      if (phase === 2) {
+                        if (v.attributes.name !== 'slowtato') {
+                          expect(v)
+                            .to.have.property('attributes')
+                            .with.property('name', 'grotato');
+                          subscription.unsubscribe();
+                          resolve();
+                        }
                       }
+                    } catch (err) {
+                      subscription.unsubscribe();
+                      reject(err);
                     }
-                  } catch (err) {
-                    subscription.unsubscribe();
-                    reject(err);
-                  }
-                },
-                complete: () => {
-                  /* noop */
-                },
-                error: err => {
-                  throw err;
-                },
-              });
-              return coldMemstore._upsert({
-                id: invalidated.id,
-                type: TestType.type,
-                attributes: { name: 'slowtato' },
-                relationships: {},
-              });
+                  },
+                  complete: () => {
+                    /* noop */
+                  },
+                  error: err => {
+                    throw err;
+                  },
+                });
+              setTimeout(() => {
+                coldMemstore._upsert({
+                  id: invalidated.id,
+                  type: TestType.type,
+                  attributes: { name: 'slowtato' },
+                  relationships: {},
+                });
+              }, 25);
             });
           })
           .then(() => {
@@ -116,7 +120,8 @@ describe('Plump', () => {
           .then(() => {
             return otherPlump.invalidate(invalidated, ['attributes']);
           });
-      });
+      })
+      .catch(e => console.log(e));
   });
 
   it('handles invalidated or unloaded values in hot cache reads', () => {

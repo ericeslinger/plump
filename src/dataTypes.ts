@@ -206,7 +206,7 @@ export interface ModelDelta extends ModelData {
 }
 
 export interface DirtyValues {
-  attributes?: StringIndexed<Attribute>;
+  attributes?: ModelAttributes;
   relationships?: StringIndexed<RelationshipDelta[]>;
 }
 

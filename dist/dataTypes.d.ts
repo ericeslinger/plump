@@ -158,7 +158,7 @@ export interface ModelDelta extends ModelData {
     invalidate: string[];
 }
 export interface DirtyValues {
-    attributes?: StringIndexed<Attribute>;
+    attributes?: ModelAttributes;
     relationships?: StringIndexed<RelationshipDelta[]>;
 }
 export interface DirtyModel extends DirtyValues {

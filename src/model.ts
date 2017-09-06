@@ -1,5 +1,5 @@
 import * as mergeOptions from 'merge-options';
-import { Observable, Subscription, Observer } from 'rxjs';
+import { Observable, Subscription, Observer, Subject } from 'rxjs';
 
 import {
   ModelData,
@@ -10,6 +10,7 @@ import {
   RelationshipDelta,
   RelationshipItem,
   CacheStore,
+  StringIndexed,
   TerminalStore,
 } from './dataTypes';
 
@@ -19,6 +20,10 @@ import { PlumpError, NotFoundError } from './errors';
 
 // TODO: figure out where error events originate (storage or model)
 // and who keeps a roll-backable delta
+
+function condMerge(arg: any[]) {
+  return mergeOptions(...arg.filter(v => !!v));
+}
 
 export class Model<MD extends ModelData> {
   id: string | number;
@@ -32,6 +37,7 @@ export class Model<MD extends ModelData> {
 
   public error: PlumpError;
 
+  private _write$: Subject<MD> = new Subject<MD>();
   private dirty: DirtyValues;
 
   get type() {
@@ -40,6 +46,42 @@ export class Model<MD extends ModelData> {
 
   get schema() {
     return this.constructor['schema'];
+  }
+
+  static empty() {
+    const retVal = {
+      type: this.type,
+      attributes: {},
+      relationships: {},
+    };
+    Object.keys(this.schema.attributes).forEach(key => {
+      if (this.schema.attributes[key].type === 'number') {
+        retVal.attributes[key] = this.schema.attributes[key].default || 0;
+      } else if (this.schema.attributes[key].type === 'date') {
+        retVal.attributes[key] = new Date(
+          (this.schema.attributes[key].default as any) || Date.now(),
+        );
+      } else if (this.schema.attributes[key].type === 'string') {
+        retVal.attributes[key] = this.schema.attributes[key].default || '';
+      } else if (this.schema.attributes[key].type === 'object') {
+        retVal.attributes[key] = Object.assign(
+          {},
+          this.schema.attributes[key].default,
+        );
+      } else if (this.schema.attributes[key].type === 'array') {
+        retVal.attributes[key] = ((this.schema.attributes[key]
+          .default as any[]) || [])
+          .concat();
+      }
+    });
+    Object.keys(this.schema.relationships).forEach(key => {
+      retVal.relationships[key] = [];
+    });
+    return retVal;
+  }
+
+  empty(): MD {
+    return this.constructor['empty']();
   }
 
   dirtyFields() {
@@ -79,6 +121,14 @@ export class Model<MD extends ModelData> {
       attributes: {}, // Simple key-value
       relationships: {}, // relName: Delta[]
     };
+    this.$$fireUpdate();
+  }
+
+  $$fireUpdate() {
+    this._write$.next({
+      attributes: this.dirty.attributes,
+      type: this.type,
+    } as MD);
   }
 
   get<T extends ModelData>(opts: string | string[] = 'attributes'): Promise<T> {
@@ -149,7 +199,7 @@ export class Model<MD extends ModelData> {
       .reduce((acc, curr) => mergeOptions(acc, curr), {});
 
     this.$$copyValuesFrom(sanitized);
-    // this.$$fireUpdate(sanitized);
+    this.$$fireUpdate();
     return this;
   }
 
@@ -168,7 +218,7 @@ export class Model<MD extends ModelData> {
     const colds = this.plump.caches.filter(s => !s.hot(this));
     const terminal = this.plump.terminal;
 
-    const preload$ = Observable.from(hots)
+    const preload$: Observable<ModelData> = Observable.from(hots)
       .flatMap((s: CacheStore) => Observable.fromPromise(s.read(this, fields)))
       .defaultIfEmpty(null)
       .flatMap(v => {
@@ -188,12 +238,12 @@ export class Model<MD extends ModelData> {
             Observable.fromPromise(s.read(this, fields)),
           );
           // .startWith(undefined);
-          return Observable.merge(terminal$, cold$.takeUntil(terminal$));
+          return Observable.merge(
+            terminal$,
+            cold$.takeUntil(terminal$),
+          ) as Observable<ModelData>;
         }
       });
-    // TODO: cacheable reads
-    // const watchRead$ = Observable.from(terminal)
-    // .flatMap(s => s.read$.filter(v => v.type === this.type && v.id === this.id));
     const watchWrite$: Observable<ModelData> = terminal.write$
       .filter((v: ModelDelta) => {
         return (
@@ -206,34 +256,28 @@ export class Model<MD extends ModelData> {
         Observable.of(terminal).flatMap((s: TerminalStore) =>
           Observable.fromPromise(s.read(this, fields, true)),
         ),
-      );
-    // );
-    return Observable.merge(preload$, watchWrite$).let(obs => {
-      return new PlumpObservable(this.plump, obs);
-    }) as PlumpObservable<MD>;
-  }
-
-  subscribe(cb: Observer<MD>): Subscription;
-  subscribe(fields: string | string[], cb: Observer<MD>): Subscription;
-  subscribe(
-    arg1: Observer<MD> | string | string[],
-    arg2?: Observer<MD>,
-  ): Subscription {
-    let fields: string[] = [];
-    let cb: Observer<MD> = null;
-
-    if (arg2) {
-      cb = arg2;
-      if (Array.isArray(arg1)) {
-        fields = arg1 as string[];
-      } else {
-        fields = [arg1 as string];
-      }
-    } else {
-      cb = arg1 as Observer<MD>;
-      fields = ['attributes'];
-    }
-    return this.asObservable(fields).subscribe(cb);
+      )
+      .startWith(null);
+    return Observable.combineLatest(
+      Observable.of(this.empty()),
+      preload$,
+      watchWrite$,
+      this._write$.asObservable().startWith(null) as Observable<ModelData>,
+    )
+      .map((a: ModelData[]) => condMerge(a))
+      .map((v: ModelData) => {
+        v.relationships = Model.resolveRelationships(
+          this.dirty.relationships,
+          v.relationships,
+        );
+        return v;
+      })
+      // .do(v => console.log(JSON.stringify(v, null, 2)))
+      // .do(() => console.log('-----'))
+      .let(obs => {
+        // return Observable.merge(preload$, watchWrite$).let(obs => {
+        return new PlumpObservable(this.plump, obs);
+      }) as PlumpObservable<MD>;
   }
 
   delete() {
@@ -262,7 +306,7 @@ export class Model<MD extends ModelData> {
           op: 'add',
           data: item,
         });
-        // this.$$fireUpdate();
+        this.$$fireUpdate();
         return this;
       } else {
         throw new Error('Invalid item added to hasMany');
@@ -280,7 +324,7 @@ export class Model<MD extends ModelData> {
           op: 'modify',
           data: item,
         });
-        // this.$$fireUpdate();
+        this.$$fireUpdate();
         return this;
       } else {
         throw new Error('Invalid item added to hasMany');
@@ -300,7 +344,7 @@ export class Model<MD extends ModelData> {
           op: 'remove',
           data: item,
         });
-        // this.$$fireUpdate();
+        this.$$fireUpdate();
         return this;
       } else {
         throw new Error('Invalid item $removed from hasMany');
@@ -336,7 +380,10 @@ export class Model<MD extends ModelData> {
     return { attributes, relationships: resolvedRelationships };
   }
 
-  static resolveRelationships(deltas, base = {}) {
+  static resolveRelationships(
+    deltas: StringIndexed<RelationshipDelta[]>,
+    base: StringIndexed<RelationshipItem[]> = {},
+  ) {
     const updates = Object.keys(deltas)
       .map(relName => {
         const resolved = this.resolveRelationship(
