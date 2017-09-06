@@ -111,11 +111,14 @@ describe('model', () => {
 
     it('should create an id when one is unset', () => {
       const noID = new TestType({ name: 'potato' }, plump);
-      return noID.save().then(() => noID.get()).then(v => {
-        expect(v.id).to.not.be.null; // tslint:disable-line no-unused-expression
-        expect(v.attributes.id).to.not.be.null; // tslint:disable-line no-unused-expression
-        expect(v.id).to.equal(v.attributes.id);
-      });
+      return noID
+        .save()
+        .then(() => noID.get())
+        .then(v => {
+          expect(v.id).to.not.be.null; // tslint:disable-line no-unused-expression
+          expect(v.attributes.id).to.not.be.null; // tslint:disable-line no-unused-expression
+          expect(v.id).to.equal(v.attributes.id);
+        });
     });
 
     it('should allow the creation of new models with an existing id', () => {
@@ -229,7 +232,9 @@ describe('model', () => {
           const baseFields = Object.keys(TestType.schema.attributes);
 
           // NOTE: .have.all requires list length equality
-          expect(data).to.have.property('attributes').with.all.keys(baseFields);
+          expect(data)
+            .to.have.property('attributes')
+            .with.all.keys(baseFields);
           expect(data).to.have.property('relationships').that.is.empty; // tslint:disable-line no-unused-expression
         });
     });
@@ -368,14 +373,14 @@ describe('model', () => {
         return one
           .get('relationships.children')
           .then(res =>
-            expect(res).to.have
-              .property('relationships')
+            expect(res)
+              .to.have.property('relationships')
               .that.deep.equals({ children: [] }),
           )
           .then(() => onePrime.get('relationships.children'))
           .then(res =>
-            expect(res).to.have
-              .property('relationships')
+            expect(res)
+              .to.have.property('relationships')
               .that.deep.equals({ children: [] }),
           )
           .then(() =>
@@ -383,15 +388,19 @@ describe('model', () => {
           )
           .then(() => one.get('relationships.children'))
           .then(res =>
-            expect(res).to.have.property('relationships').that.deep.equals({
-              children: [{ type: TestType.type, id: 100 }],
-            }),
+            expect(res)
+              .to.have.property('relationships')
+              .that.deep.equals({
+                children: [{ type: TestType.type, id: 100 }],
+              }),
           )
           .then(() => onePrime.get('relationships.children'))
           .then(res =>
-            expect(res).to.have.property('relationships').that.deep.equals({
-              children: [{ type: TestType.type, id: 100 }],
-            }),
+            expect(res)
+              .to.have.property('relationships')
+              .that.deep.equals({
+                children: [{ type: TestType.type, id: 100 }],
+              }),
           );
       });
     });
@@ -421,6 +430,58 @@ describe('model', () => {
       });
     });
 
+    it('should allow subscription to unsaved data set values', () => {
+      return new Promise((resolve, reject) => {
+        const one = new TestType({ name: 'potato' }, plump);
+        let phase = 0;
+        one
+          .save()
+          .then(() => {
+            const subscription = one
+              .asObservable(['attributes'])
+              .subscribe(v => {
+                try {
+                  expect(v).to.not.be.undefined; // tslint:disable-line no-unused-expression
+                  if (!v) {
+                    return;
+                  }
+                  if (phase === 0) {
+                    expect(v.attributes.name).to.equal('potato');
+                    phase = 1;
+                  } else if (phase === 1) {
+                    expect(v.attributes.name).to.equal('not potato');
+                    phase = 2;
+                  } else if (
+                    phase === 2 &&
+                    v.attributes.name !== 'not potato'
+                  ) {
+                    expect(v.attributes.name).to.equal('actually potato');
+                    resolve();
+                  }
+                } catch (err) {
+                  reject(err);
+                }
+              });
+          })
+          .then(() => {
+            setTimeout(
+              () => one.set({ attributes: { name: 'not potato' } }),
+              25,
+            );
+            setTimeout(() => one.save(), 35);
+            setTimeout(() => {
+              plump.terminal.writeAttributes({
+                type: one.type,
+                id: one.id,
+                attributes: {
+                  name: 'actually potato',
+                },
+              });
+            }, 100);
+          });
+      });
+    });
+
     it('should allow subscription to model data', () => {
       return new Promise((resolve, reject) => {
         const one = new TestType({ name: 'potato' }, plump);
@@ -428,7 +489,7 @@ describe('model', () => {
         one
           .save()
           .then(() => {
-            const subscription = one.subscribe({
+            const subscription = one.asObservable(['attributes']).subscribe({
               error: err => {
                 throw err;
               },
@@ -472,7 +533,12 @@ describe('model', () => {
               },
             });
           })
-          .then(() => one.set({ name: 'grotato' }).save());
+          .then(() =>
+            setTimeout(
+              () => one.set({ attributes: { name: 'grotato' } }).save(),
+              75,
+            ),
+          );
       });
     });
 
@@ -522,9 +588,9 @@ describe('model', () => {
             one.add('children', { type: TestType.type, id: 100 }).save(),
           )
           .then(() => {
-            const subscription = one.subscribe(
-              ['attributes', 'relationships'],
-              {
+            const subscription = one
+              .asObservable(['attributes', 'relationships'])
+              .subscribe({
                 error: err => {
                   throw err;
                 },
@@ -569,12 +635,121 @@ describe('model', () => {
                     reject(err);
                   }
                 },
-              },
-            );
+              });
           })
           .then(() =>
-            one.add('children', { type: TestType.type, id: 101 }).save(),
+            setTimeout(() => {
+              one.add('children', { type: TestType.type, id: 101 }).save();
+            }, 25),
           );
+      });
+    });
+
+    it('should allow subscription to unsaved model sideloads', () => {
+      return new Promise((resolve, reject) => {
+        const one = new TestType({ name: 'potato' }, plump);
+        let phase = 0;
+        one
+          .save()
+          .then(() => {
+            one
+              .add('children', { type: TestType.type, id: 100 })
+              .add('valenceChildren', {
+                type: TestType.type,
+                id: 200,
+                meta: { perm: 1 },
+              })
+              .save();
+          })
+          .then(() => {
+            const subscription = one
+              .asObservable(['attributes', 'relationships'])
+              .subscribe({
+                error: err => {
+                  throw err;
+                },
+                complete: () => {
+                  /* noop */
+                },
+                next: v => {
+                  try {
+                    if (!v) {
+                      return;
+                    }
+                    if (phase === 0) {
+                      if (v.attributes) {
+                        expect(v).to.have.property('attributes');
+                        phase = 1;
+                      }
+                    }
+                    if (
+                      phase === 1 &&
+                      v.relationships &&
+                      v.relationships.children
+                    ) {
+                      expect(v.relationships.children).to.deep.equal([
+                        { type: TestType.type, id: 100 },
+                      ]);
+                      phase = 2;
+                      setTimeout(
+                        () =>
+                          one.add('children', { type: TestType.type, id: 101 }),
+                        25,
+                      );
+                    }
+                    if (phase === 2) {
+                      if (
+                        v.relationships.children &&
+                        v.relationships.children.length > 1
+                      ) {
+                        expect(v.relationships.children).to.deep.equal([
+                          { type: TestType.type, id: 100 },
+                          { type: TestType.type, id: 101 },
+                        ]);
+                        phase = 3;
+                        setTimeout(
+                          () =>
+                            one.remove('children', {
+                              type: TestType.type,
+                              id: 101,
+                            }),
+                          25,
+                        );
+                      }
+                    } else if (
+                      phase === 3 &&
+                      v.relationships &&
+                      v.relationships.children
+                    ) {
+                      expect(v.relationships.children).to.deep.equal([
+                        { type: TestType.type, id: 100 },
+                      ]);
+                      phase = 4;
+                      setTimeout(
+                        () =>
+                          one.modifyRelationship('valenceChildren', {
+                            type: TestType.type,
+                            id: 200,
+                            meta: { perm: 2 },
+                          }),
+                        25,
+                      );
+                    } else if (
+                      phase === 4 &&
+                      v.relationships &&
+                      v.relationships.children
+                    ) {
+                      expect(v.relationships.valenceChildren).to.deep.equal([
+                        { type: TestType.type, id: 200, meta: { perm: 2 } },
+                      ]);
+                      resolve();
+                    }
+                  } catch (err) {
+                    reject(err);
+                  }
+                },
+              });
+          });
       });
     });
 
@@ -608,59 +783,64 @@ describe('model', () => {
           .then(() => otherPlump.addCache(coldMemstore))
           .then(() => {
             const one = new TestType({ name: 'slowtato' }, otherPlump);
-            one.save().then(() => one.get()).then(val => {
-              return coldMemstore
-                .cache({
-                  id: val.id,
-                  type: TestType.type,
-                  attributes: {
-                    name: 'potato',
+            one
+              .save()
+              .then(() => one.get())
+              .then(val => {
+                return coldMemstore
+                  .cache({
                     id: val.id,
-                  },
-                })
-                .then(() => {
-                  let phase = 0;
-                  const two = otherPlump.find({
                     type: TestType.type,
-                    id: val.id,
-                  });
-                  const subscription = two.subscribe({
-                    error: err => {
-                      throw err;
+                    attributes: {
+                      name: 'potato',
+                      id: val.id,
                     },
-                    complete: () => {
-                      /* noop */
-                    },
-                    next: v => {
-                      try {
-                        if (!v) {
-                          return;
-                        }
-                        if (phase === 0) {
-                          if (v.attributes.name) {
-                            expect(v).to.have
-                              .property('attributes')
-                              .with.property('name', 'potato');
-                            phase = 1;
-                          }
-                        }
-                        if (phase === 1) {
-                          if (v.attributes.name !== 'potato') {
-                            expect(v).to.have
-                              .property('attributes')
-                              .with.property('name', 'slowtato');
+                  })
+                  .then(() => {
+                    let phase = 0;
+                    const two = otherPlump.find({
+                      type: TestType.type,
+                      id: val.id,
+                    });
+                    const subscription = two
+                      .asObservable(['attributes', 'relationships'])
+                      .subscribe({
+                        error: err => {
+                          throw err;
+                        },
+                        complete: () => {
+                          /* noop */
+                        },
+                        next: v => {
+                          try {
+                            if (!v) {
+                              return;
+                            }
+                            if (phase === 0) {
+                              if (v.attributes.name) {
+                                expect(v)
+                                  .to.have.property('attributes')
+                                  .with.property('name', 'potato');
+                                phase = 1;
+                              }
+                            }
+                            if (phase === 1) {
+                              if (v.attributes.name !== 'potato') {
+                                expect(v)
+                                  .to.have.property('attributes')
+                                  .with.property('name', 'slowtato');
+                                subscription.unsubscribe();
+                                resolve();
+                              }
+                            }
+                          } catch (err) {
                             subscription.unsubscribe();
-                            resolve();
+                            reject(err);
                           }
-                        }
-                      } catch (err) {
-                        subscription.unsubscribe();
-                        reject(err);
-                      }
-                    },
+                        },
+                      });
                   });
-                });
-            });
+              });
           });
       });
     });
