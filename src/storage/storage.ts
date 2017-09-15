@@ -33,9 +33,9 @@ export abstract class Storage implements BaseStore {
     [key: string]: Promise<ModelData>;
   } = {};
   public types: { [type: string]: ModelSchema } = {};
-  private readSubject = new Subject<ModelData>();
-  private writeSubject = new Subject<ModelDelta>();
-  // protected types: Model[]; TODO: figure this out
+  public readSubject = new Subject<ModelData>();
+  public writeSubject = new Subject<ModelDelta>();
+  // public types: Model[]; TODO: figure this out
 
   constructor(opts: StorageOptions = {}) {
     // a "terminal" storage facility is the end of the storage chain.
