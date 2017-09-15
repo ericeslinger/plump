@@ -1,4 +1,4 @@
-import { Observable } from 'rxjs';
+import { Subject, Observable } from 'rxjs';
 import { Model } from './model';
 import { ModelAttributes, ModelData, ModelReference, DirtyModel, RelationshipItem, CacheStore, TerminalStore } from './dataTypes';
 export declare const types: {
@@ -13,7 +13,7 @@ export declare class Plump<TermType extends TerminalStore = TerminalStore> {
     destroy$: Observable<string>;
     caches: CacheStore[];
     types: TypeMap;
-    private teardownSubject;
+    teardownSubject: Subject<string>;
     constructor(terminal: TermType);
     addType(T: any): Promise<void>;
     type(T: string): typeof Model;

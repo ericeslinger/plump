@@ -1,4 +1,4 @@
-import { Observable } from 'rxjs';
+import { Subject, Observable } from 'rxjs';
 import { IndefiniteModelData, ModelData, ModelDelta, ModelSchema, ModelReference, BaseStore, StorageOptions } from '../dataTypes';
 export declare abstract class Storage implements BaseStore {
     terminal: boolean;
@@ -10,8 +10,8 @@ export declare abstract class Storage implements BaseStore {
     types: {
         [type: string]: ModelSchema;
     };
-    private readSubject;
-    private writeSubject;
+    readSubject: Subject<ModelData>;
+    writeSubject: Subject<ModelDelta>;
     constructor(opts?: StorageOptions);
     abstract readAttributes(value: ModelReference): Promise<ModelData>;
     abstract readRelationship(value: ModelReference, relName: string): Promise<ModelData>;

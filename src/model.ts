@@ -37,8 +37,8 @@ export class Model<MD extends ModelData> {
 
   public error: PlumpError;
 
-  private _write$: Subject<MD> = new Subject<MD>();
-  private dirty: DirtyValues;
+  public _write$: Subject<MD> = new Subject<MD>();
+  public dirty: DirtyValues;
 
   get type() {
     return this.constructor['type'];
@@ -70,8 +70,8 @@ export class Model<MD extends ModelData> {
         );
       } else if (this.schema.attributes[key].type === 'array') {
         retVal.attributes[key] = ((this.schema.attributes[key]
-          .default as any[]) || [])
-          .concat();
+          .default as any[]) || []
+        ).concat();
       }
     });
     Object.keys(this.schema.relationships).forEach(key => {
@@ -90,7 +90,7 @@ export class Model<MD extends ModelData> {
       .concat(Object.keys(this.dirty.relationships));
   }
 
-  constructor(opts, private plump: Plump) {
+  constructor(opts, public plump: Plump) {
     // TODO: Define Delta interface
     this.error = null;
     if (this.type === 'BASE') {

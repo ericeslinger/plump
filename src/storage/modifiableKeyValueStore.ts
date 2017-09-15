@@ -16,7 +16,7 @@ import {
 
 export abstract class ModifiableKeyValueStore extends Storage
   implements TerminalStore, CacheStore, AllocatingStore {
-  protected maxKeys: { [type: string]: number } = {};
+  public maxKeys: { [type: string]: number } = {};
 
   abstract _keys(type: string): Promise<string[]>;
   abstract _get(ref: ModelReference): Promise<ModelData | null>;

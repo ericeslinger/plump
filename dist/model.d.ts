@@ -1,15 +1,16 @@
-import { ModelData, ModelSchema, RelationshipDelta, RelationshipItem, StringIndexed } from './dataTypes';
+import { Subject } from 'rxjs';
+import { ModelData, ModelSchema, DirtyValues, RelationshipDelta, RelationshipItem, StringIndexed } from './dataTypes';
 import { Plump } from './plump';
 import { PlumpObservable } from './plumpObservable';
 import { PlumpError } from './errors';
 export declare class Model<MD extends ModelData> {
-    private plump;
+    plump: Plump;
     id: string | number;
     static type: string;
     static schema: ModelSchema;
     error: PlumpError;
-    private _write$;
-    private dirty;
+    _write$: Subject<MD>;
+    dirty: DirtyValues;
     readonly type: any;
     readonly schema: any;
     static empty(): {

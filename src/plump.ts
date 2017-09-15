@@ -41,7 +41,7 @@ export class Plump<TermType extends TerminalStore = TerminalStore> {
   public caches: CacheStore[];
   public types: TypeMap = {};
 
-  private teardownSubject: Subject<string>;
+  public teardownSubject: Subject<string>;
 
   constructor(public terminal: TermType) {
     this.teardownSubject = new Subject();
