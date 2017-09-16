@@ -17,17 +17,19 @@ export class PlumpObservable<T extends ModelData> extends Observable<T> {
   inflateRelationship(relName: string) {
     return Observable.create(subscriber => {
       // because we're in an arrow function `this` is from the outer scope.
-      let source = this;
+      const source = this;
 
       // save our inner subscription
-      let subscription = source.subscribe(
+      const subscription = source.subscribe(
         value => {
           // important: catch errors from user-provided callbacks
           try {
             if (value && value.relationships && value.relationships[relName]) {
               Observable.combineLatest(
                 value.relationships[relName].map((v: ModelReference) =>
-                  this.plump.find(v).asObservable(),
+                  this.plump
+                    .find(v)
+                    .asObservable(['attributes', 'relationships']),
                 ),
               ).subscribe(v => subscriber.next(v));
             } else {

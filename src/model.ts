@@ -111,7 +111,11 @@ export class Model<MD extends ModelData> {
     // const idField = this.constructor.$id in opts ? this.constructor.$id : 'id';
     // this[this.constructor.$id] = opts[idField] || this.id;
     if (this.id === undefined && opts[this.schema.idAttribute]) {
-      this.id = opts[this.schema.idAttribute];
+      if (this.schema.attributes[this.schema.idAttribute].type === 'number') {
+        this.id = parseInt(opts[this.schema.idAttribute], 10);
+      } else {
+        this.id = opts[this.schema.idAttribute];
+      }
     }
     this.dirty = mergeOptions(this.dirty, { attributes: opts });
   }
@@ -247,9 +251,7 @@ export class Model<MD extends ModelData> {
     const watchWrite$: Observable<ModelData> = terminal.write$
       .filter((v: ModelDelta) => {
         return (
-          v.type === this.type &&
-          v.id === this.id &&
-          v.invalidate.some(i => fields.indexOf(i) >= 0)
+          v.type === this.type && v.id === this.id // && v.invalidate.some(i => fields.indexOf(i) >= 0)
         );
       })
       .flatMapTo(
