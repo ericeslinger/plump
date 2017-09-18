@@ -225,8 +225,8 @@ export abstract class ModifiableKeyValueStore extends Storage
     const otherRelName = relSchema.sides[relName].otherName;
     const otherReference = { type: otherRelType, id: child.id };
 
-    const newChild: RelationshipItem = { id: child.id };
-    const newParent: RelationshipItem = { id: value.id };
+    const newChild: RelationshipItem = { id: child.id, type: otherRelType };
+    const newParent: RelationshipItem = { id: value.id, type: value.type };
     if (relSchema.extras && child.meta) {
       newParent.meta = {};
       newChild.meta = {};

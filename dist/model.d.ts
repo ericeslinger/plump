@@ -1,5 +1,5 @@
 import { Subject } from 'rxjs';
-import { ModelData, ModelSchema, DirtyValues, RelationshipDelta, RelationshipItem, StringIndexed } from './dataTypes';
+import { ModelData, ModelSchema, DirtyValues, UntypedRelationshipItem, TypedRelationshipItem, RelationshipDelta, StringIndexed } from './dataTypes';
 import { Plump } from './plump';
 import { PlumpObservable } from './plumpObservable';
 import { PlumpError } from './errors';
@@ -30,9 +30,9 @@ export declare class Model<MD extends ModelData> {
     set(update: any): this;
     asObservable(opts?: string | string[]): PlumpObservable<MD>;
     delete(): Promise<void>;
-    add(key: string, item: RelationshipItem): this;
-    modifyRelationship(key: string, item: RelationshipItem): this;
-    remove(key: string, item: RelationshipItem): this;
+    add(key: string, item: UntypedRelationshipItem): this;
+    modifyRelationship(key: string, item: UntypedRelationshipItem): this;
+    remove(key: string, item: UntypedRelationshipItem): this;
     static applyDelta(current: any, delta: any): any;
     static resolveAndOverlay(update: any, base?: {
         attributes?: any;
@@ -41,6 +41,6 @@ export declare class Model<MD extends ModelData> {
         attributes: any;
         relationships: any;
     };
-    static resolveRelationships(deltas: StringIndexed<RelationshipDelta[]>, base?: StringIndexed<RelationshipItem[]>): any;
-    static resolveRelationship(deltas: RelationshipDelta[], base?: RelationshipItem[]): RelationshipItem[];
+    static resolveRelationships(deltas: StringIndexed<RelationshipDelta[]>, base?: StringIndexed<TypedRelationshipItem[]>): any;
+    static resolveRelationship(deltas: RelationshipDelta[], base?: TypedRelationshipItem[]): TypedRelationshipItem[];
 }

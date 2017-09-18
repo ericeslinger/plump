@@ -7,8 +7,9 @@ import {
   ModelSchema,
   DirtyValues,
   DirtyModel,
+  UntypedRelationshipItem,
+  TypedRelationshipItem,
   RelationshipDelta,
-  RelationshipItem,
   CacheStore,
   StringIndexed,
   TerminalStore,
@@ -23,6 +24,13 @@ import { PlumpError, NotFoundError } from './errors';
 
 function condMerge(arg: any[]) {
   return mergeOptions(...arg.filter(v => !!v));
+}
+
+function sideType(schema: ModelSchema, rel: string) {
+  // yes, this is "what type is this conversations in communities"
+  return schema.relationships[rel].type.sides[
+    schema.relationships[rel].type.sides[rel].otherName
+  ].otherType;
 }
 
 export class Model<MD extends ModelData> {
@@ -297,7 +305,12 @@ export class Model<MD extends ModelData> {
   //   return this.plump.restRequest(restOpts).then(res => res.data);
   // }
 
-  add(key: string, item: RelationshipItem): this {
+  add(key: string, item: UntypedRelationshipItem): this {
+    const toAdd: TypedRelationshipItem = Object.assign(
+      {},
+      { type: sideType(this.schema, key) },
+      item,
+    );
     if (key in this.schema.relationships) {
       if (item.id >= 1) {
         if (this.dirty.relationships[key] === undefined) {
@@ -306,7 +319,7 @@ export class Model<MD extends ModelData> {
 
         this.dirty.relationships[key].push({
           op: 'add',
-          data: item,
+          data: toAdd,
         });
         this.$$fireUpdate();
         return this;
@@ -318,13 +331,18 @@ export class Model<MD extends ModelData> {
     }
   }
 
-  modifyRelationship(key: string, item: RelationshipItem): this {
+  modifyRelationship(key: string, item: UntypedRelationshipItem): this {
+    const toAdd: TypedRelationshipItem = Object.assign(
+      {},
+      { type: sideType(this.schema, key) },
+      item,
+    );
     if (key in this.schema.relationships) {
       if (item.id >= 1) {
         this.dirty.relationships[key] = this.dirty.relationships[key] || [];
         this.dirty.relationships[key].push({
           op: 'modify',
-          data: item,
+          data: toAdd,
         });
         this.$$fireUpdate();
         return this;
@@ -336,7 +354,12 @@ export class Model<MD extends ModelData> {
     }
   }
 
-  remove(key: string, item: RelationshipItem): this {
+  remove(key: string, item: UntypedRelationshipItem): this {
+    const toAdd: TypedRelationshipItem = Object.assign(
+      {},
+      { type: sideType(this.schema, key) },
+      item,
+    );
     if (key in this.schema.relationships) {
       if (item.id >= 1) {
         if (!(key in this.dirty.relationships)) {
@@ -344,7 +367,7 @@ export class Model<MD extends ModelData> {
         }
         this.dirty.relationships[key].push({
           op: 'remove',
-          data: item,
+          data: toAdd,
         });
         this.$$fireUpdate();
         return this;
@@ -384,7 +407,7 @@ export class Model<MD extends ModelData> {
 
   static resolveRelationships(
     deltas: StringIndexed<RelationshipDelta[]>,
-    base: StringIndexed<RelationshipItem[]> = {},
+    base: StringIndexed<TypedRelationshipItem[]> = {},
   ) {
     const updates = Object.keys(deltas)
       .map(relName => {
@@ -400,7 +423,7 @@ export class Model<MD extends ModelData> {
 
   static resolveRelationship(
     deltas: RelationshipDelta[],
-    base: RelationshipItem[] = [],
+    base: TypedRelationshipItem[] = [],
   ) {
     const retVal = base.concat();
     deltas.forEach(delta => {
