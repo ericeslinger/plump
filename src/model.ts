@@ -56,8 +56,9 @@ export class Model<MD extends ModelData> {
     return this.constructor['schema'];
   }
 
-  static empty() {
+  static empty(id: number | string) {
     const retVal = {
+      id: id,
       type: this.type,
       attributes: {},
       relationships: {},
@@ -88,8 +89,8 @@ export class Model<MD extends ModelData> {
     return retVal;
   }
 
-  empty(): MD {
-    return this.constructor['empty']();
+  empty(id: number | string): MD {
+    return this.constructor['empty'](id);
   }
 
   dirtyFields() {
@@ -269,7 +270,7 @@ export class Model<MD extends ModelData> {
       )
       .startWith(null);
     return Observable.combineLatest(
-      Observable.of(this.empty()),
+      Observable.of(this.empty(this.id)),
       preload$,
       watchWrite$,
       this._write$.asObservable().startWith(null) as Observable<ModelData>,
