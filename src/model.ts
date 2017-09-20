@@ -26,13 +26,6 @@ function condMerge(arg: any[]) {
   return mergeOptions(...arg.filter(v => !!v));
 }
 
-function sideType(schema: ModelSchema, rel: string) {
-  // yes, this is "what type is this conversations in communities"
-  return schema.relationships[rel].type.sides[
-    schema.relationships[rel].type.sides[rel].otherName
-  ].otherType;
-}
-
 export class Model<MD extends ModelData> {
   id: string | number;
   static type = 'BASE';
@@ -309,7 +302,7 @@ export class Model<MD extends ModelData> {
   add(key: string, item: UntypedRelationshipItem): this {
     const toAdd: TypedRelationshipItem = Object.assign(
       {},
-      { type: sideType(this.schema, key) },
+      { type: this.schema.relationships[key].type.sides[key].otherType },
       item,
     );
     if (key in this.schema.relationships) {
@@ -335,7 +328,7 @@ export class Model<MD extends ModelData> {
   modifyRelationship(key: string, item: UntypedRelationshipItem): this {
     const toAdd: TypedRelationshipItem = Object.assign(
       {},
-      { type: sideType(this.schema, key) },
+      { type: this.schema.relationships[key].type.sides[key].otherType },
       item,
     );
     if (key in this.schema.relationships) {
@@ -358,7 +351,7 @@ export class Model<MD extends ModelData> {
   remove(key: string, item: UntypedRelationshipItem): this {
     const toAdd: TypedRelationshipItem = Object.assign(
       {},
-      { type: sideType(this.schema, key) },
+      { type: this.schema.relationships[key].type.sides[key].otherType },
       item,
     );
     if (key in this.schema.relationships) {
