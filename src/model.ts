@@ -1,4 +1,5 @@
 import * as mergeOptions from 'merge-options';
+import * as deepEqual from 'deep-equal';
 import { Observable, Subscription, Observer, Subject } from 'rxjs';
 
 import {
@@ -276,8 +277,7 @@ export class Model<MD extends ModelData> {
         );
         return v;
       })
-      // .do(v => console.log(JSON.stringify(v, null, 2)))
-      // .do(() => console.log('-----'))
+      .distinctUntilChanged(deepEqual)
       .let(obs => {
         // return Observable.merge(preload$, watchWrite$).let(obs => {
         return new PlumpObservable(this.plump, obs);
