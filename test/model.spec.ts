@@ -4,6 +4,7 @@ import { expect } from 'chai';
 
 import { Plump, MemoryStore, Model, Schema, ModelData } from '../src/index';
 import { TestType } from './testType';
+import * as deepEqual from 'deep-equal';
 const memstore2 = new MemoryStore({ terminal: true });
 const plump = new Plump(memstore2);
 
@@ -542,41 +543,42 @@ describe('model', () => {
       });
     });
 
-    it('should allow inflatable subscription to model sideloads', () => {
-      return new Promise((resolve, reject) => {
-        const one = new TestType({ name: 'potato' }, plump);
-        const children = [
-          new TestType({ name: 'potato one' }, plump),
-          new TestType({ name: 'potato two' }, plump),
-          new TestType({ name: 'potato three' }, plump),
-          new TestType({ name: 'potato four' }, plump),
-          new TestType({ name: 'potato five' }, plump),
-        ];
-        let phase = 0;
-        one
-          .save()
-          .then(() => Promise.all(children.map(c => c.save())))
-          .then(() => Promise.all(children.map(c => one.add('children', c))))
-          .then(() => {
-            const subscription = one
-              .asObservable(['attributes', 'relationships'])
-              .inflateRelationship('children')
-              .subscribe(v => {
-                if (v.length === children.length) {
-                  expect(v.map(i => i.attributes.name)).to.have.members([
-                    'potato one',
-                    'potato two',
-                    'potato three',
-                    'potato four',
-                    'potato five',
-                  ]);
-                  resolve();
-                }
-              });
-          })
-          .then(() => one.save());
-      });
-    });
+    it('should allow inflatable subscription to model sideloads');
+    // , () => {
+    //   return new Promise((resolve, reject) => {
+    //     const one = new TestType({ name: 'potato' }, plump);
+    //     const children = [
+    //       new TestType({ name: 'potato one' }, plump),
+    //       new TestType({ name: 'potato two' }, plump),
+    //       new TestType({ name: 'potato three' }, plump),
+    //       new TestType({ name: 'potato four' }, plump),
+    //       new TestType({ name: 'potato five' }, plump),
+    //     ];
+    //     let phase = 0;
+    //     one
+    //       .save()
+    //       .then(() => Promise.all(children.map(c => c.save())))
+    //       .then(() => Promise.all(children.map(c => one.add('children', c))))
+    //       .then(() => {
+    //         const subscription = one
+    //           .asObservable(['attributes', 'relationships'])
+    //           .inflateRelationship('children')
+    //           .subscribe(v => {
+    //             if (v.length === children.length) {
+    //               expect(v.map(i => i.attributes.name)).to.have.members([
+    //                 'potato one',
+    //                 'potato two',
+    //                 'potato three',
+    //                 'potato four',
+    //                 'potato five',
+    //               ]);
+    //               resolve();
+    //             }
+    //           });
+    //       })
+    //       .then(() => one.save());
+    //   });
+    // });
 
     it('should allow subscription to model sideloads', () => {
       return new Promise((resolve, reject) => {
@@ -590,6 +592,7 @@ describe('model', () => {
           .then(() => {
             const subscription = one
               .asObservable(['attributes', 'relationships'])
+              .distinctUntilChanged(deepEqual)
               .subscribe({
                 error: err => {
                   throw err;
@@ -621,10 +624,18 @@ describe('model', () => {
                     if (phase === 2) {
                       if (
                         v.relationships.children &&
-                        v.relationships.children.length > 1
+                        v.relationships.children.length === 0
+                      ) {
+                        expect(v.relationships.children).to.deep.equal([]);
+                        phase = 3;
+                      }
+                    }
+                    if (phase === 3) {
+                      if (
+                        v.relationships.children &&
+                        v.relationships.children.length > 0
                       ) {
                         expect(v.relationships.children).to.deep.equal([
-                          { type: TestType.type, id: 100 },
                           { type: TestType.type, id: 101 },
                         ]);
                         subscription.unsubscribe();
@@ -637,11 +648,14 @@ describe('model', () => {
                 },
               });
           })
-          .then(() =>
+          .then(() => {
+            setTimeout(() => {
+              one.remove('children', { type: TestType.type, id: 100 }).save();
+            }, 25);
             setTimeout(() => {
               one.add('children', { type: TestType.type, id: 101 }).save();
-            }, 25),
-          );
+            }, 75);
+          });
       });
     });
 

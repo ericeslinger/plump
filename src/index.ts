@@ -35,6 +35,5 @@ export {
   BaseStore,
   StorageOptions,
 } from './dataTypes';
-export * from './plumpObservable';
 
 export { HotCache } from './storage/hotCache';

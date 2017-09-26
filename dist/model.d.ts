@@ -1,7 +1,6 @@
-import { Subject } from 'rxjs';
+import { Observable, Subject } from 'rxjs';
 import { ModelData, ModelSchema, DirtyValues, UntypedRelationshipItem, TypedRelationshipItem, RelationshipDelta, StringIndexed } from './dataTypes';
 import { Plump } from './plump';
-import { PlumpObservable } from './plumpObservable';
 import { PlumpError } from './errors';
 export declare class Model<MD extends ModelData> {
     plump: Plump;
@@ -29,7 +28,7 @@ export declare class Model<MD extends ModelData> {
     bulkGet<T extends ModelData>(): Promise<T>;
     save<T extends ModelData>(): Promise<T>;
     set(update: any): this;
-    asObservable(opts?: string | string[]): PlumpObservable<MD>;
+    asObservable(opts?: string | string[]): Observable<MD>;
     delete(): Promise<void>;
     add(key: string, item: UntypedRelationshipItem): this;
     modifyRelationship(key: string, item: UntypedRelationshipItem): this;

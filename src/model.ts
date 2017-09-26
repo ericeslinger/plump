@@ -17,7 +17,6 @@ import {
 } from './dataTypes';
 
 import { Plump, pathExists } from './plump';
-import { PlumpObservable } from './plumpObservable';
 import { PlumpError, NotFoundError } from './errors';
 
 // TODO: figure out where error events originate (storage or model)
@@ -212,7 +211,7 @@ export class Model<MD extends ModelData> {
 
   asObservable(
     opts: string | string[] = ['relationships', 'attributes'],
-  ): PlumpObservable<MD> {
+  ): Observable<MD> {
     let fields = Array.isArray(opts) ? opts.concat() : [opts];
     if (fields.indexOf('relationships') >= 0) {
       fields.splice(fields.indexOf('relationships'), 1);
@@ -277,27 +276,12 @@ export class Model<MD extends ModelData> {
         );
         return v;
       })
-      .distinctUntilChanged(deepEqual)
-      .let(obs => {
-        // return Observable.merge(preload$, watchWrite$).let(obs => {
-        return new PlumpObservable(this.plump, obs);
-      }) as PlumpObservable<MD>;
+      .distinctUntilChanged(deepEqual) as Observable<MD>;
   }
 
   delete() {
     return this.plump.delete(this);
   }
-
-  // $rest(opts) {
-  //   const restOpts = Object.assign(
-  //     {},
-  //     opts,
-  //     {
-  //       url: `/${this.constructor['type']}/${this.id}/${opts.url}`,
-  //     }
-  //   );
-  //   return this.plump.restRequest(restOpts).then(res => res.data);
-  // }
 
   add(key: string, item: UntypedRelationshipItem): this {
     const toAdd: TypedRelationshipItem = Object.assign(
