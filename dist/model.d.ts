@@ -23,7 +23,7 @@ export declare class Model<MD extends ModelData> {
     constructor(opts: any, plump: Plump);
     $$copyValuesFrom(opts?: {}): void;
     $$resetDirty(): void;
-    $$fireUpdate(): void;
+    $$fireUpdate(force?: boolean): void;
     get<T extends ModelData>(opts?: string | string[]): Promise<T>;
     bulkGet<T extends ModelData>(): Promise<T>;
     save<T extends ModelData>(): Promise<T>;

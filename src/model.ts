@@ -130,8 +130,8 @@ export class Model<MD extends ModelData> {
     this.$$fireUpdate();
   }
 
-  $$fireUpdate() {
-    if (!this.id) {
+  $$fireUpdate(force: boolean = false) {
+    if (!this.id || force) {
       this._write$.next({
         attributes: this.dirty.attributes,
         type: this.type,
@@ -301,7 +301,7 @@ export class Model<MD extends ModelData> {
           op: 'add',
           data: toAdd,
         });
-        this.$$fireUpdate();
+        this.$$fireUpdate(true);
         return this;
       } else {
         throw new Error('Invalid item added to hasMany');
@@ -324,7 +324,7 @@ export class Model<MD extends ModelData> {
           op: 'modify',
           data: toAdd,
         });
-        this.$$fireUpdate();
+        this.$$fireUpdate(true);
         return this;
       } else {
         throw new Error('Invalid item added to hasMany');
@@ -349,7 +349,7 @@ export class Model<MD extends ModelData> {
           op: 'remove',
           data: toAdd,
         });
-        this.$$fireUpdate();
+        this.$$fireUpdate(true);
         return this;
       } else {
         throw new Error('Invalid item $removed from hasMany');
