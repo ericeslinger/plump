@@ -131,10 +131,12 @@ export class Model<MD extends ModelData> {
   }
 
   $$fireUpdate() {
-    this._write$.next({
-      attributes: this.dirty.attributes,
-      type: this.type,
-    } as MD);
+    if (!this.id) {
+      this._write$.next({
+        attributes: this.dirty.attributes,
+        type: this.type,
+      } as MD);
+    }
   }
 
   get<T extends ModelData>(opts: string | string[] = 'attributes'): Promise<T> {
