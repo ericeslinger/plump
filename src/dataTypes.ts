@@ -196,6 +196,7 @@ export type ModelRelationships = StringIndexed<TypedRelationshipItem[]>;
 export interface IndefiniteModelData {
   type: string;
   id?: number | string;
+  meta?: any;
   attributes?: ModelAttributes;
   relationships?: ModelRelationships;
 }
