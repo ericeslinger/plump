@@ -140,6 +140,7 @@ export interface ModelSchema {
 }
 export interface ModelReference {
     type: string;
+    meta?: any;
     id: number | string;
 }
 export declare type ModelAttributes = StringIndexed<Attribute>;

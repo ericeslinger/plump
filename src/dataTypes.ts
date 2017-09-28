@@ -187,6 +187,7 @@ export interface ModelSchema {
 
 export interface ModelReference {
   type: string;
+  meta?: any;
   id: number | string;
 }
 
