@@ -15,6 +15,7 @@ export declare class Model<MD extends ModelData> {
     static empty(id: number | string): {
         id: string | number;
         type: string;
+        empty: boolean;
         attributes: {};
         relationships: {};
     };
