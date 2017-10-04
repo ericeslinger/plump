@@ -23,7 +23,11 @@ import { PlumpError, NotFoundError } from './errors';
 // and who keeps a roll-backable delta
 
 function condMerge(arg: any[]) {
-  return mergeOptions(...arg.filter(v => !!v));
+  const args = arg.filter(v => !!v);
+  if (args[0] && args[0].empty && args.length > 1) {
+    delete args[0].empty;
+  }
+  return mergeOptions(...args);
 }
 
 export class Model<MD extends ModelData> {
