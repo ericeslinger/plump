@@ -15,7 +15,7 @@ export class MemoryStore extends ModifiableKeyValueStore {
 
   _keys(type) {
     return Promise.resolve(
-      Object.keys(this.store).filter(k => k.indexOf(`${type}:`) === 0)
+      Object.keys(this.store).filter(k => k.indexOf(`${type}:`) === 0),
     );
   }
 
@@ -62,7 +62,7 @@ export class MemoryStore extends ModifiableKeyValueStore {
         this.store[k].relationships[relName] = [item];
       } else {
         const idx = this.store[k].relationships[relName].findIndex(
-          v => v.id === item.id
+          v => v.id === item.id,
         );
         if (idx >= 0) {
           this.store[k].relationships[relName][idx] = item;
@@ -77,7 +77,7 @@ export class MemoryStore extends ModifiableKeyValueStore {
   _removeFromArray(
     ref: ModelReference,
     relName: string,
-    item: RelationshipItem
+    item: RelationshipItem,
   ) {
     return Promise.resolve().then(() => {
       const k = this.keyString(ref);
@@ -87,7 +87,7 @@ export class MemoryStore extends ModifiableKeyValueStore {
         this.store[k].relationships[relName] !== undefined
       ) {
         const idx = this.store[k].relationships[relName].findIndex(
-          v => v.id === item.id
+          v => v.id === item.id,
         );
         if (idx >= 0) {
           this.store[k].relationships[relName].splice(idx, 1);

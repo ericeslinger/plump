@@ -18,21 +18,18 @@ export interface RelationshipSchema {
         };
     } & StringIndexed<any>;
 }
-export interface RelationshipItem {
-    type?: string;
-    id: number | string;
-    meta?: StringIndexed<number | string | boolean>;
-}
-export interface TypedRelationshipItem extends RelationshipItem {
+export interface TypedRelationshipItem extends UntypedRelationshipItem {
     type: string;
 }
 export interface UntypedRelationshipItem {
     id: number | string;
+    type?: string;
     meta?: StringIndexed<number | string | boolean>;
 }
+export declare type RelationshipItem = TypedRelationshipItem;
 export interface RelationshipDelta {
     op: 'add' | 'modify' | 'remove';
-    data: RelationshipItem;
+    data: TypedRelationshipItem;
 }
 export interface StorageOptions {
     terminal?: boolean;
@@ -41,6 +38,9 @@ export interface BaseStore {
     terminal: boolean;
     read$: Observable<ModelData>;
     write$: Observable<ModelDelta>;
+    types: {
+        [type: string]: ModelSchema;
+    };
     readRelationship(value: ModelReference, relName: string): Promise<ModelData>;
     readAttributes(value: ModelReference): Promise<ModelData>;
     getSchema(t: {
@@ -140,19 +140,27 @@ export interface ModelSchema {
 }
 export interface ModelReference {
     type: string;
+    meta?: any;
     id: number | string;
 }
 export declare type ModelAttributes = StringIndexed<Attribute>;
-export declare type ModelRelationships = StringIndexed<RelationshipItem[]>;
+export declare type ModelRelationships = StringIndexed<TypedRelationshipItem[]>;
+export interface Attributed {
+    id?: number | string;
+    attributes?: ModelAttributes;
+    meta?: any;
+    type?: string;
+}
 export interface IndefiniteModelData {
     type: string;
     id?: number | string;
+    meta?: any;
     attributes?: ModelAttributes;
     relationships?: ModelRelationships;
+    included?: ModelData[];
 }
 export interface ModelData extends IndefiniteModelData {
     id: number | string;
-    included?: ModelData[];
 }
 export interface ModelDelta extends ModelData {
     invalidate: string[];

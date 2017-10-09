@@ -229,8 +229,8 @@ export abstract class KeyValueStore extends Storage
           relationships: {},
         };
       }
-      const newChild: RelationshipItem = { id: child.id };
-      const newParent: RelationshipItem = { id: value.id };
+      const newChild: RelationshipItem = { id: child.id, type: otherRelType };
+      const newParent: RelationshipItem = { id: value.id, type: value.type };
       if (!thisItem.relationships) {
         thisItem.relationships = {};
       }

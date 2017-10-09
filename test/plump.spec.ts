@@ -47,7 +47,10 @@ describe('Plump', () => {
       .then(() => otherPlump.addCache(coldMemstore))
       .then(() => otherPlump.addType(TestType))
       .then(() => {
-        const invalidated = new TestType({ name: 'foo' }, otherPlump);
+        const invalidated = new TestType(
+          { attributes: { name: 'foo' } },
+          otherPlump,
+        );
         invalidated
           .save()
           .then(() => {
@@ -147,7 +150,10 @@ describe('Plump', () => {
       .addCache(hotMemstore)
       .then(() => otherPlump.addType(TestType))
       .then(() => {
-        const testItem = new TestType({ name: 'potato' }, otherPlump);
+        const testItem = new TestType(
+          { attributes: { name: 'potato' } },
+          otherPlump,
+        );
         return testItem.save();
       })
       .then(i => {
@@ -216,7 +222,10 @@ describe('Plump', () => {
       .addCache(hotMemstore)
       .then(() => otherPlump.addType(TestType))
       .then(() => {
-        const testItem = new TestType({ name: 'potato' }, otherPlump);
+        const testItem = new TestType(
+          { attributes: { name: 'potato' } },
+          otherPlump,
+        );
         return testItem.save();
       })
       .then(i => hotMemstore.cache(i).then(() => i))
@@ -251,7 +260,10 @@ describe('Plump', () => {
       .then(init => {
         return Promise.all(
           init.map(() => {
-            return new TestType({ name: 'mchammer' }, plump).save();
+            return new TestType(
+              { attributes: { name: 'mchammer' } },
+              plump,
+            ).save();
           }),
         );
       })
