@@ -89,7 +89,10 @@ export class Plump<TermType extends TerminalStore = TerminalStore> {
 
   find<T extends ModelData>(ref: ModelReference): Model<T> {
     const Type = this.types[ref.type];
-    return new Type({ [Type.schema.idAttribute]: ref.id }, this);
+    return new Type(
+      { attributes: { [Type.schema.idAttribute]: ref.id } },
+      this,
+    );
   }
 
   forge<

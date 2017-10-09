@@ -5,7 +5,7 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "test": "mocha  --require ts-node/register test/*.spec.ts"
+    "test": "mocha  --compilers ts:ts-node/register test/*.spec.ts"
   },
   "repository": {
     "type": "git",
@@ -38,7 +38,7 @@
     "ts-node": "^3.3.0",
     "tslint": "^5.7.0",
     "tslint-eslint-rules": "^4.1.1",
-    "typescript": "2.5.2"
+    "typescript": "2.4.2"
   },
   "dependencies": {
     "deep-equal": "^1.0.1",

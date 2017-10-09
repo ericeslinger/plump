@@ -14,6 +14,7 @@ import {
   CacheStore,
   StringIndexed,
   TerminalStore,
+  Attributed,
 } from './dataTypes';
 
 import { Plump, pathExists } from './plump';
@@ -66,14 +67,14 @@ export class Model<MD extends ModelData> {
         retVal.attributes[key] = this.schema.attributes[key].default || 0;
       } else if (this.schema.attributes[key].type === 'date') {
         retVal.attributes[key] = new Date(
-          (this.schema.attributes[key].default as any) || Date.now()
+          (this.schema.attributes[key].default as any) || Date.now(),
         );
       } else if (this.schema.attributes[key].type === 'string') {
         retVal.attributes[key] = this.schema.attributes[key].default || '';
       } else if (this.schema.attributes[key].type === 'object') {
         retVal.attributes[key] = Object.assign(
           {},
-          this.schema.attributes[key].default
+          this.schema.attributes[key].default,
         );
       } else if (this.schema.attributes[key].type === 'array') {
         retVal.attributes[key] = ((this.schema.attributes[key]
@@ -97,34 +98,45 @@ export class Model<MD extends ModelData> {
       .concat(Object.keys(this.dirty.relationships));
   }
 
-  constructor(opts, public plump: Plump) {
-    // TODO: Define Delta interface
+  constructor(opts: Attributed, public plump: Plump) {
     this.error = null;
     if (this.type === 'BASE') {
       throw new TypeError(
-        'Cannot instantiate base plump Models, please subclass with a schema and valid type'
+        'Cannot instantiate base plump Models, please subclass with a schema and valid type',
       );
     }
-
+    let initialValue = opts;
+    if (opts.id && !opts.attributes) {
+      initialValue = { attributes: { [this.schema.idAttribute]: opts.id } };
+    }
     this.dirty = {
       attributes: {}, // Simple key-value
       relationships: {}, // relName: Delta[]
     };
-    this.$$copyValuesFrom(opts);
+    this.$$copyValuesFrom(initialValue);
     // this.$$fireUpdate(opts);
   }
 
-  $$copyValuesFrom(opts = {}): void {
+  $$copyValuesFrom(opts: Attributed = {}): void {
     // const idField = this.constructor.$id in opts ? this.constructor.$id : 'id';
     // this[this.constructor.$id] = opts[idField] || this.id;
-    if (this.id === undefined && opts[this.schema.idAttribute]) {
-      if (this.schema.attributes[this.schema.idAttribute].type === 'number') {
-        this.id = parseInt(opts[this.schema.idAttribute], 10);
-      } else {
-        this.id = opts[this.schema.idAttribute];
-      }
+    if (
+      this.id === undefined &&
+      (opts.id || opts.attributes[this.schema.idAttribute])
+    ) {
+      this.id =
+        opts.id ||
+        this.schema.attributes[this.schema.idAttribute].type === 'number'
+          ? parseInt(opts.attributes[this.schema.idAttribute], 10)
+          : opts.attributes[this.schema.idAttribute];
     }
-    this.dirty = mergeOptions(this.dirty, { attributes: opts });
+    const sanitized = Object.keys(opts.attributes || {})
+      .filter(k => k in this.schema.attributes)
+      .map(k => {
+        return { [k]: opts.attributes[k] };
+      })
+      .reduce((acc, curr) => mergeOptions(acc, curr), {});
+    this.dirty = mergeOptions(this.dirty, { attributes: sanitized });
   }
 
   $$resetDirty(): void {
@@ -166,12 +178,12 @@ export class Model<MD extends ModelData> {
         } else {
           const resolved = Model.resolveAndOverlay(
             this.dirty,
-            self || undefined
+            self || undefined,
           );
           return mergeOptions(
             {},
             self || { id: this.id, type: this.type },
-            resolved
+            resolved,
           );
         }
       });
@@ -185,45 +197,45 @@ export class Model<MD extends ModelData> {
   save<T extends ModelData>(): Promise<T> {
     const update: DirtyModel = mergeOptions(
       { id: this.id, type: this.type },
-      this.dirty
+      this.dirty,
     );
-    return this.plump
-      .save(update)
-      .then<T>(updated => {
-        this.$$resetDirty();
-        if (updated.id) {
-          this.id = updated.id;
-        }
-        return this.get();
-      })
-      .catch(err => {
-        throw err;
-      });
+    if (
+      Object.keys(this.dirty.attributes).length +
+        Object.keys(this.dirty.relationships).length >
+      0
+    ) {
+      return this.plump
+        .save(update)
+        .then<T>(updated => {
+          this.$$resetDirty();
+          if (updated.id) {
+            this.id = updated.id;
+          }
+          return this.get();
+        })
+        .catch(err => {
+          throw err;
+        });
+    } else {
+      return Promise.resolve<T>(null);
+    }
   }
 
   set(update): this {
-    const flat = update.attributes || update;
-    // Filter out non-attribute keys
-    const sanitized = Object.keys(flat)
-      .filter(k => k in this.schema.attributes)
-      .map(k => {
-        return { [k]: flat[k] };
-      })
-      .reduce((acc, curr) => mergeOptions(acc, curr), {});
-
-    this.$$copyValuesFrom(sanitized);
+    const wide = update.attributes || update;
+    this.$$copyValuesFrom({ attributes: wide });
     this.$$fireUpdate();
     return this;
   }
 
   asObservable(
-    opts: string | string[] = ['relationships', 'attributes']
+    opts: string | string[] = ['relationships', 'attributes'],
   ): Observable<MD> {
     let fields = Array.isArray(opts) ? opts.concat() : [opts];
     if (fields.indexOf('relationships') >= 0) {
       fields.splice(fields.indexOf('relationships'), 1);
       fields = fields.concat(
-        Object.keys(this.schema.relationships).map(k => `relationships.${k}`)
+        Object.keys(this.schema.relationships).map(k => `relationships.${k}`),
       );
     }
 
@@ -245,15 +257,15 @@ export class Model<MD extends ModelData> {
               } else {
                 return terminalValue;
               }
-            })
+            }),
           );
           const cold$ = Observable.from(colds).flatMap((s: CacheStore) =>
-            Observable.fromPromise(s.read(this, fields))
+            Observable.fromPromise(s.read(this, fields)),
           );
           // .startWith(undefined);
           return Observable.merge(
             terminal$,
-            cold$.takeUntil(terminal$)
+            cold$.takeUntil(terminal$),
           ) as Observable<ModelData>;
         }
       });
@@ -265,21 +277,21 @@ export class Model<MD extends ModelData> {
       })
       .flatMapTo(
         Observable.of(terminal).flatMap((s: TerminalStore) =>
-          Observable.fromPromise(s.read(this, fields, true))
-        )
+          Observable.fromPromise(s.read(this, fields, true)),
+        ),
       )
       .startWith(null);
     return Observable.combineLatest(
       Observable.of(this.empty(this.id)),
       preload$,
       watchWrite$,
-      this._write$.asObservable().startWith(null) as Observable<ModelData>
+      this._write$.asObservable().startWith(null) as Observable<ModelData>,
     )
       .map((a: ModelData[]) => condMerge(a))
       .map((v: ModelData) => {
         v.relationships = Model.resolveRelationships(
           this.dirty.relationships,
-          v.relationships
+          v.relationships,
         );
         return v;
       })
@@ -294,7 +306,7 @@ export class Model<MD extends ModelData> {
     const toAdd: TypedRelationshipItem = Object.assign(
       {},
       { type: this.schema.relationships[key].type.sides[key].otherType },
-      item
+      item,
     );
     if (key in this.schema.relationships) {
       if (item.id >= 1) {
@@ -320,7 +332,7 @@ export class Model<MD extends ModelData> {
     const toAdd: TypedRelationshipItem = Object.assign(
       {},
       { type: this.schema.relationships[key].type.sides[key].otherType },
-      item
+      item,
     );
     if (key in this.schema.relationships) {
       if (item.id >= 1) {
@@ -343,7 +355,7 @@ export class Model<MD extends ModelData> {
     const toAdd: TypedRelationshipItem = Object.assign(
       {},
       { type: this.schema.relationships[key].type.sides[key].otherType },
-      item
+      item,
     );
     if (key in this.schema.relationships) {
       if (item.id >= 1) {
@@ -380,25 +392,25 @@ export class Model<MD extends ModelData> {
     base: { attributes?: any; relationships?: any } = {
       attributes: {},
       relationships: {},
-    }
+    },
   ) {
     const attributes = mergeOptions({}, base.attributes, update.attributes);
     const resolvedRelationships = this.resolveRelationships(
       update.relationships,
-      base.relationships
+      base.relationships,
     );
     return { attributes, relationships: resolvedRelationships };
   }
 
   static resolveRelationships(
     deltas: StringIndexed<RelationshipDelta[]>,
-    base: StringIndexed<TypedRelationshipItem[]> = {}
+    base: StringIndexed<TypedRelationshipItem[]> = {},
   ) {
     const updates = Object.keys(deltas)
       .map(relName => {
         const resolved = this.resolveRelationship(
           deltas[relName],
-          base[relName]
+          base[relName],
         );
         return { [relName]: resolved };
       })
@@ -408,7 +420,7 @@ export class Model<MD extends ModelData> {
 
   static resolveRelationship(
     deltas: RelationshipDelta[],
-    base: TypedRelationshipItem[] = []
+    base: TypedRelationshipItem[] = [],
   ) {
     const retVal = base.concat();
     deltas.forEach(delta => {

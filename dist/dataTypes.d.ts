@@ -145,16 +145,22 @@ export interface ModelReference {
 }
 export declare type ModelAttributes = StringIndexed<Attribute>;
 export declare type ModelRelationships = StringIndexed<TypedRelationshipItem[]>;
+export interface Attributed {
+    id?: number | string;
+    attributes?: ModelAttributes;
+    meta?: any;
+    type?: string;
+}
 export interface IndefiniteModelData {
     type: string;
     id?: number | string;
     meta?: any;
     attributes?: ModelAttributes;
     relationships?: ModelRelationships;
+    included?: ModelData[];
 }
 export interface ModelData extends IndefiniteModelData {
     id: number | string;
-    included?: ModelData[];
 }
 export interface ModelDelta extends ModelData {
     invalidate: string[];
