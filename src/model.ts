@@ -124,11 +124,20 @@ export class Model<MD extends ModelData> {
       this.id === undefined &&
       (opts.id || opts.attributes[this.schema.idAttribute])
     ) {
-      this.id =
-        opts.id ||
-        this.schema.attributes[this.schema.idAttribute].type === 'number'
-          ? parseInt(opts.attributes[this.schema.idAttribute], 10)
-          : opts.attributes[this.schema.idAttribute];
+      if (opts.id) {
+        this.id = opts.id;
+        if (!opts.attributes) {
+          opts.attributes = {};
+        }
+        if (!opts.attributes[this.schema.idAttribute]) {
+          opts.attributes[this.schema.idAttribute] = this.id;
+        }
+      } else if (opts.attributes && opts.attributes[this.schema.idAttribute]) {
+        this.id =
+          this.schema.attributes[this.schema.idAttribute].type === 'number'
+            ? parseInt(opts.attributes[this.schema.idAttribute], 10)
+            : opts.attributes[this.schema.idAttribute];
+      }
     }
     const sanitized = Object.keys(opts.attributes || {})
       .filter(k => k in this.schema.attributes)
@@ -194,7 +203,12 @@ export class Model<MD extends ModelData> {
   }
 
   // TODO: Should $save ultimately return this.get()?
-  save<T extends ModelData>(): Promise<T> {
+
+  create(): Promise<MD> {
+    return this.save({ stripId: false });
+  }
+
+  save(opts: any = { stripId: true }): Promise<MD> {
     const update: DirtyModel = mergeOptions(
       { id: this.id, type: this.type },
       this.dirty,
@@ -205,8 +219,8 @@ export class Model<MD extends ModelData> {
       0
     ) {
       return this.plump
-        .save(update)
-        .then<T>(updated => {
+        .save(update, opts)
+        .then<MD>((updated: MD) => {
           this.$$resetDirty();
           if (updated.id) {
             this.id = updated.id;
@@ -217,7 +231,7 @@ export class Model<MD extends ModelData> {
           throw err;
         });
     } else {
-      return Promise.resolve<T>(null);
+      return Promise.resolve<MD>(null);
     }
   }
 

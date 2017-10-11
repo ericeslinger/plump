@@ -27,7 +27,8 @@ export declare class Model<MD extends ModelData> {
     $$fireUpdate(force?: boolean): void;
     get<T extends ModelData>(opts?: string | string[]): Promise<T>;
     bulkGet<T extends ModelData>(): Promise<T>;
-    save<T extends ModelData>(): Promise<T>;
+    create(): Promise<MD>;
+    save(opts?: any): Promise<MD>;
     set(update: any): this;
     asObservable(opts?: string | string[]): Observable<MD>;
     delete(): Promise<void>;
