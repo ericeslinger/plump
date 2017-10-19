@@ -18,7 +18,7 @@ export interface RelationshipSchema {
   extras?: StringIndexed<any>;
   storeData?: {
     sql?: {
-      tableName: string;
+      tableName?: string;
       joinFields: StringIndexed<string>;
       joinQuery?: StringIndexed<string>;
       where?: StringIndexed<string>;
