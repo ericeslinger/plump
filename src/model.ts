@@ -261,7 +261,7 @@ export class Model<MD extends ModelData> {
       .flatMap((s: CacheStore) => Observable.fromPromise(s.read(this, fields)))
       .defaultIfEmpty(null)
       .flatMap(v => {
-        if (v !== null && fields.every(f => pathExists(v, f))) {
+        if (!!v && fields.every(f => pathExists(v, f))) {
           return Observable.of(v);
         } else {
           const terminal$ = Observable.fromPromise(
