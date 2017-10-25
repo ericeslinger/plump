@@ -5,7 +5,7 @@ import * as deepEqual from 'deep-equal';
 
 export function observeAttribute<T>(
   o: Observable<ModelData>,
-  attr: string,
+  attr: string
 ): Observable<T> {
   return o
     .filter(v => !!v)
@@ -16,14 +16,14 @@ export function observeAttribute<T>(
 export function observeChild(
   o: Observable<ModelData>,
   rel: string,
-  plump: Plump,
+  plump: Plump
 ): Observable<ModelData[]> {
   return observeList(o.filter(v => !!v).map(v => v.relationships[rel]), plump);
 }
 
 export function observeList(
   list: Observable<ModelReference[]>,
-  plump: Plump,
+  plump: Plump
 ): Observable<(ModelData)[]> {
   const cache = {};
   return list
@@ -53,8 +53,8 @@ export function observeList(
           coms.map(ed =>
             ed.model.asObservable(['attributes']).map(v => {
               return Object.assign(v, { meta: ed.meta });
-            }),
-          ),
+            })
+          )
         );
       }
     })
