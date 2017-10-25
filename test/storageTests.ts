@@ -2,7 +2,14 @@
 /* eslint no-shadow: 0, max-len: 0 */
 
 import { TestType } from './testType';
-import { MemoryStore, Plump } from '../src/index';
+import {
+  MemoryStore,
+  Plump,
+  Model,
+  ModelData,
+  Schema,
+  TerminalStore,
+} from '../src/index';
 import * as mergeOptions from 'merge-options';
 
 import * as chai from 'chai';
@@ -31,7 +38,7 @@ export function testSuite(context, storeOpts) {
     storeOpts,
   );
   context.describe(store.name, () => {
-    let actualStore;
+    let actualStore: TerminalStore;
     context.before(() => {
       return (store.before || (() => Promise.resolve()))(
         actualStore,
@@ -91,6 +98,40 @@ export function testSuite(context, storeOpts) {
                 expect(v.attributes.otherName).to.equal('');
               });
           });
+        });
+      });
+
+      context.it('supports storing and retrieving dates in Date format', () => {
+        @Schema({
+          name: 'datedTests',
+          idAttribute: 'id',
+          attributes: {
+            id: { type: 'number', readOnly: true },
+            name: { type: 'string' },
+            when: { type: 'date' },
+          },
+          relationships: {},
+        })
+        class DatedType extends Model<ModelData> {
+          static type = 'datedTests';
+        }
+        return actualStore.addSchema(DatedType).then(() => {
+          const theDate = new Date();
+          return actualStore
+            .writeAttributes({
+              type: 'datedTests',
+              attributes: {
+                name: 'datarino',
+                when: theDate,
+              },
+            })
+            .then(inserted => {
+              return actualStore.read({ type: 'datedTests', id: inserted.id });
+            })
+            .then(v => {
+              expect(v.attributes.when instanceof Date).to.equal(true);
+              expect(v.attributes.when.getTime()).to.equal(theDate.getTime());
+            });
         });
       });
 
@@ -322,7 +363,7 @@ export function testSuite(context, storeOpts) {
         'should pass basic write-invalidation events to other datastores',
         () => {
           const memstore = new MemoryStore();
-          const testPlump = new Plump(actualStore);
+          const testPlump = new Plump(actualStore as TerminalStore);
           return testPlump
             .addCache(memstore)
             .then(() => testPlump.addType(TestType))

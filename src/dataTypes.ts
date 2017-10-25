@@ -18,7 +18,7 @@ export interface RelationshipSchema {
   extras?: StringIndexed<any>;
   storeData?: {
     sql?: {
-      tableName: string;
+      tableName?: string;
       joinFields: StringIndexed<string>;
       joinQuery?: StringIndexed<string>;
       where?: StringIndexed<string>;
@@ -67,7 +67,7 @@ export interface BaseStore {
   read(
     item: ModelReference,
     opts?: string | string[],
-    force?: boolean,
+    force?: boolean
   ): Promise<ModelData>;
 }
 
@@ -87,12 +87,12 @@ export interface TerminalStore extends BaseStore {
   writeRelationshipItem(
     value: ModelReference,
     relName: string,
-    child: UntypedRelationshipItem,
+    child: UntypedRelationshipItem
   ): Promise<ModelData>;
   deleteRelationshipItem(
     value: ModelReference,
     relName: string,
-    child: UntypedRelationshipItem,
+    child: UntypedRelationshipItem
   ): Promise<ModelData>;
   query(type: string, q?: any): Promise<ModelReference[]>;
   bulkRead(value: ModelReference): Promise<ModelData>;
@@ -171,6 +171,13 @@ export interface ReadOnlyFieldSchema extends GenericSchemaFieldSchema {
 export type ModelRelationshipsSchema = StringIndexed<RelationshipFieldSchema>;
 export type ModelAttributesSchema = StringIndexed<AttributeFieldSchema>;
 
+// export interface VirtualAttributesSchema {
+//   create: false | ((v: IndefiniteModelData) => Promise<ModelData>);
+//   read: false | ((v: ModelReference) => Promise<ModelData>);
+//   update: false | ((v: ModelData) => Promise<ModelData>);
+//   delete: false | ((v: ModelReference) => Promise<ModelData>);
+// }
+
 export interface ModelSchema {
   idAttribute: string;
   name: string;
@@ -182,6 +189,7 @@ export interface ModelSchema {
       tableName: string;
       singleQuery?: string;
     };
+    // virtual?: VirtualAttributesSchema;
   };
 }
 

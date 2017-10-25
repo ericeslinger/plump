@@ -94,6 +94,15 @@ describe('model', () => {
         });
     });
 
+    it('should allow you to optionally create with an ID', () => {
+      return new TestType({ id: 57, attributes: { name: 'thing' } }, plump)
+        .create()
+        .then(v => {
+          expect(v.id).to.equal(57);
+          expect(v).to.have.nested.property('attributes.name', 'thing');
+        });
+    });
+
     it('should load data from datastores', () => {
       return memstore2
         .writeAttributes({
