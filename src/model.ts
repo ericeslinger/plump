@@ -122,7 +122,7 @@ export class Model<MD extends ModelData> {
     // this[this.constructor.$id] = opts[idField] || this.id;
     if (
       this.id === undefined &&
-      (opts.id || opts.attributes[this.schema.idAttribute])
+      (opts.id || (opts.attributes && opts.attributes[this.schema.idAttribute]))
     ) {
       if (opts.id) {
         this.id = opts.id;
