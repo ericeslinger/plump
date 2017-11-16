@@ -1,5 +1,5 @@
 import { Storage } from './storage';
-import { IndefiniteModelData, ModelData, ModelReference, ModelSchema, RelationshipItem, TerminalStore, CacheStore, AllocatingStore } from '../dataTypes';
+import { IndefiniteModelData, ModelData, ModelReference, StorageReadRequest, ModelSchema, RelationshipItem, TerminalStore, CacheStore, AllocatingStore } from '../dataTypes';
 export declare abstract class KeyValueStore extends Storage implements TerminalStore, CacheStore, AllocatingStore {
     maxKeys: {
         [type: string]: number;
@@ -10,11 +10,11 @@ export declare abstract class KeyValueStore extends Storage implements TerminalS
     abstract _del(k: string): Promise<ModelData>;
     allocateId(type: string): Promise<number>;
     writeAttributes(inputValue: IndefiniteModelData): Promise<ModelData>;
-    readAttributes(value: ModelReference): Promise<ModelData>;
+    readAttributes(req: StorageReadRequest): Promise<ModelData>;
     cache(value: ModelData): Promise<ModelData>;
     cacheAttributes(value: ModelData): Promise<ModelData>;
     cacheRelationship(value: ModelData): Promise<ModelData>;
-    readRelationship(value: ModelReference, relName: string): Promise<ModelData>;
+    readRelationship(req: StorageReadRequest): Promise<ModelData>;
     delete(value: ModelReference): Promise<void>;
     wipe(value: ModelReference, field: string): Promise<ModelData>;
     writeRelationshipItem(value: ModelReference, relName: string, child: RelationshipItem): Promise<ModelData>;

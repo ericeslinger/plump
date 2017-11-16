@@ -1,5 +1,5 @@
 import { Observable, Subject } from 'rxjs';
-import { ModelData, ModelSchema, DirtyValues, UntypedRelationshipItem, TypedRelationshipItem, RelationshipDelta, StringIndexed, Attributed } from './dataTypes';
+import { ModelData, ModelSchema, DirtyValues, UntypedRelationshipItem, TypedRelationshipItem, RelationshipDelta, ReadRequest, StringIndexed, Attributed } from './dataTypes';
 import { Plump } from './plump';
 import { PlumpError } from './errors';
 export declare class Model<MD extends ModelData> {
@@ -25,8 +25,7 @@ export declare class Model<MD extends ModelData> {
     $$copyValuesFrom(opts?: Attributed): void;
     $$resetDirty(): void;
     $$fireUpdate(force?: boolean): void;
-    get<T extends ModelData>(opts?: string | string[]): Promise<T>;
-    bulkGet<T extends ModelData>(): Promise<T>;
+    get<T extends ModelData>(req: ReadRequest): Promise<T>;
     create(): Promise<MD>;
     save(opts?: any): Promise<MD>;
     set(update: any): this;

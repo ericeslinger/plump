@@ -11,6 +11,8 @@ import {
   UntypedRelationshipItem,
   TypedRelationshipItem,
   RelationshipDelta,
+  ReadRequest,
+  StorageReadRequest,
   CacheStore,
   StringIndexed,
   TerminalStore,
@@ -77,8 +79,8 @@ export class Model<MD extends ModelData> {
           this.schema.attributes[key].default,
         );
       } else if (this.schema.attributes[key].type === 'array') {
-        retVal.attributes[key] = ((this.schema.attributes[key]
-          .default as any[]) || []
+        retVal.attributes[key] = (
+          (this.schema.attributes[key].default as any[]) || []
         ).concat();
       }
     });
@@ -165,13 +167,16 @@ export class Model<MD extends ModelData> {
     }
   }
 
-  get<T extends ModelData>(opts: string | string[] = 'attributes'): Promise<T> {
+  get<T extends ModelData>(req: ReadRequest): Promise<T> {
     // If opts is falsy (i.e., undefined), get attributes
     // Otherwise, get what was requested,
     // wrapping the request in a Array if it wasn't already one
-    const keys = opts && !Array.isArray(opts) ? [opts] : opts as string[];
     return this.plump
-      .get(this, keys)
+      .get(
+        mergeOptions({}, req, {
+          item: { id: this.id, type: this.type },
+        }),
+      )
       .catch((e: PlumpError) => {
         this.error = e;
         return null;
@@ -198,10 +203,6 @@ export class Model<MD extends ModelData> {
       });
   }
 
-  bulkGet<T extends ModelData>(): Promise<T> {
-    return this.plump.bulkGet(this) as Promise<T>;
-  }
-
   // TODO: Should $save ultimately return this.get()?
 
   create(): Promise<MD> {
@@ -225,7 +226,7 @@ export class Model<MD extends ModelData> {
           if (updated.id) {
             this.id = updated.id;
           }
-          return this.get();
+          return this.get({ fields: ['attributes', 'relationships'] });
         })
         .catch(err => {
           throw err;
@@ -256,16 +257,20 @@ export class Model<MD extends ModelData> {
     const hots = this.plump.caches.filter(s => s.hot(this));
     const colds = this.plump.caches.filter(s => !s.hot(this));
     const terminal = this.plump.terminal;
+    const readReq: StorageReadRequest = {
+      item: { id: this.id, type: this.type },
+      fields: fields,
+    };
 
     const preload$: Observable<ModelData> = Observable.from(hots)
-      .flatMap((s: CacheStore) => Observable.fromPromise(s.read(this, fields)))
+      .flatMap((s: CacheStore) => Observable.fromPromise(s.read(readReq)))
       .defaultIfEmpty(null)
       .flatMap(v => {
         if (!!v && fields.every(f => pathExists(v, f))) {
           return Observable.of(v);
         } else {
           const terminal$ = Observable.fromPromise(
-            terminal.read(this, fields).then(terminalValue => {
+            terminal.read(readReq).then(terminalValue => {
               if (terminalValue === null) {
                 throw new NotFoundError();
               } else {
@@ -274,7 +279,7 @@ export class Model<MD extends ModelData> {
             }),
           );
           const cold$ = Observable.from(colds).flatMap((s: CacheStore) =>
-            Observable.fromPromise(s.read(this, fields)),
+            Observable.fromPromise(s.read(readReq)),
           );
           // .startWith(undefined);
           return Observable.merge(
@@ -291,7 +296,9 @@ export class Model<MD extends ModelData> {
       })
       .flatMapTo(
         Observable.of(terminal).flatMap((s: TerminalStore) =>
-          Observable.fromPromise(s.read(this, fields, true)),
+          Observable.fromPromise(
+            s.read(Object.assign({}, readReq, { force: true })),
+          ),
         ),
       )
       .startWith(null);

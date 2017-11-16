@@ -1,26 +1,86 @@
-"use strict";
-function __export(m) {
-    for (var p in m) if (!exports.hasOwnProperty(p)) exports[p] = m[p];
-}
-Object.defineProperty(exports, "__esModule", { value: true });
-var plump_1 = require("./plump");
-exports.default = plump_1.Plump;
-var plump_2 = require("./plump");
-exports.Plump = plump_2.Plump;
-var model_1 = require("./model");
-exports.Model = model_1.Model;
-var storage_1 = require("./storage/storage");
-exports.Storage = storage_1.Storage;
-var memory_1 = require("./storage/memory");
-exports.MemoryStore = memory_1.MemoryStore;
-var keyValueStore_1 = require("./storage/keyValueStore");
-exports.KeyValueStore = keyValueStore_1.KeyValueStore;
-var relationship_1 = require("./relationship");
-exports.Relationship = relationship_1.Relationship;
-var schema_1 = require("./schema");
-exports.Schema = schema_1.Schema;
-__export(require("./observers"));
-var hotCache_1 = require("./storage/hotCache");
-exports.HotCache = hotCache_1.HotCache;
+'use strict';
 
-//# sourceMappingURL=data:application/json;charset=utf8;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbIi4uL3NyYy9pbmRleC50cyJdLCJuYW1lcyI6W10sIm1hcHBpbmdzIjoiOzs7OztBQUFBLGlDQUEyQztBQUFsQywwQkFBQSxLQUFLLENBQVc7QUFDekIsaUNBQWdDO0FBQXZCLHdCQUFBLEtBQUssQ0FBQTtBQUNkLGlDQUFnQztBQUF2Qix3QkFBQSxLQUFLLENBQUE7QUFDZCw2Q0FBNEM7QUFBbkMsNEJBQUEsT0FBTyxDQUFBO0FBQ2hCLDJDQUErQztBQUF0QywrQkFBQSxXQUFXLENBQUE7QUFDcEIseURBQXdEO0FBQS9DLHdDQUFBLGFBQWEsQ0FBQTtBQUN0QiwrQ0FBOEM7QUFBckMsc0NBQUEsWUFBWSxDQUFBO0FBQ3JCLG1DQUFrQztBQUF6QiwwQkFBQSxNQUFNLENBQUE7QUFFZixpQ0FBNEI7QUFFNUIsK0NBQThDO0FBQXJDLDhCQUFBLFFBQVEsQ0FBQSIsImZpbGUiOiJpbmRleC5qcyIsInNvdXJjZXNDb250ZW50IjpbImV4cG9ydCB7IFBsdW1wIGFzIGRlZmF1bHQgfSBmcm9tICcuL3BsdW1wJztcbmV4cG9ydCB7IFBsdW1wIH0gZnJvbSAnLi9wbHVtcCc7XG5leHBvcnQgeyBNb2RlbCB9IGZyb20gJy4vbW9kZWwnO1xuZXhwb3J0IHsgU3RvcmFnZSB9IGZyb20gJy4vc3RvcmFnZS9zdG9yYWdlJztcbmV4cG9ydCB7IE1lbW9yeVN0b3JlIH0gZnJvbSAnLi9zdG9yYWdlL21lbW9yeSc7XG5leHBvcnQgeyBLZXlWYWx1ZVN0b3JlIH0gZnJvbSAnLi9zdG9yYWdlL2tleVZhbHVlU3RvcmUnO1xuZXhwb3J0IHsgUmVsYXRpb25zaGlwIH0gZnJvbSAnLi9yZWxhdGlvbnNoaXAnO1xuZXhwb3J0IHsgU2NoZW1hIH0gZnJvbSAnLi9zY2hlbWEnO1xuZXhwb3J0ICogZnJvbSAnLi9kYXRhVHlwZXMnO1xuZXhwb3J0ICogZnJvbSAnLi9vYnNlcnZlcnMnO1xuXG5leHBvcnQgeyBIb3RDYWNoZSB9IGZyb20gJy4vc3RvcmFnZS9ob3RDYWNoZSc7XG4iXX0=
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var _plump = require('./plump');
+
+Object.defineProperty(exports, 'default', {
+  enumerable: true,
+  get: function get() {
+    return _plump.Plump;
+  }
+});
+Object.defineProperty(exports, 'Plump', {
+  enumerable: true,
+  get: function get() {
+    return _plump.Plump;
+  }
+});
+
+var _model = require('./model');
+
+Object.defineProperty(exports, 'Model', {
+  enumerable: true,
+  get: function get() {
+    return _model.Model;
+  }
+});
+
+var _storage = require('./storage/storage');
+
+Object.defineProperty(exports, 'Storage', {
+  enumerable: true,
+  get: function get() {
+    return _storage.Storage;
+  }
+});
+
+var _memory = require('./storage/memory');
+
+Object.defineProperty(exports, 'MemoryStore', {
+  enumerable: true,
+  get: function get() {
+    return _memory.MemoryStore;
+  }
+});
+
+var _keyValueStore = require('./storage/keyValueStore');
+
+Object.defineProperty(exports, 'KeyValueStore', {
+  enumerable: true,
+  get: function get() {
+    return _keyValueStore.KeyValueStore;
+  }
+});
+
+var _schema = require('./schema');
+
+Object.defineProperty(exports, 'Schema', {
+  enumerable: true,
+  get: function get() {
+    return _schema.Schema;
+  }
+});
+
+var _observers = require('./observers');
+
+Object.keys(_observers).forEach(function (key) {
+  if (key === "default" || key === "__esModule") return;
+  Object.defineProperty(exports, key, {
+    enumerable: true,
+    get: function get() {
+      return _observers[key];
+    }
+  });
+});
+
+var _hotCache = require('./storage/hotCache');
+
+Object.defineProperty(exports, 'HotCache', {
+  enumerable: true,
+  get: function get() {
+    return _hotCache.HotCache;
+  }
+});

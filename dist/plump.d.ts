@@ -1,6 +1,6 @@
 import { Subject, Observable } from 'rxjs';
 import { Model } from './model';
-import { ModelAttributes, ModelData, ModelReference, DirtyModel, RelationshipItem, CacheStore, TerminalStore } from './dataTypes';
+import { ModelAttributes, ModelData, ModelReference, DirtyModel, RelationshipItem, CacheStore, StorageReadRequest, TerminalStore } from './dataTypes';
 export declare const types: {
     [type: string]: typeof Model;
 };
@@ -24,8 +24,7 @@ export declare class Plump<TermType extends TerminalStore = TerminalStore> {
         attributes?: A;
     }>>(t: string, val: Partial<A>): T;
     teardown(): void;
-    get(value: ModelReference, opts?: string[]): Promise<ModelData>;
-    bulkGet(value: ModelReference): Promise<ModelData>;
+    get(req: StorageReadRequest): Promise<ModelData>;
     forceCreate(value: DirtyModel): Promise<ModelData>;
     save(value: DirtyModel, options?: {
         stripId: boolean;

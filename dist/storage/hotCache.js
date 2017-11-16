@@ -1,26 +1,35 @@
-"use strict";
-var __extends = (this && this.__extends) || (function () {
-    var extendStatics = Object.setPrototypeOf ||
-        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
-    return function (d, b) {
-        extendStatics(d, b);
-        function __() { this.constructor = d; }
-        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-    };
-})();
-Object.defineProperty(exports, "__esModule", { value: true });
-var memory_1 = require("./memory");
-var HotCache = (function (_super) {
-    __extends(HotCache, _super);
-    function HotCache() {
-        return _super.call(this, { terminal: false }) || this;
-    }
-    HotCache.prototype.hot = function (item) {
-        return !!this.store[this.keyString(item)];
-    };
-    return HotCache;
-}(memory_1.MemoryStore));
-exports.HotCache = HotCache;
+'use strict';
 
-//# sourceMappingURL=data:application/json;charset=utf8;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbIi4uL3NyYy9zdG9yYWdlL2hvdENhY2hlLnRzIl0sIm5hbWVzIjpbXSwibWFwcGluZ3MiOiI7Ozs7Ozs7Ozs7OztBQUNBLG1DQUF1QztBQUV2QztJQUE4Qiw0QkFBVztJQUN2QztlQUNFLGtCQUFNLEVBQUUsUUFBUSxFQUFFLEtBQUssRUFBRSxDQUFDO0lBQzVCLENBQUM7SUFDRCxzQkFBRyxHQUFILFVBQUksSUFBb0I7UUFDdEIsTUFBTSxDQUFDLENBQUMsQ0FBQyxJQUFJLENBQUMsS0FBSyxDQUFDLElBQUksQ0FBQyxTQUFTLENBQUMsSUFBSSxDQUFDLENBQUMsQ0FBQztJQUM1QyxDQUFDO0lBQ0gsZUFBQztBQUFELENBUEEsQUFPQyxDQVA2QixvQkFBVyxHQU94QztBQVBZLDRCQUFRIiwiZmlsZSI6InN0b3JhZ2UvaG90Q2FjaGUuanMiLCJzb3VyY2VzQ29udGVudCI6WyJpbXBvcnQgeyBNb2RlbFJlZmVyZW5jZSB9IGZyb20gJy4uL2RhdGFUeXBlcyc7XG5pbXBvcnQgeyBNZW1vcnlTdG9yZSB9IGZyb20gJy4vbWVtb3J5JztcblxuZXhwb3J0IGNsYXNzIEhvdENhY2hlIGV4dGVuZHMgTWVtb3J5U3RvcmUge1xuICBjb25zdHJ1Y3RvcigpIHtcbiAgICBzdXBlcih7IHRlcm1pbmFsOiBmYWxzZSB9KTtcbiAgfVxuICBob3QoaXRlbTogTW9kZWxSZWZlcmVuY2UpOiBib29sZWFuIHtcbiAgICByZXR1cm4gISF0aGlzLnN0b3JlW3RoaXMua2V5U3RyaW5nKGl0ZW0pXTtcbiAgfVxufVxuIl19
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+exports.HotCache = undefined;
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+var _memory = require('./memory');
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
+var HotCache = exports.HotCache = function (_MemoryStore) {
+    _inherits(HotCache, _MemoryStore);
+
+    function HotCache() {
+        _classCallCheck(this, HotCache);
+
+        return _possibleConstructorReturn(this, (HotCache.__proto__ || Object.getPrototypeOf(HotCache)).call(this, { terminal: false }));
+    }
+
+    _createClass(HotCache, [{
+        key: 'hot',
+        value: function hot(item) {
+            return !!this.store[this.keyString(item)];
+        }
+    }]);
+
+    return HotCache;
+}(_memory.MemoryStore);

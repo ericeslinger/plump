@@ -1,46 +1,59 @@
-"use strict";
-var __extends = (this && this.__extends) || (function () {
-    var extendStatics = Object.setPrototypeOf ||
-        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
-    return function (d, b) {
-        extendStatics(d, b);
-        function __() { this.constructor = d; }
-        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-    };
-})();
-Object.defineProperty(exports, "__esModule", { value: true });
-var NotFoundError = (function (_super) {
-    __extends(NotFoundError, _super);
-    function NotFoundError() {
-        return _super.call(this, 'not found') || this;
-    }
-    return NotFoundError;
-}(Error));
-exports.NotFoundError = NotFoundError;
-var NotAuthorizedError = (function (_super) {
-    __extends(NotAuthorizedError, _super);
-    function NotAuthorizedError() {
-        return _super.call(this, 'not authorized') || this;
-    }
-    return NotAuthorizedError;
-}(Error));
-exports.NotAuthorizedError = NotAuthorizedError;
-var NotAuthenticatedError = (function (_super) {
-    __extends(NotAuthenticatedError, _super);
-    function NotAuthenticatedError() {
-        return _super.call(this, 'not authenticated') || this;
-    }
-    return NotAuthenticatedError;
-}(Error));
-exports.NotAuthenticatedError = NotAuthenticatedError;
-var UnknownError = (function (_super) {
-    __extends(UnknownError, _super);
-    function UnknownError() {
-        return _super.call(this, 'unknown') || this;
-    }
-    return UnknownError;
-}(Error));
-exports.UnknownError = UnknownError;
+'use strict';
 
-//# sourceMappingURL=data:application/json;charset=utf8;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbIi4uL3NyYy9lcnJvcnMudHMiXSwibmFtZXMiOltdLCJtYXBwaW5ncyI6Ijs7Ozs7Ozs7Ozs7O0FBQUE7SUFBbUMsaUNBQUs7SUFDdEM7ZUFDRSxrQkFBTSxXQUFXLENBQUM7SUFDcEIsQ0FBQztJQUNILG9CQUFDO0FBQUQsQ0FKQSxBQUlDLENBSmtDLEtBQUssR0FJdkM7QUFKWSxzQ0FBYTtBQU0xQjtJQUF3QyxzQ0FBSztJQUMzQztlQUNFLGtCQUFNLGdCQUFnQixDQUFDO0lBQ3pCLENBQUM7SUFDSCx5QkFBQztBQUFELENBSkEsQUFJQyxDQUp1QyxLQUFLLEdBSTVDO0FBSlksZ0RBQWtCO0FBTS9CO0lBQTJDLHlDQUFLO0lBQzlDO2VBQ0Usa0JBQU0sbUJBQW1CLENBQUM7SUFDNUIsQ0FBQztJQUNILDRCQUFDO0FBQUQsQ0FKQSxBQUlDLENBSjBDLEtBQUssR0FJL0M7QUFKWSxzREFBcUI7QUFNbEM7SUFBa0MsZ0NBQUs7SUFDckM7ZUFDRSxrQkFBTSxTQUFTLENBQUM7SUFDbEIsQ0FBQztJQUNILG1CQUFDO0FBQUQsQ0FKQSxBQUlDLENBSmlDLEtBQUssR0FJdEM7QUFKWSxvQ0FBWSIsImZpbGUiOiJlcnJvcnMuanMiLCJzb3VyY2VzQ29udGVudCI6WyJleHBvcnQgY2xhc3MgTm90Rm91bmRFcnJvciBleHRlbmRzIEVycm9yIHtcbiAgY29uc3RydWN0b3IoKSB7XG4gICAgc3VwZXIoJ25vdCBmb3VuZCcpO1xuICB9XG59XG5cbmV4cG9ydCBjbGFzcyBOb3RBdXRob3JpemVkRXJyb3IgZXh0ZW5kcyBFcnJvciB7XG4gIGNvbnN0cnVjdG9yKCkge1xuICAgIHN1cGVyKCdub3QgYXV0aG9yaXplZCcpO1xuICB9XG59XG5cbmV4cG9ydCBjbGFzcyBOb3RBdXRoZW50aWNhdGVkRXJyb3IgZXh0ZW5kcyBFcnJvciB7XG4gIGNvbnN0cnVjdG9yKCkge1xuICAgIHN1cGVyKCdub3QgYXV0aGVudGljYXRlZCcpO1xuICB9XG59XG5cbmV4cG9ydCBjbGFzcyBVbmtub3duRXJyb3IgZXh0ZW5kcyBFcnJvciB7XG4gIGNvbnN0cnVjdG9yKCkge1xuICAgIHN1cGVyKCd1bmtub3duJyk7XG4gIH1cbn1cblxuZXhwb3J0IHR5cGUgUGx1bXBFcnJvciA9XG4gIHwgTm90Rm91bmRFcnJvclxuICB8IE5vdEF1dGhvcml6ZWRFcnJvclxuICB8IE5vdEF1dGhvcml6ZWRFcnJvclxuICB8IFVua25vd25FcnJvcjtcbiJdfQ==
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
+var NotFoundError = exports.NotFoundError = function (_Error) {
+    _inherits(NotFoundError, _Error);
+
+    function NotFoundError() {
+        _classCallCheck(this, NotFoundError);
+
+        return _possibleConstructorReturn(this, (NotFoundError.__proto__ || Object.getPrototypeOf(NotFoundError)).call(this, 'not found'));
+    }
+
+    return NotFoundError;
+}(Error);
+
+var NotAuthorizedError = exports.NotAuthorizedError = function (_Error2) {
+    _inherits(NotAuthorizedError, _Error2);
+
+    function NotAuthorizedError() {
+        _classCallCheck(this, NotAuthorizedError);
+
+        return _possibleConstructorReturn(this, (NotAuthorizedError.__proto__ || Object.getPrototypeOf(NotAuthorizedError)).call(this, 'not authorized'));
+    }
+
+    return NotAuthorizedError;
+}(Error);
+
+var NotAuthenticatedError = exports.NotAuthenticatedError = function (_Error3) {
+    _inherits(NotAuthenticatedError, _Error3);
+
+    function NotAuthenticatedError() {
+        _classCallCheck(this, NotAuthenticatedError);
+
+        return _possibleConstructorReturn(this, (NotAuthenticatedError.__proto__ || Object.getPrototypeOf(NotAuthenticatedError)).call(this, 'not authenticated'));
+    }
+
+    return NotAuthenticatedError;
+}(Error);
+
+var UnknownError = exports.UnknownError = function (_Error4) {
+    _inherits(UnknownError, _Error4);
+
+    function UnknownError() {
+        _classCallCheck(this, UnknownError);
+
+        return _possibleConstructorReturn(this, (UnknownError.__proto__ || Object.getPrototypeOf(UnknownError)).call(this, 'unknown'));
+    }
+
+    return UnknownError;
+}(Error);
