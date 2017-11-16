@@ -1,6 +1,6 @@
 /* eslint no-unused-vars: 0 */
 
-import * as mergeOptions from 'merge-options';
+import mergeOptions from 'merge-options';
 // import { validateInput } from '../util';
 import { Subject, Observable } from 'rxjs';
 import { PlumpError, NotFoundError } from '../errors';

@@ -140,7 +140,11 @@ var Plump = exports.Plump = function () {
                 if (_this4.terminal && (v === null || !keys.every(function (path) {
                     return pathExists(v, path);
                 }))) {
-                    return _this4.terminal.read({ item: req.item, fields: keys });
+                    var readReq = { item: req.item, fields: keys };
+                    if (req.view) {
+                        readReq.view = req.view;
+                    }
+                    return _this4.terminal.read(readReq);
                 } else {
                     return v;
                 }

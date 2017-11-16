@@ -135,7 +135,11 @@ export class Plump<TermType extends TerminalStore = TerminalStore> {
           this.terminal &&
           (v === null || !keys.every(path => pathExists(v, path)))
         ) {
-          return this.terminal.read({ item: req.item, fields: keys });
+          const readReq: StorageReadRequest = { item: req.item, fields: keys };
+          if (req.view) {
+            readReq.view = req.view;
+          }
+          return this.terminal.read(readReq);
         } else {
           return v;
         }

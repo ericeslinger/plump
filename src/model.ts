@@ -1,4 +1,4 @@
-import * as mergeOptions from 'merge-options';
+import mergeOptions from 'merge-options';
 import * as deepEqual from 'deep-equal';
 import { Observable, Subscription, Observer, Subject } from 'rxjs';
 
