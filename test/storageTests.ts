@@ -9,8 +9,8 @@ import {
   ModelData,
   Schema,
   TerminalStore,
-} from '../src/index';
-import * as mergeOptions from 'merge-options';
+} from '../dist/index';
+import mergeOptions from 'merge-options';
 
 import * as chai from 'chai';
 

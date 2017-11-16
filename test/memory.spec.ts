@@ -1,7 +1,7 @@
 /* eslint-env node, mocha*/
 /* eslint no-shadow: 0 */
 
-import { MemoryStore } from '../src/storage/memory';
+import { MemoryStore } from '../dist/storage/memory';
 import { ModelData } from '../src/dataTypes';
 import { testSuite } from './storageTests';
 import { TestType } from './testType';

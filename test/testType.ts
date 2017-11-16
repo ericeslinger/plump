@@ -5,7 +5,7 @@ import {
   ModelData,
   Schema,
   RelationshipItem,
-} from '../src/index';
+} from '../dist/index';
 
 export const ChildrenSchema: RelationshipSchema = {
   sides: {
