@@ -2,7 +2,7 @@
 
 import { expect } from 'chai';
 
-import { Plump, MemoryStore, Model, Schema, ModelData } from '../src/index';
+import { Plump, MemoryStore, Model, Schema, ModelData } from '../dist/index';
 import { TestType } from './testType';
 import * as deepEqual from 'deep-equal';
 const memstore2 = new MemoryStore({ terminal: true });

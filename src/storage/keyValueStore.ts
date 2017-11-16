@@ -1,4 +1,4 @@
-import * as mergeOptions from 'merge-options';
+import mergeOptions from 'merge-options';
 
 import { Storage } from './storage';
 import {

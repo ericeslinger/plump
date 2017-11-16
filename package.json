@@ -1,18 +1,22 @@
 {
   "name": "plump",
-  "version": "0.25.0",
+  "version": "0.25.1",
   "description": "Pluggable Datastore",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "test":
-      "TS_NODE_COMPILER_OPTIONS='{\"module\":\"commonjs\"}' mocha  --compilers ts:ts-node/register test/*.spec.ts"
+    "test": "gulp maketest && mocha testbuild/*.spec.js && gulp testclean"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/plumpstack/plump.git"
   },
-  "keywords": ["typescript", "orm", "datastore", "activerecord"],
+  "keywords": [
+    "typescript",
+    "orm",
+    "datastore",
+    "activerecord"
+  ],
   "author": "Eric Eslinger <eric.eslinger@gmail.com>",
   "license": "MIT",
   "bugs": {
@@ -34,7 +38,6 @@
     "gulp-sourcemaps": "^2.6.1",
     "gulp-typescript": "^3.2.2",
     "mocha": "^3.5.3",
-    "ts-node": "^3.3.0",
     "tslint": "^5.7.0",
     "tslint-eslint-rules": "^4.1.1",
     "typescript": "2.4.2"

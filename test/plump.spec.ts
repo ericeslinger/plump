@@ -8,7 +8,7 @@ import {
   ModelData,
   HotCache,
   ModelReference,
-} from '../src/index';
+} from '../dist/index';
 import { TestType } from './testType';
 
 // import { ITest } from 'mocha';

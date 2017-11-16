@@ -5,7 +5,7 @@ import {
   ModelReference,
   StorageReadRequest,
 } from '../dataTypes';
-import * as mergeOptions from 'merge-options';
+import mergeOptions from 'merge-options';
 
 export class MemoryStore extends ModifiableKeyValueStore {
   store: { [index: string]: ModelData } = {};
