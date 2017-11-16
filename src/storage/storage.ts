@@ -11,6 +11,7 @@ import {
   ModelSchema,
   ModelReference,
   BaseStore,
+  StorageReadRequest,
   StorageOptions,
   // RelationshipItem,
 } from '../dataTypes';
@@ -55,11 +56,8 @@ export abstract class Storage implements BaseStore {
 
   // abstract allocateId(type: string): Promise<string | number>;
   // abstract writeAttributes(value: IndefiniteModelData): Promise<ModelData>;
-  abstract readAttributes(value: ModelReference): Promise<ModelData>;
-  abstract readRelationship(
-    value: ModelReference,
-    relName: string,
-  ): Promise<ModelData>;
+  abstract readAttributes(value: StorageReadRequest): Promise<ModelData>;
+  abstract readRelationship(value: StorageReadRequest): Promise<ModelData>;
   // abstract delete(value: ModelReference): Promise<void>;
   // abstract writeRelationshipItem( value: ModelReference, relName: string, child: {id: string | number} ): Promise<ModelData>;
   // abstract deleteRelationshipItem( value: ModelReference, relName: string, child: {id: string | number} ): Promise<ModelData>;
@@ -73,13 +71,15 @@ export abstract class Storage implements BaseStore {
   //
   // convenience function used internally
   // read a bunch of relationships and merge them together.
-  readRelationships(item: ModelReference, relationships: string[]) {
+  readRelationships(req: StorageReadRequest, relationships: string[]) {
     return Promise.all(
-      relationships.map(r => this.readRelationship(item, r)),
+      relationships.map(r =>
+        this.readRelationship(Object.assign({}, req, { rel: r })),
+      ),
     ).then(rA =>
       rA.reduce((a, r) => mergeOptions(a, r || {}), {
-        type: item.type,
-        id: item.id,
+        type: req.item.type,
+        id: req.item.id,
         attributes: {},
         relationships: {},
       }),
@@ -87,21 +87,16 @@ export abstract class Storage implements BaseStore {
   }
 
   // debounces reads so multiple requests for the same thing return the same promise.
-  read(
-    item: ModelReference,
-    opts: string | string[] = ['attributes'],
-    force: boolean = false,
-  ): Promise<ModelData> {
-    const keys = (opts && !Array.isArray(opts) ? [opts] : opts) as string[];
-    const reqKey = `${item.type}:${item.id} - ${keys.join(';')}`;
-    if (force) {
-      return this._read(item, opts);
+  read(req: StorageReadRequest): Promise<ModelData> {
+    const reqKey = `${req.item.type}:${req.item.id} - ${req.fields.join(';')}`;
+    if (req.force) {
+      return this._read(req);
     } else {
       if (
         this.inProgress[reqKey] === undefined ||
         this.inProgress[reqKey] === null
       ) {
-        this.inProgress[reqKey] = this._read(item, opts).then(result => {
+        this.inProgress[reqKey] = this._read(req).then(result => {
           delete this.inProgress[reqKey];
           return result;
         });
@@ -111,10 +106,9 @@ export abstract class Storage implements BaseStore {
   }
 
   // does the actual read
-  _read(item: ModelReference, opts: string | string[] = ['attributes']) {
-    const schema = this.getSchema(item.type);
-    const keys = (opts && !Array.isArray(opts) ? [opts] : opts) as string[];
-    return this.readAttributes(item)
+  _read(req: StorageReadRequest): Promise<ModelData> {
+    const schema = this.getSchema(req.item.type);
+    return this.readAttributes(req)
       .then(attributes => {
         if (!attributes) {
           return null;
@@ -154,9 +148,9 @@ export abstract class Storage implements BaseStore {
           }
 
           const relsWanted =
-            keys.indexOf('relationships') >= 0
+            req.fields.indexOf('relationships') >= 0
               ? Object.keys(schema.relationships)
-              : keys
+              : req.fields
                   .map(k => k.split('.'))
                   .filter(ka => ka[0] === 'relationships')
                   .map(ka => ka[1]);
@@ -165,7 +159,7 @@ export abstract class Storage implements BaseStore {
           );
           // readAttributes can return relationship data, so don't fetch those
           if (relsToFetch.length > 0) {
-            return this.readRelationships(item, relsToFetch).then(rels => {
+            return this.readRelationships(req, relsToFetch).then(rels => {
               return mergeOptions(attributes, rels);
             });
           } else {
@@ -186,17 +180,6 @@ export abstract class Storage implements BaseStore {
         }
         return result;
       });
-  }
-
-  bulkRead(item: ModelReference): Promise<ModelData> {
-    // override this if you want to do any special pre-processing
-    // for reading from the store prior to a REST service event
-    return this.read(item).then(data => {
-      if (data.included === undefined) {
-        data.included = [];
-      }
-      return data;
-    });
   }
 
   hot(item: ModelReference): boolean {

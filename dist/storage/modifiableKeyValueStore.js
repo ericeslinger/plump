@@ -1,236 +1,285 @@
-"use strict";
-var __extends = (this && this.__extends) || (function () {
-    var extendStatics = Object.setPrototypeOf ||
-        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
-    return function (d, b) {
-        extendStatics(d, b);
-        function __() { this.constructor = d; }
-        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-    };
-})();
-Object.defineProperty(exports, "__esModule", { value: true });
-var mergeOptions = require("merge-options");
-var storage_1 = require("./storage");
-var ModifiableKeyValueStore = (function (_super) {
-    __extends(ModifiableKeyValueStore, _super);
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+exports.ModifiableKeyValueStore = undefined;
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
+
+var _mergeOptions = require('merge-options');
+
+var _mergeOptions2 = _interopRequireDefault(_mergeOptions);
+
+var _storage = require('./storage');
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
+// declare function parseInt(n: string | number, radix: number): number;
+var ModifiableKeyValueStore = exports.ModifiableKeyValueStore = function (_Storage) {
+    _inherits(ModifiableKeyValueStore, _Storage);
+
     function ModifiableKeyValueStore() {
-        var _this = _super !== null && _super.apply(this, arguments) || this;
+        _classCallCheck(this, ModifiableKeyValueStore);
+
+        var _this = _possibleConstructorReturn(this, (ModifiableKeyValueStore.__proto__ || Object.getPrototypeOf(ModifiableKeyValueStore)).apply(this, arguments));
+
         _this.maxKeys = {};
         return _this;
     }
-    ModifiableKeyValueStore.prototype.allocateId = function (type) {
-        this.maxKeys[type] = this.maxKeys[type] + 1;
-        return Promise.resolve(this.maxKeys[type]);
-    };
-    ModifiableKeyValueStore.prototype.writeAttributes = function (inputValue) {
-        var _this = this;
-        var value = this.validateInput(inputValue);
-        delete value.relationships;
-        return Promise.resolve()
-            .then(function () {
-            var idAttribute = _this.getSchema(inputValue.type).idAttribute;
-            if (value.id === undefined || value.id === null) {
-                if (!_this.terminal) {
-                    throw new Error('Cannot create new content in a non-terminal store');
-                }
-                return _this.allocateId(value.type).then(function (n) {
-                    return mergeOptions({}, value, {
-                        id: n,
-                        relationships: {},
-                        attributes: (_a = {}, _a[idAttribute] = n, _a),
+
+    _createClass(ModifiableKeyValueStore, [{
+        key: 'allocateId',
+        value: function allocateId(type) {
+            this.maxKeys[type] = this.maxKeys[type] + 1;
+            return Promise.resolve(this.maxKeys[type]);
+        }
+    }, {
+        key: 'writeAttributes',
+        value: function writeAttributes(inputValue) {
+            var _this2 = this;
+
+            var value = this.validateInput(inputValue);
+            delete value.relationships;
+            // trim out relationships for a direct write.
+            return Promise.resolve().then(function () {
+                var idAttribute = _this2.getSchema(inputValue.type).idAttribute;
+                if (value.id === undefined || value.id === null) {
+                    if (!_this2.terminal) {
+                        throw new Error('Cannot create new content in a non-terminal store');
+                    }
+                    return _this2.allocateId(value.type).then(function (n) {
+                        return (0, _mergeOptions2.default)({}, value, {
+                            id: n,
+                            relationships: {},
+                            attributes: _defineProperty({}, idAttribute, n)
+                        }); // if new.
                     });
-                    var _a;
-                });
-            }
-            else {
-                _this.maxKeys[inputValue.type] = Math.max(_this.maxKeys[inputValue.type], value.id);
-                return value;
-            }
-        })
-            .then(function (toSave) {
-            return _this._upsert(toSave).then(function () {
-                _this.fireWriteUpdate(Object.assign({}, toSave, { invalidate: ['attributes'] }));
-                return toSave;
-            });
-        });
-    };
-    ModifiableKeyValueStore.prototype.readAttributes = function (value) {
-        return this._get(value).then(function (d) {
-            if (d && d.attributes) {
-                return d;
-            }
-            else {
-                return null;
-            }
-        });
-    };
-    ModifiableKeyValueStore.prototype.cache = function (value) {
-        var _this = this;
-        if (value.id === undefined || value.id === null) {
-            return Promise.reject('Cannot cache data without an id - write it to a terminal first');
-        }
-        else {
-            return this._get(value).then(function (current) {
-                var newVal = mergeOptions(current || {}, value);
-                return _this._upsert(newVal);
-            });
-        }
-    };
-    ModifiableKeyValueStore.prototype.cacheAttributes = function (value) {
-        var _this = this;
-        if (value.id === undefined || value.id === null) {
-            return Promise.reject('Cannot cache data without an id - write it to a terminal first');
-        }
-        else {
-            return this._get(value).then(function (current) {
-                return _this._upsert({
-                    type: value.type,
-                    id: value.id,
-                    attributes: value.attributes,
-                    relationships: current.relationships || {},
-                });
-            });
-        }
-    };
-    ModifiableKeyValueStore.prototype.cacheRelationship = function (value) {
-        var _this = this;
-        if (value.id === undefined || value.id === null) {
-            return Promise.reject('Cannot cache data without an id - write it to a terminal first');
-        }
-        else {
-            return this._get(value).then(function (current) {
-                return _this._upsert({
-                    type: value.type,
-                    id: value.id,
-                    attributes: current.attributes || {},
-                    relationships: value.relationships,
-                });
-            });
-        }
-    };
-    ModifiableKeyValueStore.prototype.readRelationship = function (value, relName) {
-        var _this = this;
-        return this._get(value).then(function (v) {
-            var retVal = Object.assign({}, v);
-            if (!v) {
-                if (_this.terminal) {
-                    return {
-                        type: value.type,
-                        id: value.id,
-                        relationships: (_a = {}, _a[relName] = [], _a),
-                    };
+                } else {
+                    _this2.maxKeys[inputValue.type] = Math.max(_this2.maxKeys[inputValue.type], value.id);
+                    return value;
                 }
-                else {
+            }).then(function (toSave) {
+                return _this2._upsert(toSave).then(function () {
+                    _this2.fireWriteUpdate(Object.assign({}, toSave, { invalidate: ['attributes'] }));
+                    return toSave;
+                });
+            });
+        }
+    }, {
+        key: 'readAttributes',
+        value: function readAttributes(value) {
+            return this._get(value).then(function (d) {
+                // TODO: figure out what happens when there's a
+                // field with no real attributes
+                if (d && d.attributes) {
+                    return d;
+                } else {
                     return null;
                 }
-            }
-            else if (!v.relationships && _this.terminal) {
-                retVal.relationships = (_b = {}, _b[relName] = [], _b);
-            }
-            else if (!retVal.relationships[relName] && _this.terminal) {
-                retVal.relationships[relName] = [];
-            }
-            return retVal;
-            var _a, _b;
-        });
-    };
-    ModifiableKeyValueStore.prototype.delete = function (value) {
-        var _this = this;
-        return this._del(value, ['attributes', 'relationships']).then(function () {
-            if (_this.terminal) {
-                _this.fireWriteUpdate({
-                    id: value.id,
-                    type: value.type,
-                    invalidate: ['attributes', 'relationships'],
+            });
+        }
+    }, {
+        key: 'cache',
+        value: function cache(value) {
+            var _this3 = this;
+
+            if (value.id === undefined || value.id === null) {
+                return Promise.reject('Cannot cache data without an id - write it to a terminal first');
+            } else {
+                return this._get({
+                    fields: ['attributes', 'relationships'],
+                    item: value
+                }).then(function (current) {
+                    var newVal = (0, _mergeOptions2.default)(current || {}, value);
+                    return _this3._upsert(newVal);
                 });
             }
-        });
-    };
-    ModifiableKeyValueStore.prototype.wipe = function (value, field) {
-        return this._del(value, [field]);
-    };
-    ModifiableKeyValueStore.prototype.writeRelationshipItem = function (value, relName, child) {
-        var _this = this;
-        var schema = this.getSchema(value.type);
-        var relSchema = schema.relationships[relName].type;
-        var otherRelType = relSchema.sides[relName].otherType;
-        var otherRelName = relSchema.sides[relName].otherName;
-        var otherReference = { type: otherRelType, id: child.id };
-        var newChild = { id: child.id, type: otherRelType };
-        var newParent = { id: value.id, type: schema.name };
-        if (relSchema.extras && child.meta) {
-            newParent.meta = {};
-            newChild.meta = {};
-            for (var extra in child.meta) {
-                if (extra in relSchema.extras) {
-                    newChild.meta[extra] = child.meta[extra];
-                    newParent.meta[extra] = child.meta[extra];
-                }
-            }
         }
-        return Promise.all([
-            this._updateArray(value, relName, newChild),
-            this._updateArray(otherReference, otherRelName, newParent),
-        ])
-            .then(function () {
-            _this.fireWriteUpdate(Object.assign(value, { invalidate: ["relationships." + relName] }));
-            _this.fireWriteUpdate(Object.assign({ type: otherRelType, id: child.id }, { invalidate: ["relationships." + otherRelName] }));
-        })
-            .then(function () { return value; });
-    };
-    ModifiableKeyValueStore.prototype.deleteRelationshipItem = function (value, relName, child) {
-        var _this = this;
-        var schema = this.getSchema(value.type);
-        var relSchema = schema.relationships[relName].type;
-        var otherRelType = relSchema.sides[relName].otherType;
-        var otherRelName = relSchema.sides[relName].otherName;
-        var otherReference = { type: otherRelType, id: child.id };
-        var newChild = { id: child.id, type: otherRelType };
-        var newParent = { id: value.id, type: value.type };
-        if (relSchema.extras && child.meta) {
-            newParent.meta = {};
-            newChild.meta = {};
-            for (var extra in child.meta) {
-                if (extra in relSchema.extras) {
-                    newChild.meta[extra] = child.meta[extra];
-                    newParent.meta[extra] = child.meta[extra];
-                }
-            }
-        }
-        return Promise.all([
-            this._removeFromArray(value, relName, newChild),
-            this._removeFromArray(otherReference, otherRelName, newParent),
-        ])
-            .then(function () {
-            _this.fireWriteUpdate(Object.assign(value, { invalidate: ["relationships." + relName] }));
-            _this.fireWriteUpdate(Object.assign({ type: otherRelType, id: child.id }, { invalidate: ["relationships." + otherRelName] }));
-        })
-            .then(function () { return value; });
-    };
-    ModifiableKeyValueStore.prototype.query = function (t, q) {
-        return this._keys(t).then(function (keys) {
-            return keys
-                .map(function (k) {
-                return {
-                    type: t,
-                    id: parseInt(k.split(':')[1], 10),
-                };
-            })
-                .filter(function (v) { return !isNaN(v.id); });
-        });
-    };
-    ModifiableKeyValueStore.prototype.addSchema = function (t) {
-        var _this = this;
-        return _super.prototype.addSchema.call(this, t).then(function () {
-            _this.maxKeys[t.type] = 0;
-        });
-    };
-    ModifiableKeyValueStore.prototype.keyString = function (value) {
-        return value.type + ":" + value.id;
-    };
-    return ModifiableKeyValueStore;
-}(storage_1.Storage));
-exports.ModifiableKeyValueStore = ModifiableKeyValueStore;
+    }, {
+        key: 'cacheAttributes',
+        value: function cacheAttributes(value) {
+            var _this4 = this;
 
-//# sourceMappingURL=data:application/json;charset=utf8;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbIi4uL3NyYy9zdG9yYWdlL21vZGlmaWFibGVLZXlWYWx1ZVN0b3JlLnRzIl0sIm5hbWVzIjpbXSwibWFwcGluZ3MiOiI7Ozs7Ozs7Ozs7OztBQUFBLDRDQUE4QztBQUU5QyxxQ0FBb0M7QUFjcEM7SUFBc0QsMkNBQU87SUFBN0Q7UUFBQSxxRUF1UUM7UUFyUVEsYUFBTyxHQUErQixFQUFFLENBQUM7O0lBcVFsRCxDQUFDO0lBcFBDLDRDQUFVLEdBQVYsVUFBVyxJQUFZO1FBQ3JCLElBQUksQ0FBQyxPQUFPLENBQUMsSUFBSSxDQUFDLEdBQUcsSUFBSSxDQUFDLE9BQU8sQ0FBQyxJQUFJLENBQUMsR0FBRyxDQUFDLENBQUM7UUFDNUMsTUFBTSxDQUFDLE9BQU8sQ0FBQyxPQUFPLENBQUMsSUFBSSxDQUFDLE9BQU8sQ0FBQyxJQUFJLENBQUMsQ0FBQyxDQUFDO0lBQzdDLENBQUM7SUFFRCxpREFBZSxHQUFmLFVBQWdCLFVBQStCO1FBQS9DLGlCQW9DQztRQW5DQyxJQUFNLEtBQUssR0FBRyxJQUFJLENBQUMsYUFBYSxDQUFDLFVBQVUsQ0FBQyxDQUFDO1FBQzdDLE9BQU8sS0FBSyxDQUFDLGFBQWEsQ0FBQztRQUUzQixNQUFNLENBQUMsT0FBTyxDQUFDLE9BQU8sRUFBRTthQUNyQixJQUFJLENBQUM7WUFDSixJQUFNLFdBQVcsR0FBRyxLQUFJLENBQUMsU0FBUyxDQUFDLFVBQVUsQ0FBQyxJQUFJLENBQUMsQ0FBQyxXQUFXLENBQUM7WUFDaEUsRUFBRSxDQUFDLENBQUMsS0FBSyxDQUFDLEVBQUUsS0FBSyxTQUFTLElBQUksS0FBSyxDQUFDLEVBQUUsS0FBSyxJQUFJLENBQUMsQ0FBQyxDQUFDO2dCQUNoRCxFQUFFLENBQUMsQ0FBQyxDQUFDLEtBQUksQ0FBQyxRQUFRLENBQUMsQ0FBQyxDQUFDO29CQUNuQixNQUFNLElBQUksS0FBSyxDQUNiLG1EQUFtRCxDQUNwRCxDQUFDO2dCQUNKLENBQUM7Z0JBQ0QsTUFBTSxDQUFDLEtBQUksQ0FBQyxVQUFVLENBQUMs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QUFDLENBQUMsQ0FBQyxLQUFLLENBQUMsR0FBRyxDQUFDLENBQUMsQ0FBQyxDQUFDLEVBQUUsRUFBRSxDQUFDO2lCQUNsQyxDQUFDO1lBQ0osQ0FBQyxDQUFDO2lCQUNELE1BQU0sQ0FBQyxVQUFBLENBQUMsSUFBSSxPQUFBLENBQUMsS0FBSyxDQUFDLENBQUMsQ0FBQyxFQUFFLENBQUMsRUFBWixDQUFZLENBQUMsQ0FBQztRQUMvQixDQUFDLENBQUMsQ0FBQztJQUNMLENBQUM7SUFFRCwyQ0FBUyxHQUFULFVBQVUsQ0FBd0M7UUFBbEQsaUJBSUM7UUFIQyxNQUFNLENBQUMsaUJBQU0sU0FBUyxZQUFDLENBQUMsQ0FBQyxDQUFDLElBQUksQ0FBQztZQUM3QixLQUFJLENBQUMsT0FBTyxDQUFDLENBQUMsQ0FBQyxJQUFJLENBQUMsR0FBRyxDQUFDLENBQUM7UUFDM0IsQ0FBQyxDQUFDLENBQUM7SUFDTCxDQUFDO0lBRUQsMkNBQVMsR0FBVCxVQUFVLEtBQXFCO1FBQzdCLE1BQU0sQ0FBSSxLQUFLLENBQUMsSUFBSSxTQUFJLEtBQUssQ0FBQyxFQUFJLENBQUM7SUFDckMsQ0FBQztJQUNILDhCQUFDO0FBQUQsQ0F2UUEsQUF1UUMsQ0F2UXFELGlCQUFPLEdBdVE1RDtBQXZRcUIsMERBQXVCIiwiZmlsZSI6InN0b3JhZ2UvbW9kaWZpYWJsZUtleVZhbHVlU3RvcmUuanMiLCJzb3VyY2VzQ29udGVudCI6WyJpbXBvcnQgKiBhcyBtZXJnZU9wdGlvbnMgZnJvbSAnbWVyZ2Utb3B0aW9ucyc7XG5cbmltcG9ydCB7IFN0b3JhZ2UgfSBmcm9tICcuL3N0b3JhZ2UnO1xuaW1wb3J0IHtcbiAgSW5kZWZpbml0ZU1vZGVsRGF0YSxcbiAgTW9kZWxEYXRhLFxuICBNb2RlbFJlZmVyZW5jZSxcbiAgTW9kZWxTY2hlbWEsXG4gIFJlbGF0aW9uc2hpcEl0ZW0sXG4gIFRlcm1pbmFsU3RvcmUsXG4gIENhY2hlU3RvcmUsXG4gIEFsbG9jYXRpbmdTdG9yZSxcbn0gZnJvbSAnLi4vZGF0YVR5cGVzJztcblxuLy8gZGVjbGFyZSBmdW5jdGlvbiBwYXJzZUludChuOiBzdHJpbmcgfCBudW1iZXIsIHJhZGl4OiBudW1iZXIpOiBudW1iZXI7XG5cbmV4cG9ydCBhYnN0cmFjdCBjbGFzcyBNb2RpZmlhYmxlS2V5VmFsdWVTdG9yZSBleHRlbmRzIFN0b3JhZ2VcbiAgaW1wbGVtZW50cyBUZXJtaW5hbFN0b3JlLCBDYWNoZVN0b3JlLCBBbGxvY2F0aW5nU3RvcmUge1xuICBwdWJsaWMgbWF4S2V5czogeyBbdHlwZTogc3RyaW5nXTogbnVtYmVyIH0gPSB7fTtcblxuICBhYnN0cmFjdCBfa2V5cyh0eXBlOiBzdHJpbmcpOiBQcm9taXNlPHN0cmluZ1tdPjtcbiAgYWJzdHJhY3QgX2dldChyZWY6IE1vZGVsUmVmZXJlbmNlKTogUHJvbWlzZTxNb2RlbERhdGEgfCBudWxsPjtcbiAgYWJzdHJhY3QgX3Vwc2VydCh2OiBNb2RlbERhdGEpOiBQcm9taXNlPE1vZGVsRGF0YT47XG4gIGFic3RyYWN0IF91cGRhdGVBcnJheShcbiAgICByZWY6IE1vZGVsUmVmZXJlbmNlLFxuICAgIHJlbE5hbWU6IHN0cmluZyxcbiAgICBpdGVtOiBSZWxhdGlvbnNoaXBJdGVtLFxuICApOiBQcm9taXNlPE1vZGVsUmVmZXJlbmNlPjtcbiAgYWJzdHJhY3QgX3JlbW92ZUZyb21BcnJheShcbiAgICByZWY6IE1vZGVsUmVmZXJlbmNlLFxuICAgIHJlbE5hbWU6IHN0cmluZyxcbiAgICBpdGVtOiBSZWxhdGlvbnNoaXBJdGVtLFxuICApOiBQcm9taXNlPE1vZGVsUmVmZXJlbmNlPjtcbiAgYWJzdHJhY3QgX2RlbChyZWY6IE1vZGVsUmVmZXJlbmNlLCBmaWVsZHM6IHN0cmluZ1tdKTogUHJvbWlzZTxNb2RlbERhdGE+O1xuXG4gIGFsbG9jYXRlSWQodHlwZTogc3RyaW5nKSB7XG4gICAgdGhpcy5tYXhLZXlzW3R5cGVdID0gdGhpcy5tYXhLZXlzW3R5cGVdICsgMTtcbiAgICByZXR1cm4gUHJvbWlzZS5yZXNvbHZlKHRoaXMubWF4S2V5c1t0eXBlXSk7XG4gIH1cblxuICB3cml0ZUF0dHJpYnV0ZXMoaW5wdXRWYWx1ZTogSW5kZWZpbml0ZU1vZGVsRGF0YSkge1xuICAgIGNvbnN0IHZhbHVlID0gdGhpcy52YWxpZGF0ZUlucHV0KGlucHV0VmFsdWUpO1xuICAgIGRlbGV0ZSB2YWx1ZS5yZWxhdGlvbnNoaXBzO1xuICAgIC8vIHRyaW0gb3V0IHJlbGF0aW9uc2hpcHMgZm9yIGEgZGlyZWN0IHdyaXRlLlxuICAgIHJldHVybiBQcm9taXNlLnJlc29sdmUoKVxuICAgICAgLnRoZW4oKCkgPT4ge1xuICAgICAgICBjb25zdCBpZEF0dHJpYnV0ZSA9IHRoaXMuZ2V0U2NoZW1hKGlucHV0VmFsdWUudHlwZSkuaWRBdHRyaWJ1dGU7XG4gICAgICAgIGlmICh2YWx1ZS5pZCA9PT0gdW5kZWZpbmVkIHx8IHZhbHVlLmlkID09PSBudWxsKSB7XG4gICAgICAgICAgaWYgKCF0aGlzLnRlcm1pbmFsKSB7XG4gICAgICAgICAgICB0aHJvdyBuZXcgRXJyb3IoXG4gICAgICAgICAgICAgICdDYW5ub3QgY3JlYXRlIG5ldyBjb250ZW50IGluIGEgbm9uLXRlcm1pbmFsIHN0b3JlJyxcbiAgICAgICAgICAgICk7XG4gICAgICAgICAgfVxuICAgICAgICAgIHJldHVybiB0aGlzLmFsbG9jYXRlSWQodmFsdWUudHlwZSkudGhlbihuID0+IHtcbiAgICAgICAgICAgIHJldHVybiBtZXJnZU9wdGlvbnMoe30sIHZhbHVlLCB7XG4gICAgICAgICAgICAgIGlkOiBuLFxuICAgICAgICAgICAgICByZWxhdGlvbnNoaXBzOiB7fSxcbiAgICAgICAgICAgICAgYXR0cmlidXRlczogeyBbaWRBdHRyaWJ1dGVdOiBuIH0sXG4gICAgICAgICAgICB9KSBhcyBNb2RlbERhdGE7IC8vIGlmIG5ldy5cbiAgICAgICAgICB9KTtcbiAgICAgICAgfSBlbHNlIHtcbiAgICAgICAgICB0aGlzLm1heEtleXNbaW5wdXRWYWx1ZS50eXBlXSA9IE1hdGgubWF4KFxuICAgICAgICAgICAgdGhpcy5tYXhLZXlzW2lucHV0VmFsdWUudHlwZV0sXG4gICAgICAgICAgICB2YWx1ZS5pZCBhcyBudW1iZXIsXG4gICAgICAgICAgKTtcbiAgICAgICAgICByZXR1cm4gdmFsdWUgYXMgTW9kZWxEYXRhO1xuICAgICAgICB9XG4gICAgICB9KVxuICAgICAgLnRoZW4oKHRvU2F2ZTogTW9kZWxEYXRhKSA9PiB7XG4gICAgICAgIHJldHVybiB0aGlzLl91cHNlcnQodG9TYXZlKS50aGVuKCgpID0+IHtcbiAgICAgICAgICB0aGlzLmZpcmVXcml0ZVVwZGF0ZShcbiAgICAgICAgICAgIE9iamVjdC5hc3NpZ24oe30sIHRvU2F2ZSwgeyBpbnZhbGlkYXRlOiBbJ2F0dHJpYnV0ZXMnXSB9KSxcbiAgICAgICAgICApO1xuICAgICAgICAgIHJldHVybiB0b1NhdmU7XG4gICAgICAgIH0pO1xuICAgICAgfSk7XG4gIH1cblxuICByZWFkQXR0cmlidXRlcyh2YWx1ZTogTW9kZWxSZWZlcmVuY2UpOiBQcm9taXNlPE1vZGVsRGF0YT4ge1xuICAgIHJldHVybiB0aGlzLl9nZXQodmFsdWUpLnRoZW4oZCA9PiB7XG4gICAgICAvLyBUT0RPOiBmaWd1cmUgb3V0IHdoYXQgaGFwcGVucyB3aGVuIHRoZXJlJ3MgYVxuICAgICAgLy8gZmllbGQgd2l0aCBubyByZWFsIGF0dHJpYnV0ZXNcbiAgICAgIGlmIChkICYmIGQuYXR0cmlidXRlcykge1xuICAgICAgICByZXR1cm4gZDtcbiAgICAgIH0gZWxzZSB7XG4gICAgICAgIHJldHVybiBudWxsO1xuICAgICAgfVxuICAgIH0pO1xuICB9XG5cbiAgY2FjaGUodmFsdWU6IE1vZGVsRGF0YSkge1xuICAgIGlmICh2YWx1ZS5pZCA9PT0gdW5kZWZpbmVkIHx8IHZhbHVlLmlkID09PSBudWxsKSB7XG4gICAgICByZXR1cm4gUHJvbWlzZS5yZWplY3QoXG4gICAgICAgICdDYW5ub3QgY2FjaGUgZGF0YSB3aXRob3V0IGFuIGlkIC0gd3JpdGUgaXQgdG8gYSB0ZXJtaW5hbCBmaXJzdCcsXG4gICAgICApO1xuICAgIH0gZWxzZSB7XG4gICAgICByZXR1cm4gdGhpcy5fZ2V0KHZhbHVlKS50aGVuKGN1cnJlbnQgPT4ge1xuICAgICAgICBjb25zdCBuZXdWYWwgPSBtZXJnZU9wdGlvbnMoY3VycmVudCB8fCB7fSwgdmFsdWUpO1xuICAgICAgICByZXR1cm4gdGhpcy5fdXBzZXJ0KG5ld1ZhbCk7XG4gICAgICB9KTtcbiAgICB9XG4gIH1cblxuICBjYWNoZUF0dHJpYnV0ZXModmFsdWU6IE1vZGVsRGF0YSkge1xuICAgIGlmICh2YWx1ZS5pZCA9PT0gdW5kZWZpbmVkIHx8IHZhbHVlLmlkID09PSBudWxsKSB7XG4gICAgICByZXR1cm4gUHJvbWlzZS5yZWplY3QoXG4gICAgICAgICdDYW5ub3QgY2FjaGUgZGF0YSB3aXRob3V0IGFuIGlkIC0gd3JpdGUgaXQgdG8gYSB0ZXJtaW5hbCBmaXJzdCcsXG4gICAgICApO1xuICAgIH0gZWxzZSB7XG4gICAgICByZXR1cm4gdGhpcy5fZ2V0KHZhbHVlKS50aGVuKGN1cnJlbnQgPT4ge1xuICAgICAgICByZXR1cm4gdGhpcy5fdXBzZXJ0KHtcbiAgICAgICAgICB0eXBlOiB2YWx1ZS50eXBlLFxuICAgICAgICAgIGlkOiB2YWx1ZS5pZCxcbiAgICAgICAgICBhdHRyaWJ1dGVzOiB2YWx1ZS5hdHRyaWJ1dGVzLFxuICAgICAgICAgIHJlbGF0aW9uc2hpcHM6IGN1cnJlbnQucmVsYXRpb25zaGlwcyB8fCB7fSxcbiAgICAgICAgfSk7XG4gICAgICB9KTtcbiAgICB9XG4gIH1cblxuICBjYWNoZVJlbGF0aW9uc2hpcCh2YWx1ZTogTW9kZWxEYXRhKSB7XG4gICAgaWYgKHZhbHVlLmlkID09PSB1bmRlZmluZWQgfHwgdmFsdWUuaWQgPT09IG51bGwpIHtcbiAgICAgIHJldHVybiBQcm9taXNlLnJlamVjdChcbiAgICAgICAgJ0Nhbm5vdCBjYWNoZSBkYXRhIHdpdGhvdXQgYW4gaWQgLSB3cml0ZSBpdCB0byBhIHRlcm1pbmFsIGZpcnN0JyxcbiAgICAgICk7XG4gICAgfSBlbHNlIHtcbiAgICAgIHJldHVybiB0aGlzLl9nZXQodmFsdWUpLnRoZW4oY3VycmVudCA9PiB7XG4gICAgICAgIHJldHVybiB0aGlzLl91cHNlcnQoe1xuICAgICAgICAgIHR5cGU6IHZhbHVlLnR5cGUsXG4gICAgICAgICAgaWQ6IHZhbHVlLmlkLFxuICAgICAgICAgIGF0dHJpYnV0ZXM6IGN1cnJlbnQuYXR0cmlidXRlcyB8fCB7fSxcbiAgICAgICAgICByZWxhdGlvbnNoaXBzOiB2YWx1ZS5yZWxhdGlvbnNoaXBzLFxuICAgICAgICB9KTtcbiAgICAgIH0pO1xuICAgIH1cbiAgfVxuXG4gIHJlYWRSZWxhdGlvbnNoaXAodmFsdWU6IE1vZGVsUmVmZXJlbmNlLCByZWxOYW1lOiBzdHJpbmcpOiBQcm9taXNlPE1vZGVsRGF0YT4ge1xuICAgIHJldHVybiB0aGlzLl9nZXQodmFsdWUpLnRoZW4odiA9PiB7XG4gICAgICBjb25zdCByZXRWYWwgPSBPYmplY3QuYXNzaWduKHt9LCB2KTtcbiAgICAgIGlmICghdikge1xuICAgICAgICBpZiAodGhpcy50ZXJtaW5hbCkge1xuICAgICAgICAgIHJldHVybiB7XG4gICAgICAgICAgICB0eXBlOiB2YWx1ZS50eXBlLFxuICAgICAgICAgICAgaWQ6IHZhbHVlLmlkLFxuICAgICAgICAgICAgcmVsYXRpb25zaGlwczogeyBbcmVsTmFtZV06IFtdIH0sXG4gICAgICAgICAgfTtcbiAgICAgICAgfSBlbHNlIHtcbiAgICAgICAgICByZXR1cm4gbnVsbDtcbiAgICAgICAgfVxuICAgICAgfSBlbHNlIGlmICghdi5yZWxhdGlvbnNoaXBzICYmIHRoaXMudGVybWluYWwpIHtcbiAgICAgICAgcmV0VmFsLnJlbGF0aW9uc2hpcHMgPSB7IFtyZWxOYW1lXTogW10gfTtcbiAgICAgIH0gZWxzZSBpZiAoIXJldFZhbC5yZWxhdGlvbnNoaXBzW3JlbE5hbWVdICYmIHRoaXMudGVybWluYWwpIHtcbiAgICAgICAgcmV0VmFsLnJlbGF0aW9uc2hpcHNbcmVsTmFtZV0gPSBbXTtcbiAgICAgIH1cbiAgICAgIHJldHVybiByZXRWYWw7XG4gICAgfSk7XG4gIH1cblxuICBkZWxldGUodmFsdWU6IE1vZGVsUmVmZXJlbmNlKSB7XG4gICAgcmV0dXJuIHRoaXMuX2RlbCh2YWx1ZSwgWydhdHRyaWJ1dGVzJywgJ3JlbGF0aW9uc2hpcHMnXSkudGhlbigoKSA9PiB7XG4gICAgICBpZiAodGhpcy50ZXJtaW5hbCkge1xuICAgICAgICB0aGlzLmZpcmVXcml0ZVVwZGF0ZSh7XG4gICAgICAgICAgaWQ6IHZhbHVlLmlkLFxuICAgICAgICAgIHR5cGU6IHZhbHVlLnR5cGUsXG4gICAgICAgICAgaW52YWxpZGF0ZTogWydhdHRyaWJ1dGVzJywgJ3JlbGF0aW9uc2hpcHMnXSxcbiAgICAgICAgfSk7XG4gICAgICB9XG4gICAgfSk7XG4gIH1cblxuICB3aXBlKHZhbHVlOiBNb2RlbFJlZmVyZW5jZSwgZmllbGQ6IHN0cmluZykge1xuICAgIHJldHVybiB0aGlzLl9kZWwodmFsdWUsIFtmaWVsZF0pO1xuICB9XG5cbiAgd3JpdGVSZWxhdGlvbnNoaXBJdGVtKFxuICAgIHZhbHVlOiBNb2RlbFJlZmVyZW5jZSxcbiAgICByZWxOYW1lOiBzdHJpbmcsXG4gICAgY2hpbGQ6IFJlbGF0aW9uc2hpcEl0ZW0sXG4gICkge1xuICAgIGNvbnN0IHNjaGVtYSA9IHRoaXMuZ2V0U2NoZW1hKHZhbHVlLnR5cGUpO1xuICAgIGNvbnN0IHJlbFNjaGVtYSA9IHNjaGVtYS5yZWxhdGlvbnNoaXBzW3JlbE5hbWVdLnR5cGU7XG4gICAgY29uc3Qgb3RoZXJSZWxUeXBlID0gcmVsU2NoZW1hLnNpZGVzW3JlbE5hbWVdLm90aGVyVHlwZTtcbiAgICBjb25zdCBvdGhlclJlbE5hbWUgPSByZWxTY2hlbWEuc2lkZXNbcmVsTmFtZV0ub3RoZXJOYW1lO1xuICAgIGNvbnN0IG90aGVyUmVmZXJlbmNlID0geyB0eXBlOiBvdGhlclJlbFR5cGUsIGlkOiBjaGlsZC5pZCB9O1xuXG4gICAgY29uc3QgbmV3Q2hpbGQ6IFJlbGF0aW9uc2hpcEl0ZW0gPSB7IGlkOiBjaGlsZC5pZCwgdHlwZTogb3RoZXJSZWxUeXBlIH07XG4gICAgY29uc3QgbmV3UGFyZW50OiBSZWxhdGlvbnNoaXBJdGVtID0geyBpZDogdmFsdWUuaWQsIHR5cGU6IHNjaGVtYS5uYW1lIH07XG4gICAgaWYgKHJlbFNjaGVtYS5leHRyYXMgJiYgY2hpbGQubWV0YSkge1xuICAgICAgbmV3UGFyZW50Lm1ldGEgPSB7fTtcbiAgICAgIG5ld0NoaWxkLm1ldGEgPSB7fTtcbiAgICAgIGZvciAoY29uc3QgZXh0cmEgaW4gY2hpbGQubWV0YSkge1xuICAgICAgICBpZiAoZXh0cmEgaW4gcmVsU2NoZW1hLmV4dHJhcykge1xuICAgICAgICAgIG5ld0NoaWxkLm1ldGFbZXh0cmFdID0gY2hpbGQubWV0YVtleHRyYV07XG4gICAgICAgICAgbmV3UGFyZW50Lm1ldGFbZXh0cmFdID0gY2hpbGQubWV0YVtleHRyYV07XG4gICAgICAgIH1cbiAgICAgIH1cbiAgICB9XG4gICAgcmV0dXJuIFByb21pc2UuYWxsKFtcbiAgICAgIHRoaXMuX3VwZGF0ZUFycmF5KHZhbHVlLCByZWxOYW1lLCBuZXdDaGlsZCksXG4gICAgICB0aGlzLl91cGRhdGVBcnJheShvdGhlclJlZmVyZW5jZSwgb3RoZXJSZWxOYW1lLCBuZXdQYXJlbnQpLFxuICAgIF0pXG4gICAgICAudGhlbigoKSA9PiB7XG4gICAgICAgIHRoaXMuZmlyZVdyaXRlVXBkYXRlKFxuICAgICAgICAgIE9iamVjdC5hc3NpZ24odmFsdWUsIHsgaW52YWxpZGF0ZTogW2ByZWxhdGlvbnNoaXBzLiR7cmVsTmFtZX1gXSB9KSxcbiAgICAgICAgKTtcbiAgICAgICAgdGhpcy5maXJlV3JpdGVVcGRhdGUoXG4gICAgICAgICAgT2JqZWN0LmFzc2lnbihcbiAgICAgICAgICAgIHsgdHlwZTogb3RoZXJSZWxUeXBlLCBpZDogY2hpbGQuaWQgfSxcbiAgICAgICAgICAgIHsgaW52YWxpZGF0ZTogW2ByZWxhdGlvbnNoaXBzLiR7b3RoZXJSZWxOYW1lfWBdIH0sXG4gICAgICAgICAgKSxcbiAgICAgICAgKTtcbiAgICAgIH0pXG4gICAgICAudGhlbigoKSA9PiB2YWx1ZSk7XG4gIH1cblxuICBkZWxldGVSZWxhdGlvbnNoaXBJdGVtKFxuICAgIHZhbHVlOiBNb2RlbFJlZmVyZW5jZSxcbiAgICByZWxOYW1lOiBzdHJpbmcsXG4gICAgY2hpbGQ6IFJlbGF0aW9uc2hpcEl0ZW0sXG4gICkge1xuICAgIGNvbnN0IHNjaGVtYSA9IHRoaXMuZ2V0U2NoZW1hKHZhbHVlLnR5cGUpO1xuICAgIGNvbnN0IHJlbFNjaGVtYSA9IHNjaGVtYS5yZWxhdGlvbnNoaXBzW3JlbE5hbWVdLnR5cGU7XG4gICAgY29uc3Qgb3RoZXJSZWxUeXBlID0gcmVsU2NoZW1hLnNpZGVzW3JlbE5hbWVdLm90aGVyVHlwZTtcbiAgICBjb25zdCBvdGhlclJlbE5hbWUgPSByZWxTY2hlbWEuc2lkZXNbcmVsTmFtZV0ub3RoZXJOYW1lO1xuICAgIGNvbnN0IG90aGVyUmVmZXJlbmNlID0geyB0eXBlOiBvdGhlclJlbFR5cGUsIGlkOiBjaGlsZC5pZCB9O1xuXG4gICAgY29uc3QgbmV3Q2hpbGQ6IFJlbGF0aW9uc2hpcEl0ZW0gPSB7IGlkOiBjaGlsZC5pZCwgdHlwZTogb3RoZXJSZWxUeXBlIH07XG4gICAgY29uc3QgbmV3UGFyZW50OiBSZWxhdGlvbnNoaXBJdGVtID0geyBpZDogdmFsdWUuaWQsIHR5cGU6IHZhbHVlLnR5cGUgfTtcbiAgICBpZiAocmVsU2NoZW1hLmV4dHJhcyAmJiBjaGlsZC5tZXRhKSB7XG4gICAgICBuZXdQYXJlbnQubWV0YSA9IHt9O1xuICAgICAgbmV3Q2hpbGQubWV0YSA9IHt9O1xuICAgICAgZm9yIChjb25zdCBleHRyYSBpbiBjaGlsZC5tZXRhKSB7XG4gICAgICAgIGlmIChleHRyYSBpbiByZWxTY2hlbWEuZXh0cmFzKSB7XG4gICAgICAgICAgbmV3Q2hpbGQubWV0YVtleHRyYV0gPSBjaGlsZC5tZXRhW2V4dHJhXTtcbiAgICAgICAgICBuZXdQYXJlbnQubWV0YVtleHRyYV0gPSBjaGlsZC5tZXRhW2V4dHJhXTtcbiAgICAgICAgfVxuICAgICAgfVxuICAgIH1cbiAgICByZXR1cm4gUHJvbWlzZS5hbGwoW1xuICAgICAgdGhpcy5fcmVtb3ZlRnJvbUFycmF5KHZhbHVlLCByZWxOYW1lLCBuZXdDaGlsZCksXG4gICAgICB0aGlzLl9yZW1vdmVGcm9tQXJyYXkob3RoZXJSZWZlcmVuY2UsIG90aGVyUmVsTmFtZSwgbmV3UGFyZW50KSxcbiAgICBdKVxuICAgICAgLnRoZW4oKCkgPT4ge1xuICAgICAgICB0aGlzLmZpcmVXcml0ZVVwZGF0ZShcbiAgICAgICAgICBPYmplY3QuYXNzaWduKHZhbHVlLCB7IGludmFsaWRhdGU6IFtgcmVsYXRpb25zaGlwcy4ke3JlbE5hbWV9YF0gfSksXG4gICAgICAgICk7XG4gICAgICAgIHRoaXMuZmlyZVdyaXRlVXBkYXRlKFxuICAgICAgICAgIE9iamVjdC5hc3NpZ24oXG4gICAgICAgICAgICB7IHR5cGU6IG90aGVyUmVsVHlwZSwgaWQ6IGNoaWxkLmlkIH0sXG4gICAgICAgICAgICB7IGludmFsaWRhdGU6IFtgcmVsYXRpb25zaGlwcy4ke290aGVyUmVsTmFtZX1gXSB9LFxuICAgICAgICAgICksXG4gICAgICAgICk7XG4gICAgICB9KVxuICAgICAgLnRoZW4oKCkgPT4gdmFsdWUpO1xuICB9XG5cbiAgcXVlcnkodDogc3RyaW5nLCBxPzogYW55KTogUHJvbWlzZTxNb2RlbFJlZmVyZW5jZVtdPiB7XG4gICAgcmV0dXJuIHRoaXMuX2tleXModCkudGhlbihrZXlzID0+IHtcbiAgICAgIHJldHVybiBrZXlzXG4gICAgICAgIC5tYXAoayA9PiB7XG4gICAgICAgICAgcmV0dXJuIHtcbiAgICAgICAgICAgIHR5cGU6IHQsXG4gICAgICAgICAgICBpZDogcGFyc2VJbnQoay5zcGxpdCgnOicpWzFdLCAxMCksXG4gICAgICAgICAgfTtcbiAgICAgICAgfSlcbiAgICAgICAgLmZpbHRlcih2ID0+ICFpc05hTih2LmlkKSk7XG4gICAgfSk7XG4gIH1cblxuICBhZGRTY2hlbWEodDogeyB0eXBlOiBzdHJpbmc7IHNjaGVtYTogTW9kZWxTY2hlbWEgfSkge1xuICAgIHJldHVybiBzdXBlci5hZGRTY2hlbWEodCkudGhlbigoKSA9PiB7XG4gICAgICB0aGlzLm1heEtleXNbdC50eXBlXSA9IDA7XG4gICAgfSk7XG4gIH1cblxuICBrZXlTdHJpbmcodmFsdWU6IE1vZGVsUmVmZXJlbmNlKSB7XG4gICAgcmV0dXJuIGAke3ZhbHVlLnR5cGV9OiR7dmFsdWUuaWR9YDtcbiAgfVxufVxuIl19
+            if (value.id === undefined || value.id === null) {
+                return Promise.reject('Cannot cache data without an id - write it to a terminal first');
+            } else {
+                return this._get({
+                    fields: ['attributes', 'relationships'],
+                    item: value
+                }).then(function (current) {
+                    return _this4._upsert({
+                        type: value.type,
+                        id: value.id,
+                        attributes: value.attributes,
+                        relationships: current.relationships || {}
+                    });
+                });
+            }
+        }
+    }, {
+        key: 'cacheRelationship',
+        value: function cacheRelationship(value) {
+            var _this5 = this;
+
+            if (value.id === undefined || value.id === null) {
+                return Promise.reject('Cannot cache data without an id - write it to a terminal first');
+            } else {
+                return this._get({
+                    fields: ['attributes', 'relationships'],
+                    item: value
+                }).then(function (current) {
+                    return _this5._upsert({
+                        type: value.type,
+                        id: value.id,
+                        attributes: current.attributes || {},
+                        relationships: value.relationships
+                    });
+                });
+            }
+        }
+    }, {
+        key: 'readRelationship',
+        value: function readRelationship(value) {
+            var _this6 = this;
+
+            return this._get(value).then(function (v) {
+                var retVal = Object.assign({}, v);
+                if (!v) {
+                    if (_this6.terminal) {
+                        return {
+                            type: value.item.type,
+                            id: value.item.id,
+                            relationships: _defineProperty({}, value.rel, [])
+                        };
+                    } else {
+                        return null;
+                    }
+                } else if (!v.relationships && _this6.terminal) {
+                    retVal.relationships = _defineProperty({}, value.rel, []);
+                } else if (!retVal.relationships[value.rel] && _this6.terminal) {
+                    retVal.relationships[value.rel] = [];
+                }
+                return retVal;
+            });
+        }
+    }, {
+        key: 'delete',
+        value: function _delete(value) {
+            var _this7 = this;
+
+            return this._del(value, ['attributes', 'relationships']).then(function () {
+                if (_this7.terminal) {
+                    _this7.fireWriteUpdate({
+                        id: value.id,
+                        type: value.type,
+                        invalidate: ['attributes', 'relationships']
+                    });
+                }
+            });
+        }
+    }, {
+        key: 'wipe',
+        value: function wipe(value, field) {
+            return this._del(value, [field]);
+        }
+    }, {
+        key: 'writeRelationshipItem',
+        value: function writeRelationshipItem(value, relName, child) {
+            var _this8 = this;
+
+            var schema = this.getSchema(value.type);
+            var relSchema = schema.relationships[relName].type;
+            var otherRelType = relSchema.sides[relName].otherType;
+            var otherRelName = relSchema.sides[relName].otherName;
+            var otherReference = { type: otherRelType, id: child.id };
+            var newChild = { id: child.id, type: otherRelType };
+            var newParent = { id: value.id, type: schema.name };
+            if (relSchema.extras && child.meta) {
+                newParent.meta = {};
+                newChild.meta = {};
+                for (var extra in child.meta) {
+                    if (extra in relSchema.extras) {
+                        newChild.meta[extra] = child.meta[extra];
+                        newParent.meta[extra] = child.meta[extra];
+                    }
+                }
+            }
+            return Promise.all([this._updateArray(value, relName, newChild), this._updateArray(otherReference, otherRelName, newParent)]).then(function () {
+                _this8.fireWriteUpdate(Object.assign(value, { invalidate: ['relationships.' + relName] }));
+                _this8.fireWriteUpdate(Object.assign({ type: otherRelType, id: child.id }, { invalidate: ['relationships.' + otherRelName] }));
+            }).then(function () {
+                return value;
+            });
+        }
+    }, {
+        key: 'deleteRelationshipItem',
+        value: function deleteRelationshipItem(value, relName, child) {
+            var _this9 = this;
+
+            var schema = this.getSchema(value.type);
+            var relSchema = schema.relationships[relName].type;
+            var otherRelType = relSchema.sides[relName].otherType;
+            var otherRelName = relSchema.sides[relName].otherName;
+            var otherReference = { type: otherRelType, id: child.id };
+            var newChild = { id: child.id, type: otherRelType };
+            var newParent = { id: value.id, type: value.type };
+            if (relSchema.extras && child.meta) {
+                newParent.meta = {};
+                newChild.meta = {};
+                for (var extra in child.meta) {
+                    if (extra in relSchema.extras) {
+                        newChild.meta[extra] = child.meta[extra];
+                        newParent.meta[extra] = child.meta[extra];
+                    }
+                }
+            }
+            return Promise.all([this._removeFromArray(value, relName, newChild), this._removeFromArray(otherReference, otherRelName, newParent)]).then(function () {
+                _this9.fireWriteUpdate(Object.assign(value, { invalidate: ['relationships.' + relName] }));
+                _this9.fireWriteUpdate(Object.assign({ type: otherRelType, id: child.id }, { invalidate: ['relationships.' + otherRelName] }));
+            }).then(function () {
+                return value;
+            });
+        }
+    }, {
+        key: 'query',
+        value: function query(t, q) {
+            return this._keys(t).then(function (keys) {
+                return keys.map(function (k) {
+                    return {
+                        type: t,
+                        id: parseInt(k.split(':')[1], 10)
+                    };
+                }).filter(function (v) {
+                    return !isNaN(v.id);
+                });
+            });
+        }
+    }, {
+        key: 'addSchema',
+        value: function addSchema(t) {
+            var _this10 = this;
+
+            return _get(ModifiableKeyValueStore.prototype.__proto__ || Object.getPrototypeOf(ModifiableKeyValueStore.prototype), 'addSchema', this).call(this, t).then(function () {
+                _this10.maxKeys[t.type] = 0;
+            });
+        }
+    }, {
+        key: 'keyString',
+        value: function keyString(value) {
+            return value.type + ':' + value.id;
+        }
+    }]);
+
+    return ModifiableKeyValueStore;
+}(_storage.Storage);

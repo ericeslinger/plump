@@ -1,5 +1,10 @@
 import { ModifiableKeyValueStore } from './modifiableKeyValueStore';
-import { ModelData, RelationshipItem, ModelReference } from '../dataTypes';
+import {
+  ModelData,
+  RelationshipItem,
+  ModelReference,
+  StorageReadRequest,
+} from '../dataTypes';
 import * as mergeOptions from 'merge-options';
 
 export class MemoryStore extends ModifiableKeyValueStore {
@@ -19,8 +24,8 @@ export class MemoryStore extends ModifiableKeyValueStore {
     );
   }
 
-  _get(item: ModelReference) {
-    const k = this.keyString(item);
+  _get(req: StorageReadRequest) {
+    const k = this.keyString(req.item);
     if (this.store[k]) {
       return Promise.resolve(this.store[k]);
     } else {

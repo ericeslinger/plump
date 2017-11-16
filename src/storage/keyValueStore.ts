@@ -5,6 +5,7 @@ import {
   IndefiniteModelData,
   ModelData,
   ModelReference,
+  StorageReadRequest,
   ModelSchema,
   RelationshipItem,
   TerminalStore,
@@ -61,15 +62,18 @@ export abstract class KeyValueStore extends Storage
           if (saneNumber(thisId) && thisId > this.maxKeys[value.type]) {
             this.maxKeys[value.type] = thisId;
           }
-          return this._get(
-            this.keyString(value as ModelReference),
-          ).then(current => {
-            if (current) {
-              return mergeOptions({}, current, value);
-            } else {
-              return mergeOptions({ relationships: {}, attributes: {} }, value);
-            }
-          });
+          return this._get(this.keyString(value as ModelReference)).then(
+            current => {
+              if (current) {
+                return mergeOptions({}, current, value);
+              } else {
+                return mergeOptions(
+                  { relationships: {}, attributes: {} },
+                  value,
+                );
+              }
+            },
+          );
         }
       })
       .then((toSave: ModelData) => {
@@ -82,8 +86,8 @@ export abstract class KeyValueStore extends Storage
       });
   }
 
-  readAttributes(value: ModelReference): Promise<ModelData> {
-    return this._get(this.keyString(value)).then(d => {
+  readAttributes(req: StorageReadRequest): Promise<ModelData> {
+    return this._get(this.keyString(req.item)).then(d => {
       if (d && d.attributes && Object.keys(d.attributes).length > 0) {
         return d;
       } else {
@@ -139,23 +143,23 @@ export abstract class KeyValueStore extends Storage
     }
   }
 
-  readRelationship(value: ModelReference, relName: string): Promise<ModelData> {
-    return this._get(this.keyString(value)).then(v => {
+  readRelationship(req: StorageReadRequest): Promise<ModelData> {
+    return this._get(this.keyString(req.item)).then(v => {
       const retVal = Object.assign({}, v);
       if (!v) {
         if (this.terminal) {
           return {
-            type: value.type,
-            id: value.id,
-            relationships: { [relName]: [] },
+            type: req.item.type,
+            id: req.item.id,
+            relationships: { [req.rel]: [] },
           };
         } else {
           return null;
         }
       } else if (!v.relationships && this.terminal) {
-        retVal.relationships = { [relName]: [] };
-      } else if (!retVal.relationships[relName] && this.terminal) {
-        retVal.relationships[relName] = [];
+        retVal.relationships = { [req.rel]: [] };
+      } else if (!retVal.relationships[req.rel] && this.terminal) {
+        retVal.relationships[req.rel] = [];
       }
       return retVal;
     });

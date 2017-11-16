@@ -11,6 +11,7 @@ import {
   DirtyModel,
   RelationshipItem,
   CacheStore,
+  StorageReadRequest,
   TerminalStore,
 } from './dataTypes';
 
@@ -107,15 +108,12 @@ export class Plump<TermType extends TerminalStore = TerminalStore> {
     this.teardownSubject.next('done');
   }
 
-  get(
-    value: ModelReference,
-    opts: string[] = ['attributes'],
-  ): Promise<ModelData> {
-    const keys = opts && !Array.isArray(opts) ? [opts] : opts;
+  get(req: StorageReadRequest): Promise<ModelData> {
+    const keys = req.fields.concat();
     if (keys.indexOf('relationships') >= 0) {
       keys.splice(keys.indexOf('relationships'), 1);
       keys.unshift(
-        ...Object.keys(this.types[value.type].schema.relationships).map(
+        ...Object.keys(this.types[req.item.type].schema.relationships).map(
           v => `relationships.${v}`,
         ),
       );
@@ -125,8 +123,8 @@ export class Plump<TermType extends TerminalStore = TerminalStore> {
         return thenable.then(v => {
           if (v !== null) {
             return v;
-          } else if (storage.hot(value)) {
-            return storage.read(value, keys);
+          } else if (storage.hot(req.item)) {
+            return storage.read({ item: req.item, fields: keys });
           } else {
             return null;
           }
@@ -135,17 +133,13 @@ export class Plump<TermType extends TerminalStore = TerminalStore> {
       .then(v => {
         if (
           this.terminal &&
-          (v === null || !opts.every(path => pathExists(v, path)))
+          (v === null || !keys.every(path => pathExists(v, path)))
         ) {
-          return this.terminal.read(value, keys);
+          return this.terminal.read({ item: req.item, fields: keys });
         } else {
           return v;
         }
       });
-  }
-
-  bulkGet(value: ModelReference): Promise<ModelData> {
-    return this.terminal.bulkRead(value);
   }
 
   forceCreate(value: DirtyModel) {
@@ -187,35 +181,36 @@ export class Plump<TermType extends TerminalStore = TerminalStore> {
           ) {
             return Promise.all(
               Object.keys(value.relationships).map(relName => {
-                return value.relationships[
-                  relName
-                ].reduce((thenable: Promise<void | ModelData>, delta) => {
-                  return thenable.then(() => {
-                    if (delta.op === 'add') {
-                      return this.terminal.writeRelationshipItem(
-                        updated,
-                        relName,
-                        delta.data,
-                      );
-                    } else if (delta.op === 'remove') {
-                      return this.terminal.deleteRelationshipItem(
-                        updated,
-                        relName,
-                        delta.data,
-                      );
-                    } else if (delta.op === 'modify') {
-                      return this.terminal.writeRelationshipItem(
-                        updated,
-                        relName,
-                        delta.data,
-                      );
-                    } else {
-                      throw new Error(
-                        `Unknown relationship delta ${JSON.stringify(delta)}`,
-                      );
-                    }
-                  });
-                }, Promise.resolve());
+                return value.relationships[relName].reduce(
+                  (thenable: Promise<void | ModelData>, delta) => {
+                    return thenable.then(() => {
+                      if (delta.op === 'add') {
+                        return this.terminal.writeRelationshipItem(
+                          updated,
+                          relName,
+                          delta.data,
+                        );
+                      } else if (delta.op === 'remove') {
+                        return this.terminal.deleteRelationshipItem(
+                          updated,
+                          relName,
+                          delta.data,
+                        );
+                      } else if (delta.op === 'modify') {
+                        return this.terminal.writeRelationshipItem(
+                          updated,
+                          relName,
+                          delta.data,
+                        );
+                      } else {
+                        throw new Error(
+                          `Unknown relationship delta ${JSON.stringify(delta)}`,
+                        );
+                      }
+                    });
+                  },
+                  Promise.resolve(),
+                );
               }),
             ).then(() => updated);
           } else {

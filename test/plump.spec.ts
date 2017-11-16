@@ -161,14 +161,20 @@ describe('Plump', () => {
         return savedItem
           .add('children', { type: 'tests', id: 101 })
           .save()
-          .then(() => savedItem.get(['attributes', 'relationships']))
+          .then(() =>
+            savedItem.get({ fields: ['attributes', 'relationships'] }),
+          )
           .then(val => expect(val.relationships.children).to.have.length(1))
           .then(() =>
             savedItem.add('children', { type: 'tests', id: 102 }).save(),
           )
-          .then(() => savedItem.get(['attributes', 'relationships']))
+          .then(() =>
+            savedItem.get({ fields: ['attributes', 'relationships'] }),
+          )
           .then(val => expect(val.relationships.children).to.have.length(2))
-          .then(() => savedItem.get(['attributes', 'relationships']))
+          .then(() =>
+            savedItem.get({ fields: ['attributes', 'relationships'] }),
+          )
           .then(val => expect(val.relationships.children).to.have.length(2))
           .then(() => i);
       });
@@ -296,7 +302,7 @@ describe('Plump', () => {
           added.map(val => {
             return plump
               .find({ type: 'tests', id: val.id })
-              .get(['attributes', 'relationships'])
+              .get({ fields: ['attributes', 'relationships'] })
               .then(final => {
                 expect(final.attributes.name).to.equal('mchammer');
                 expect(final.relationships.valenceChildren).to.deep.equal([

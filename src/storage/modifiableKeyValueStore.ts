@@ -8,6 +8,7 @@ import {
   ModelSchema,
   RelationshipItem,
   TerminalStore,
+  StorageReadRequest,
   CacheStore,
   AllocatingStore,
 } from '../dataTypes';
@@ -19,7 +20,7 @@ export abstract class ModifiableKeyValueStore extends Storage
   public maxKeys: { [type: string]: number } = {};
 
   abstract _keys(type: string): Promise<string[]>;
-  abstract _get(ref: ModelReference): Promise<ModelData | null>;
+  abstract _get(ref: StorageReadRequest): Promise<ModelData | null>;
   abstract _upsert(v: ModelData): Promise<ModelData>;
   abstract _updateArray(
     ref: ModelReference,
@@ -76,7 +77,7 @@ export abstract class ModifiableKeyValueStore extends Storage
       });
   }
 
-  readAttributes(value: ModelReference): Promise<ModelData> {
+  readAttributes(value: StorageReadRequest): Promise<ModelData> {
     return this._get(value).then(d => {
       // TODO: figure out what happens when there's a
       // field with no real attributes
@@ -94,7 +95,10 @@ export abstract class ModifiableKeyValueStore extends Storage
         'Cannot cache data without an id - write it to a terminal first',
       );
     } else {
-      return this._get(value).then(current => {
+      return this._get({
+        fields: ['attributes', 'relationships'],
+        item: value,
+      }).then(current => {
         const newVal = mergeOptions(current || {}, value);
         return this._upsert(newVal);
       });
@@ -107,7 +111,10 @@ export abstract class ModifiableKeyValueStore extends Storage
         'Cannot cache data without an id - write it to a terminal first',
       );
     } else {
-      return this._get(value).then(current => {
+      return this._get({
+        fields: ['attributes', 'relationships'],
+        item: value,
+      }).then(current => {
         return this._upsert({
           type: value.type,
           id: value.id,
@@ -124,7 +131,10 @@ export abstract class ModifiableKeyValueStore extends Storage
         'Cannot cache data without an id - write it to a terminal first',
       );
     } else {
-      return this._get(value).then(current => {
+      return this._get({
+        fields: ['attributes', 'relationships'],
+        item: value,
+      }).then(current => {
         return this._upsert({
           type: value.type,
           id: value.id,
@@ -135,23 +145,23 @@ export abstract class ModifiableKeyValueStore extends Storage
     }
   }
 
-  readRelationship(value: ModelReference, relName: string): Promise<ModelData> {
+  readRelationship(value: StorageReadRequest): Promise<ModelData> {
     return this._get(value).then(v => {
       const retVal = Object.assign({}, v);
       if (!v) {
         if (this.terminal) {
           return {
-            type: value.type,
-            id: value.id,
-            relationships: { [relName]: [] },
+            type: value.item.type,
+            id: value.item.id,
+            relationships: { [value.rel]: [] },
           };
         } else {
           return null;
         }
       } else if (!v.relationships && this.terminal) {
-        retVal.relationships = { [relName]: [] };
-      } else if (!retVal.relationships[relName] && this.terminal) {
-        retVal.relationships[relName] = [];
+        retVal.relationships = { [value.rel]: [] };
+      } else if (!retVal.relationships[value.rel] && this.terminal) {
+        retVal.relationships[value.rel] = [];
       }
       return retVal;
     });

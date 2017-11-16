@@ -1,32 +1,36 @@
 {
   "name": "plump",
-  "version": "0.20.2",
+  "version": "0.25.0",
   "description": "Pluggable Datastore",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "test": "mocha  --compilers ts:ts-node/register test/*.spec.ts"
+    "test":
+      "TS_NODE_COMPILER_OPTIONS='{\"module\":\"commonjs\"}' mocha  --compilers ts:ts-node/register test/*.spec.ts"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/kstf/plump.git"
+    "url": "git+https://github.com/plumpstack/plump.git"
   },
   "keywords": ["typescript", "orm", "datastore", "activerecord"],
   "author": "Eric Eslinger <eric.eslinger@gmail.com>",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/kstf/plump/issues"
+    "url": "https://github.com/plumpstack/plump/issues"
   },
-  "homepage": "https://github.com/kstf/plump#readme",
+  "homepage": "https://github.com/plumpstack/plump#readme",
   "devDependencies": {
     "@types/chai": "^4.0.4",
     "@types/chai-as-promised": "7.1.0",
     "@types/core-js": "^0.9.43",
     "@types/mocha": "^2.2.43",
     "@types/node": "^8.0.28",
+    "babel-core": "^6.26.0",
+    "babel-preset-env": "^1.6.1",
     "chai": "^4.1.2",
     "del": "^3.0.0",
     "gulp": "github:gulpjs/gulp#4.0",
+    "gulp-babel": "^7.0.0",
     "gulp-sourcemaps": "^2.6.1",
     "gulp-typescript": "^3.2.2",
     "mocha": "^3.5.3",

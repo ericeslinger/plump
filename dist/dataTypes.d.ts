@@ -13,13 +13,20 @@ export interface RelationshipSchema {
         sql?: {
             tableName?: string;
             joinFields: StringIndexed<string>;
-            joinQuery?: StringIndexed<string>;
-            where?: StringIndexed<string>;
         };
     } & StringIndexed<any>;
 }
 export interface TypedRelationshipItem extends UntypedRelationshipItem {
     type: string;
+}
+export interface ReadRequest {
+    fields: string[];
+    view?: string;
+    force?: boolean;
+    rel?: string;
+}
+export interface StorageReadRequest extends ReadRequest {
+    item: ModelReference;
 }
 export interface UntypedRelationshipItem {
     id: number | string;
@@ -41,8 +48,8 @@ export interface BaseStore {
     types: {
         [type: string]: ModelSchema;
     };
-    readRelationship(value: ModelReference, relName: string): Promise<ModelData>;
-    readAttributes(value: ModelReference): Promise<ModelData>;
+    readRelationship(req: StorageReadRequest): Promise<ModelData>;
+    readAttributes(req: StorageReadRequest): Promise<ModelData>;
     getSchema(t: {
         schema: ModelSchema;
     } | ModelSchema | string): ModelSchema;
@@ -55,7 +62,7 @@ export interface BaseStore {
         schema: ModelSchema;
     }[]): Promise<void>;
     validateInput(value: ModelData | IndefiniteModelData): typeof value;
-    read(item: ModelReference, opts?: string | string[], force?: boolean): Promise<ModelData>;
+    read(req: StorageReadRequest): Promise<ModelData>;
 }
 export interface CacheStore extends BaseStore {
     cache(value: ModelData): Promise<ModelData>;
@@ -72,7 +79,6 @@ export interface TerminalStore extends BaseStore {
     writeRelationshipItem(value: ModelReference, relName: string, child: UntypedRelationshipItem): Promise<ModelData>;
     deleteRelationshipItem(value: ModelReference, relName: string, child: UntypedRelationshipItem): Promise<ModelData>;
     query(type: string, q?: any): Promise<ModelReference[]>;
-    bulkRead(value: ModelReference): Promise<ModelData>;
 }
 export interface AllocatingStore extends TerminalStore {
     allocateId(type: string): Promise<string | number>;
@@ -125,6 +131,10 @@ export interface ReadOnlyFieldSchema extends GenericSchemaFieldSchema {
 }
 export declare type ModelRelationshipsSchema = StringIndexed<RelationshipFieldSchema>;
 export declare type ModelAttributesSchema = StringIndexed<AttributeFieldSchema>;
+export interface TableView {
+    name: string;
+    contains?: string[];
+}
 export interface ModelSchema {
     idAttribute: string;
     name: string;
@@ -132,9 +142,10 @@ export interface ModelSchema {
     relationships: ModelRelationshipsSchema;
     storeData?: StringIndexed<any> & {
         sql?: {
-            bulkQuery?: string;
-            tableName: string;
-            singleQuery?: string;
+            views: {
+                default: TableView;
+                [otherView: string]: TableView;
+            };
         };
     };
 }

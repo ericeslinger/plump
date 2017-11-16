@@ -1,5 +1,5 @@
 import { Subject, Observable } from 'rxjs';
-import { IndefiniteModelData, ModelData, ModelDelta, ModelSchema, ModelReference, BaseStore, StorageOptions } from '../dataTypes';
+import { IndefiniteModelData, ModelData, ModelDelta, ModelSchema, ModelReference, BaseStore, StorageReadRequest, StorageOptions } from '../dataTypes';
 export declare abstract class Storage implements BaseStore {
     terminal: boolean;
     read$: Observable<ModelData>;
@@ -13,12 +13,11 @@ export declare abstract class Storage implements BaseStore {
     readSubject: Subject<ModelData>;
     writeSubject: Subject<ModelDelta>;
     constructor(opts?: StorageOptions);
-    abstract readAttributes(value: ModelReference): Promise<ModelData>;
-    abstract readRelationship(value: ModelReference, relName: string): Promise<ModelData>;
-    readRelationships(item: ModelReference, relationships: string[]): Promise<any>;
-    read(item: ModelReference, opts?: string | string[], force?: boolean): Promise<ModelData>;
-    _read(item: ModelReference, opts?: string | string[]): Promise<any>;
-    bulkRead(item: ModelReference): Promise<ModelData>;
+    abstract readAttributes(value: StorageReadRequest): Promise<ModelData>;
+    abstract readRelationship(value: StorageReadRequest): Promise<ModelData>;
+    readRelationships(req: StorageReadRequest, relationships: string[]): Promise<any>;
+    read(req: StorageReadRequest): Promise<ModelData>;
+    _read(req: StorageReadRequest): Promise<ModelData>;
     hot(item: ModelReference): boolean;
     validateInput(value: ModelData | IndefiniteModelData): typeof value;
     getSchema(t: {
