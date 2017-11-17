@@ -1,5 +1,5 @@
 import { Observable, Subject } from 'rxjs';
-import { ModelData, ModelSchema, DirtyValues, UntypedRelationshipItem, TypedRelationshipItem, RelationshipDelta, ReadRequest, StringIndexed, Attributed } from './dataTypes';
+import { ModelData, ModelSchema, DirtyValues, UntypedRelationshipItem, TypedRelationshipItem, RelationshipDelta, ReadRequest, StorageReadRequest, StringIndexed, Attributed } from './dataTypes';
 import { Plump } from './plump';
 import { PlumpError } from './errors';
 export declare class Model<MD extends ModelData> {
@@ -29,7 +29,8 @@ export declare class Model<MD extends ModelData> {
     create(): Promise<MD>;
     save(opts?: any): Promise<MD>;
     set(update: any): this;
-    asObservable(opts?: string | string[]): Observable<MD>;
+    parseOpts(opts: ReadRequest | string | string[]): StorageReadRequest;
+    asObservable(opts?: ReadRequest | string | string[]): Observable<MD>;
     delete(): Promise<void>;
     add(key: string, item: UntypedRelationshipItem): this;
     modifyRelationship(key: string, item: UntypedRelationshipItem): this;

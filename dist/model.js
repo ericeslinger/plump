@@ -196,19 +196,38 @@ var Model = exports.Model = function () {
             return this;
         }
     }, {
+        key: 'parseOpts',
+        value: function parseOpts(opts) {
+            if (Array.isArray(opts) || typeof opts === 'string') {
+                var fields = Array.isArray(opts) ? opts.concat() : [opts];
+                if (fields.indexOf('relationships') >= 0) {
+                    fields.splice(fields.indexOf('relationships'), 1);
+                    fields = fields.concat(Object.keys(this.schema.relationships).map(function (k) {
+                        return 'relationships.' + k;
+                    }));
+                }
+                return {
+                    fields: fields,
+                    item: {
+                        id: this.id,
+                        type: this.type
+                    },
+                    view: 'default'
+                };
+            } else {
+                return Object.assign({}, opts, {
+                    item: {
+                        id: this.id,
+                        type: this.type
+                    }
+                });
+            }
+        }
+    }, {
         key: 'asObservable',
-        value: function asObservable() {
+        value: function asObservable(opts) {
             var _this5 = this;
 
-            var opts = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : ['relationships', 'attributes'];
-
-            var fields = Array.isArray(opts) ? opts.concat() : [opts];
-            if (fields.indexOf('relationships') >= 0) {
-                fields.splice(fields.indexOf('relationships'), 1);
-                fields = fields.concat(Object.keys(this.schema.relationships).map(function (k) {
-                    return 'relationships.' + k;
-                }));
-            }
             var hots = this.plump.caches.filter(function (s) {
                 return s.hot(_this5);
             });
@@ -216,14 +235,11 @@ var Model = exports.Model = function () {
                 return !s.hot(_this5);
             });
             var terminal = this.plump.terminal;
-            var readReq = {
-                item: { id: this.id, type: this.type },
-                fields: fields
-            };
+            var readReq = this.parseOpts(opts || { fields: ['attributes', 'relationships'] });
             var preload$ = _rxjs.Observable.from(hots).flatMap(function (s) {
                 return _rxjs.Observable.fromPromise(s.read(readReq));
             }).defaultIfEmpty(null).flatMap(function (v) {
-                if (!!v && fields.every(function (f) {
+                if (!!v && readReq.fields.every(function (f) {
                     return (0, _plump.pathExists)(v, f);
                 })) {
                     return _rxjs.Observable.of(v);
