@@ -243,30 +243,46 @@ export class Model<MD extends ModelData> {
     return this;
   }
 
-  asObservable(
-    opts: string | string[] = ['relationships', 'attributes'],
-  ): Observable<MD> {
-    let fields = Array.isArray(opts) ? opts.concat() : [opts];
-    if (fields.indexOf('relationships') >= 0) {
-      fields.splice(fields.indexOf('relationships'), 1);
-      fields = fields.concat(
-        Object.keys(this.schema.relationships).map(k => `relationships.${k}`),
-      );
+  parseOpts(opts: ReadRequest | string | string[]): StorageReadRequest {
+    if (Array.isArray(opts) || typeof opts === 'string') {
+      let fields = Array.isArray(opts) ? opts.concat() : [opts];
+      if (fields.indexOf('relationships') >= 0) {
+        fields.splice(fields.indexOf('relationships'), 1);
+        fields = fields.concat(
+          Object.keys(this.schema.relationships).map(k => `relationships.${k}`),
+        );
+      }
+      return {
+        fields: fields,
+        item: {
+          id: this.id,
+          type: this.type,
+        },
+        view: 'default',
+      };
+    } else {
+      return Object.assign({}, opts, {
+        item: {
+          id: this.id,
+          type: this.type,
+        },
+      });
     }
+  }
 
+  asObservable(opts?: ReadRequest | string | string[]): Observable<MD> {
     const hots = this.plump.caches.filter(s => s.hot(this));
     const colds = this.plump.caches.filter(s => !s.hot(this));
     const terminal = this.plump.terminal;
-    const readReq: StorageReadRequest = {
-      item: { id: this.id, type: this.type },
-      fields: fields,
-    };
+    const readReq = this.parseOpts(
+      opts || { fields: ['attributes', 'relationships'] },
+    );
 
     const preload$: Observable<ModelData> = Observable.from(hots)
       .flatMap((s: CacheStore) => Observable.fromPromise(s.read(readReq)))
       .defaultIfEmpty(null)
       .flatMap(v => {
-        if (!!v && fields.every(f => pathExists(v, f))) {
+        if (!!v && readReq.fields.every(f => pathExists(v, f))) {
           return Observable.of(v);
         } else {
           const terminal$ = Observable.fromPromise(

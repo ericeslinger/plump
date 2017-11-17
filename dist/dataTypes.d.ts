@@ -12,12 +12,11 @@ export interface RelationshipSchema {
     storeData?: {
         sql?: {
             tableName?: string;
+            readView?: string;
+            writeView?: string;
             joinFields: StringIndexed<string>;
         };
     } & StringIndexed<any>;
-}
-export interface TypedRelationshipItem extends UntypedRelationshipItem {
-    type: string;
 }
 export interface ReadRequest {
     fields: string[];
@@ -32,6 +31,9 @@ export interface UntypedRelationshipItem {
     id: number | string;
     type?: string;
     meta?: StringIndexed<number | string | boolean>;
+}
+export interface TypedRelationshipItem extends UntypedRelationshipItem {
+    type: string;
 }
 export declare type RelationshipItem = TypedRelationshipItem;
 export interface RelationshipDelta {
