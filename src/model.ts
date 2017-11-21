@@ -43,10 +43,12 @@ export class Model<MD extends ModelData> {
     relationships: {},
   };
 
-  public error: PlumpError;
+  error: PlumpError;
 
-  public _write$: Subject<MD> = new Subject<MD>();
-  public dirty: DirtyValues;
+  _write$: Subject<MD> = new Subject<MD>();
+  dirty: DirtyValues;
+  _dirty$ = new Subject<boolean>();
+  dirty$ = this._dirty$.asObservable().startWith(false);
 
   get type() {
     return this.constructor['type'];
@@ -56,11 +58,12 @@ export class Model<MD extends ModelData> {
     return this.constructor['schema'];
   }
 
-  static empty(id: number | string) {
+  static empty(id: number | string, error?: string) {
     const retVal = {
       id: id,
       type: this.type,
       empty: true,
+      error: error,
       attributes: {},
       relationships: {},
     };
@@ -90,8 +93,8 @@ export class Model<MD extends ModelData> {
     return retVal;
   }
 
-  empty(id: number | string): MD {
-    return this.constructor['empty'](id);
+  empty(id: number | string, error?: string): MD {
+    return this.constructor['empty'](id, error);
   }
 
   dirtyFields() {
@@ -165,6 +168,7 @@ export class Model<MD extends ModelData> {
         type: this.type,
       } as MD);
     }
+    this._dirty$.next(this.dirtyFields().length !== 0);
   }
 
   get<T extends ModelData>(req: ReadRequest): Promise<T> {
@@ -289,11 +293,14 @@ export class Model<MD extends ModelData> {
             terminal.read(readReq).then(terminalValue => {
               if (terminalValue === null) {
                 throw new NotFoundError();
+                // return null;
               } else {
                 return terminalValue;
               }
             }),
-          );
+          ).catch(() => {
+            return Observable.of(this.empty(this.id, 'load error'));
+          });
           const cold$ = Observable.from(colds).flatMap((s: CacheStore) =>
             Observable.fromPromise(s.read(readReq)),
           );
