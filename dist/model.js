@@ -49,6 +49,8 @@ var Model = exports.Model = function () {
 
         this.plump = plump;
         this._write$ = new _rxjs.Subject();
+        this._dirty$ = new _rxjs.Subject();
+        this.dirty$ = this._dirty$.asObservable().startWith(false);
         this.error = null;
         if (this.type === 'BASE') {
             throw new TypeError('Cannot instantiate base plump Models, please subclass with a schema and valid type');
@@ -130,6 +132,7 @@ var Model = exports.Model = function () {
                     type: this.type
                 });
             }
+            this._dirty$.next(this.dirtyFields().length !== 0);
         }
     }, {
         key: 'get',

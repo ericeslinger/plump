@@ -43,10 +43,12 @@ export class Model<MD extends ModelData> {
     relationships: {},
   };
 
-  public error: PlumpError;
+  error: PlumpError;
 
-  public _write$: Subject<MD> = new Subject<MD>();
-  public dirty: DirtyValues;
+  _write$: Subject<MD> = new Subject<MD>();
+  dirty: DirtyValues;
+  _dirty$ = new Subject<boolean>();
+  dirty$ = this._dirty$.asObservable().startWith(false);
 
   get type() {
     return this.constructor['type'];
@@ -166,6 +168,7 @@ export class Model<MD extends ModelData> {
         type: this.type,
       } as MD);
     }
+    this._dirty$.next(this.dirtyFields().length !== 0);
   }
 
   get<T extends ModelData>(req: ReadRequest): Promise<T> {

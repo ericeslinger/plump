@@ -10,6 +10,8 @@ export declare class Model<MD extends ModelData> {
     error: PlumpError;
     _write$: Subject<MD>;
     dirty: DirtyValues;
+    _dirty$: Subject<boolean>;
+    dirty$: Observable<boolean>;
     readonly type: any;
     readonly schema: any;
     static empty(id: number | string, error?: string): {
