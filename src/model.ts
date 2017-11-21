@@ -56,11 +56,12 @@ export class Model<MD extends ModelData> {
     return this.constructor['schema'];
   }
 
-  static empty(id: number | string) {
+  static empty(id: number | string, error?: string) {
     const retVal = {
       id: id,
       type: this.type,
       empty: true,
+      error: error,
       attributes: {},
       relationships: {},
     };
@@ -90,8 +91,8 @@ export class Model<MD extends ModelData> {
     return retVal;
   }
 
-  empty(id: number | string): MD {
-    return this.constructor['empty'](id);
+  empty(id: number | string, error?: string): MD {
+    return this.constructor['empty'](id, error);
   }
 
   dirtyFields() {
@@ -289,11 +290,14 @@ export class Model<MD extends ModelData> {
             terminal.read(readReq).then(terminalValue => {
               if (terminalValue === null) {
                 throw new NotFoundError();
+                // return null;
               } else {
                 return terminalValue;
               }
             }),
-          );
+          ).catch(() => {
+            return Observable.of(this.empty(this.id, 'load error'));
+          });
           const cold$ = Observable.from(colds).flatMap((s: CacheStore) =>
             Observable.fromPromise(s.read(readReq)),
           );

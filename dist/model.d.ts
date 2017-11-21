@@ -12,14 +12,15 @@ export declare class Model<MD extends ModelData> {
     dirty: DirtyValues;
     readonly type: any;
     readonly schema: any;
-    static empty(id: number | string): {
+    static empty(id: number | string, error?: string): {
         id: string | number;
         type: string;
         empty: boolean;
+        error: string;
         attributes: {};
         relationships: {};
     };
-    empty(id: number | string): MD;
+    empty(id: number | string, error?: string): MD;
     dirtyFields(): string[];
     constructor(opts: Attributed, plump: Plump);
     $$copyValuesFrom(opts?: Attributed): void;

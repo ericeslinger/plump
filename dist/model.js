@@ -67,8 +67,8 @@ var Model = exports.Model = function () {
 
     _createClass(Model, [{
         key: 'empty',
-        value: function empty(id) {
-            return this.constructor['empty'](id);
+        value: function empty(id, error) {
+            return this.constructor['empty'](id, error);
         }
     }, {
         key: 'dirtyFields',
@@ -247,10 +247,13 @@ var Model = exports.Model = function () {
                     var terminal$ = _rxjs.Observable.fromPromise(terminal.read(readReq).then(function (terminalValue) {
                         if (terminalValue === null) {
                             throw new _errors.NotFoundError();
+                            // return null;
                         } else {
                             return terminalValue;
                         }
-                    }));
+                    })).catch(function () {
+                        return _rxjs.Observable.of(_this5.empty(_this5.id, 'load error'));
+                    });
                     var cold$ = _rxjs.Observable.from(colds).flatMap(function (s) {
                         return _rxjs.Observable.fromPromise(s.read(readReq));
                     });
@@ -352,13 +355,14 @@ var Model = exports.Model = function () {
         }
     }], [{
         key: 'empty',
-        value: function empty(id) {
+        value: function empty(id, error) {
             var _this6 = this;
 
             var retVal = {
                 id: id,
                 type: this.type,
                 empty: true,
+                error: error,
                 attributes: {},
                 relationships: {}
             };

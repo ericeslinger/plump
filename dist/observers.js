@@ -51,10 +51,16 @@ function observeList(list, plump) {
             return _rxjs.Observable.of([]);
         } else {
             return _rxjs.Observable.combineLatest(coms.map(function (ed) {
-                return ed.model.asObservable(['attributes']).map(function (v) {
+                return ed.model.asObservable(['attributes']).catch(function () {
+                    return _rxjs.Observable.of(ed.model.empty());
+                }).map(function (v) {
                     return Object.assign(v, { meta: ed.meta });
                 });
-            }));
+            })).map(function (children) {
+                return children.filter(function (child) {
+                    return !child.empty;
+                });
+            });
         }
     }).startWith([]).shareReplay(1);
 }
