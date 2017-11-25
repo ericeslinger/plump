@@ -25,12 +25,12 @@ export abstract class ModifiableKeyValueStore extends Storage
   abstract _updateArray(
     ref: ModelReference,
     relName: string,
-    item: RelationshipItem,
+    item: RelationshipItem
   ): Promise<ModelReference>;
   abstract _removeFromArray(
     ref: ModelReference,
     relName: string,
-    item: RelationshipItem,
+    item: RelationshipItem
   ): Promise<ModelReference>;
   abstract _del(ref: ModelReference, fields: string[]): Promise<ModelData>;
 
@@ -49,7 +49,7 @@ export abstract class ModifiableKeyValueStore extends Storage
         if (value.id === undefined || value.id === null) {
           if (!this.terminal) {
             throw new Error(
-              'Cannot create new content in a non-terminal store',
+              'Cannot create new content in a non-terminal store'
             );
           }
           return this.allocateId(value.type).then(n => {
@@ -62,7 +62,7 @@ export abstract class ModifiableKeyValueStore extends Storage
         } else {
           this.maxKeys[inputValue.type] = Math.max(
             this.maxKeys[inputValue.type],
-            value.id as number,
+            value.id as number
           );
           return value as ModelData;
         }
@@ -70,7 +70,7 @@ export abstract class ModifiableKeyValueStore extends Storage
       .then((toSave: ModelData) => {
         return this._upsert(toSave).then(() => {
           this.fireWriteUpdate(
-            Object.assign({}, toSave, { invalidate: ['attributes'] }),
+            Object.assign({}, toSave, { invalidate: ['attributes'] })
           );
           return toSave;
         });
@@ -92,13 +92,29 @@ export abstract class ModifiableKeyValueStore extends Storage
   cache(value: ModelData) {
     if (value.id === undefined || value.id === null) {
       return Promise.reject(
-        'Cannot cache data without an id - write it to a terminal first',
+        'Cannot cache data without an id - write it to a terminal first'
       );
     } else {
       return this._get({
         fields: ['attributes', 'relationships'],
         item: value,
       }).then(current => {
+        if (!current) {
+          return this._upsert(value);
+        } else {
+          const newVal: ModelData = mergeOptions({}, current, value);
+          Object.keys(current.relationships).forEach(relKey => {
+            if (
+              current.relationships[relKey].length > 0 &&
+              (!value.relationships[relKey] ||
+                value.relationships[relKey].length === 0)
+            ) {
+              newVal.relationships[relKey] = current.relationships[
+                relKey
+              ].concat();
+            }
+          });
+        }
         const newVal = mergeOptions(current || {}, value);
         return this._upsert(newVal);
       });
@@ -108,7 +124,7 @@ export abstract class ModifiableKeyValueStore extends Storage
   cacheAttributes(value: ModelData) {
     if (value.id === undefined || value.id === null) {
       return Promise.reject(
-        'Cannot cache data without an id - write it to a terminal first',
+        'Cannot cache data without an id - write it to a terminal first'
       );
     } else {
       return this._get({
@@ -128,7 +144,7 @@ export abstract class ModifiableKeyValueStore extends Storage
   cacheRelationship(value: ModelData) {
     if (value.id === undefined || value.id === null) {
       return Promise.reject(
-        'Cannot cache data without an id - write it to a terminal first',
+        'Cannot cache data without an id - write it to a terminal first'
       );
     } else {
       return this._get({
@@ -186,7 +202,7 @@ export abstract class ModifiableKeyValueStore extends Storage
   writeRelationshipItem(
     value: ModelReference,
     relName: string,
-    child: RelationshipItem,
+    child: RelationshipItem
   ) {
     const schema = this.getSchema(value.type);
     const relSchema = schema.relationships[relName].type;
@@ -212,13 +228,13 @@ export abstract class ModifiableKeyValueStore extends Storage
     ])
       .then(() => {
         this.fireWriteUpdate(
-          Object.assign(value, { invalidate: [`relationships.${relName}`] }),
+          Object.assign(value, { invalidate: [`relationships.${relName}`] })
         );
         this.fireWriteUpdate(
           Object.assign(
             { type: otherRelType, id: child.id },
-            { invalidate: [`relationships.${otherRelName}`] },
-          ),
+            { invalidate: [`relationships.${otherRelName}`] }
+          )
         );
       })
       .then(() => value);
@@ -227,7 +243,7 @@ export abstract class ModifiableKeyValueStore extends Storage
   deleteRelationshipItem(
     value: ModelReference,
     relName: string,
-    child: RelationshipItem,
+    child: RelationshipItem
   ) {
     const schema = this.getSchema(value.type);
     const relSchema = schema.relationships[relName].type;
@@ -253,13 +269,13 @@ export abstract class ModifiableKeyValueStore extends Storage
     ])
       .then(() => {
         this.fireWriteUpdate(
-          Object.assign(value, { invalidate: [`relationships.${relName}`] }),
+          Object.assign(value, { invalidate: [`relationships.${relName}`] })
         );
         this.fireWriteUpdate(
           Object.assign(
             { type: otherRelType, id: child.id },
-            { invalidate: [`relationships.${otherRelName}`] },
-          ),
+            { invalidate: [`relationships.${otherRelName}`] }
+          )
         );
       })
       .then(() => value);

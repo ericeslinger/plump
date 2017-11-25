@@ -254,9 +254,10 @@ var Model = exports.Model = function () {
                         } else {
                             return terminalValue;
                         }
-                    })).catch(function () {
-                        return _rxjs.Observable.of(_this5.empty(_this5.id, 'load error'));
-                    });
+                    }));
+                    // .catch(() => {
+                    //   return Observable.of(this.empty(this.id, 'load error'));
+                    // });
                     var cold$ = _rxjs.Observable.from(colds).flatMap(function (s) {
                         return _rxjs.Observable.fromPromise(s.read(readReq));
                     });

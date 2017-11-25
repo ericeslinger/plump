@@ -101,6 +101,16 @@ var ModifiableKeyValueStore = exports.ModifiableKeyValueStore = function (_Stora
                     fields: ['attributes', 'relationships'],
                     item: value
                 }).then(function (current) {
+                    if (!current) {
+                        return _this3._upsert(value);
+                    } else {
+                        var _newVal = (0, _mergeOptions2.default)({}, current, value);
+                        Object.keys(current.relationships).forEach(function (relKey) {
+                            if (current.relationships[relKey].length > 0 && (!value.relationships[relKey] || value.relationships[relKey].length === 0)) {
+                                _newVal.relationships[relKey] = current.relationships[relKey].concat();
+                            }
+                        });
+                    }
                     var newVal = (0, _mergeOptions2.default)(current || {}, value);
                     return _this3._upsert(newVal);
                 });
