@@ -74,15 +74,15 @@ export abstract class Storage implements BaseStore {
   readRelationships(req: StorageReadRequest, relationships: string[]) {
     return Promise.all(
       relationships.map(r =>
-        this.readRelationship(Object.assign({}, req, { rel: r })),
-      ),
+        this.readRelationship(Object.assign({}, req, { rel: r }))
+      )
     ).then(rA =>
       rA.reduce((a, r) => mergeOptions(a, r || {}), {
         type: req.item.type,
         id: req.item.id,
         attributes: {},
         relationships: {},
-      }),
+      })
     );
   }
 
@@ -137,7 +137,7 @@ export abstract class Storage implements BaseStore {
                 ) {
                   attributes.attributes[attrName] = Object.assign(
                     {},
-                    schema.attributes[attrName].default,
+                    schema.attributes[attrName].default
                   );
                 } else {
                   attributes.attributes[attrName] =
@@ -155,7 +155,7 @@ export abstract class Storage implements BaseStore {
                   .filter(ka => ka[0] === 'relationships')
                   .map(ka => ka[1]);
           const relsToFetch = relsWanted.filter(
-            relName => !attributes.relationships[relName],
+            relName => !attributes.relationships[relName]
           );
           // readAttributes can return relationship data, so don't fetch those
           if (relsToFetch.length > 0) {
@@ -214,13 +214,13 @@ export abstract class Storage implements BaseStore {
 
     if (invalidAttrs.length > 0) {
       throw new Error(
-        `Invalid attributes on value object: ${JSON.stringify(invalidAttrs)}`,
+        `Invalid attributes on value object: ${JSON.stringify(invalidAttrs)}`
       );
     }
 
     if (invalidRels.length > 0) {
       throw new Error(
-        `Invalid relationships on value object: ${JSON.stringify(invalidRels)}`,
+        `Invalid relationships on value object: ${JSON.stringify(invalidRels)}`
       );
     }
 
