@@ -1,6 +1,6 @@
 import mergeOptions from 'merge-options';
 import * as deepEqual from 'deep-equal';
-import { Observable, Subscription, Observer, Subject } from 'rxjs';
+import { Observable, Subscription, Observer, Subject, Scheduler } from 'rxjs';
 
 import {
   ModelData,
@@ -72,14 +72,14 @@ export class Model<MD extends ModelData> {
         retVal.attributes[key] = this.schema.attributes[key].default || 0;
       } else if (this.schema.attributes[key].type === 'date') {
         retVal.attributes[key] = new Date(
-          (this.schema.attributes[key].default as any) || Date.now()
+          (this.schema.attributes[key].default as any) || Date.now(),
         );
       } else if (this.schema.attributes[key].type === 'string') {
         retVal.attributes[key] = this.schema.attributes[key].default || '';
       } else if (this.schema.attributes[key].type === 'object') {
         retVal.attributes[key] = Object.assign(
           {},
-          this.schema.attributes[key].default
+          this.schema.attributes[key].default,
         );
       } else if (this.schema.attributes[key].type === 'array') {
         retVal.attributes[key] = (
@@ -107,7 +107,7 @@ export class Model<MD extends ModelData> {
     this.error = null;
     if (this.type === 'BASE') {
       throw new TypeError(
-        'Cannot instantiate base plump Models, please subclass with a schema and valid type'
+        'Cannot instantiate base plump Models, please subclass with a schema and valid type',
       );
     }
     let initialValue = opts;
@@ -179,7 +179,7 @@ export class Model<MD extends ModelData> {
       .get(
         mergeOptions({}, req, {
           item: { id: this.id, type: this.type },
-        })
+        }),
       )
       .catch((e: PlumpError) => {
         this.error = e;
@@ -196,12 +196,12 @@ export class Model<MD extends ModelData> {
         } else {
           const resolved = Model.resolveAndOverlay(
             this.dirty,
-            self || undefined
+            self || undefined,
           );
           return mergeOptions(
             {},
             self || { id: this.id, type: this.type },
-            resolved
+            resolved,
           );
         }
       });
@@ -216,7 +216,7 @@ export class Model<MD extends ModelData> {
   save(opts: any = { stripId: true }): Promise<MD> {
     const update: DirtyModel = mergeOptions(
       { id: this.id, type: this.type },
-      this.dirty
+      this.dirty,
     );
     if (
       Object.keys(this.dirty.attributes).length +
@@ -253,7 +253,7 @@ export class Model<MD extends ModelData> {
       if (fields.indexOf('relationships') >= 0) {
         fields.splice(fields.indexOf('relationships'), 1);
         fields = fields.concat(
-          Object.keys(this.schema.relationships).map(k => `relationships.${k}`)
+          Object.keys(this.schema.relationships).map(k => `relationships.${k}`),
         );
       }
       return {
@@ -279,7 +279,7 @@ export class Model<MD extends ModelData> {
     const colds = this.plump.caches.filter(s => !s.hot(this));
     const terminal = this.plump.terminal;
     const readReq = this.parseOpts(
-      opts || { fields: ['attributes', 'relationships'] }
+      opts || { fields: ['attributes', 'relationships'] },
     );
 
     const preload$: Observable<ModelData> = Observable.from(hots)
@@ -297,18 +297,18 @@ export class Model<MD extends ModelData> {
               } else {
                 return terminalValue;
               }
-            })
+            }),
           );
           // .catch(() => {
           //   return Observable.of(this.empty(this.id, 'load error'));
           // });
           const cold$ = Observable.from(colds).flatMap((s: CacheStore) =>
-            Observable.fromPromise(s.read(readReq))
+            Observable.fromPromise(s.read(readReq)),
           );
           // .startWith(undefined);
           return Observable.merge(
             terminal$,
-            cold$.takeUntil(terminal$)
+            cold$.takeUntil(terminal$),
           ) as Observable<ModelData>;
         }
       });
@@ -321,26 +321,28 @@ export class Model<MD extends ModelData> {
       .flatMapTo(
         Observable.of(terminal).flatMap((s: TerminalStore) =>
           Observable.fromPromise(
-            s.read(Object.assign({}, readReq, { force: true }))
-          )
-        )
+            s.read(Object.assign({}, readReq, { force: true })),
+          ),
+        ),
       )
       .startWith(null);
     return Observable.combineLatest(
       Observable.of(this.empty(this.id)),
       preload$,
       watchWrite$,
-      this._write$.asObservable().startWith(null) as Observable<ModelData>
+      this._write$.asObservable().startWith(null) as Observable<ModelData>,
+      Scheduler.queue,
     )
       .map((a: ModelData[]) => condMerge(a))
       .map((v: ModelData) => {
         v.relationships = Model.resolveRelationships(
           this.dirty.relationships,
-          v.relationships
+          v.relationships,
         );
         return v;
       })
-      .distinctUntilChanged(deepEqual) as Observable<MD>;
+      .distinctUntilChanged(deepEqual)
+      .share() as Observable<MD>;
   }
 
   delete() {
@@ -351,7 +353,7 @@ export class Model<MD extends ModelData> {
     const toAdd: TypedRelationshipItem = Object.assign(
       {},
       { type: this.schema.relationships[key].type.sides[key].otherType },
-      item
+      item,
     );
     if (key in this.schema.relationships) {
       if (item.id >= 1) {
@@ -377,7 +379,7 @@ export class Model<MD extends ModelData> {
     const toAdd: TypedRelationshipItem = Object.assign(
       {},
       { type: this.schema.relationships[key].type.sides[key].otherType },
-      item
+      item,
     );
     if (key in this.schema.relationships) {
       if (item.id >= 1) {
@@ -400,7 +402,7 @@ export class Model<MD extends ModelData> {
     const toAdd: TypedRelationshipItem = Object.assign(
       {},
       { type: this.schema.relationships[key].type.sides[key].otherType },
-      item
+      item,
     );
     if (key in this.schema.relationships) {
       if (item.id >= 1) {
@@ -437,25 +439,25 @@ export class Model<MD extends ModelData> {
     base: { attributes?: any; relationships?: any } = {
       attributes: {},
       relationships: {},
-    }
+    },
   ) {
     const attributes = mergeOptions({}, base.attributes, update.attributes);
     const resolvedRelationships = this.resolveRelationships(
       update.relationships,
-      base.relationships
+      base.relationships,
     );
     return { attributes, relationships: resolvedRelationships };
   }
 
   static resolveRelationships(
     deltas: StringIndexed<RelationshipDelta[]>,
-    base: StringIndexed<TypedRelationshipItem[]> = {}
+    base: StringIndexed<TypedRelationshipItem[]> = {},
   ) {
     const updates = Object.keys(deltas)
       .map(relName => {
         const resolved = this.resolveRelationship(
           deltas[relName],
-          base[relName]
+          base[relName],
         );
         return { [relName]: resolved };
       })
@@ -465,7 +467,7 @@ export class Model<MD extends ModelData> {
 
   static resolveRelationship(
     deltas: RelationshipDelta[],
-    base: TypedRelationshipItem[] = []
+    base: TypedRelationshipItem[] = [],
   ) {
     const retVal = base.concat();
     deltas.forEach(delta => {
