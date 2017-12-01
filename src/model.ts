@@ -50,6 +50,10 @@ export class Model<MD extends ModelData> {
   _dirty$ = new Subject<boolean>();
   dirty$ = this._dirty$.asObservable().startWith(false);
 
+  observableCache: {
+    [k: string]: Observable<MD>;
+  } = {};
+
   get type() {
     return this.constructor['type'];
   }
@@ -274,75 +278,85 @@ export class Model<MD extends ModelData> {
     }
   }
 
+  stringifyRequest(opts: ReadRequest) {
+    return [opts.view || 'default']
+      .concat(opts.fields.sort((a, b) => a.localeCompare(b)))
+      .join(':');
+  }
+
   asObservable(opts?: ReadRequest | string | string[]): Observable<MD> {
-    const hots = this.plump.caches.filter(s => s.hot(this));
-    const colds = this.plump.caches.filter(s => !s.hot(this));
-    const terminal = this.plump.terminal;
     const readReq = this.parseOpts(
       opts || { fields: ['attributes', 'relationships'] },
     );
+    const reqKey = this.stringifyRequest(readReq);
+    if (!this.observableCache[reqKey]) {
+      const hots = this.plump.caches.filter(s => s.hot(this));
+      const colds = this.plump.caches.filter(s => !s.hot(this));
+      const terminal = this.plump.terminal;
 
-    const preload$: Observable<ModelData> = Observable.from(hots)
-      .flatMap((s: CacheStore) => Observable.fromPromise(s.read(readReq)))
-      .defaultIfEmpty(null)
-      .flatMap(v => {
-        if (!!v && readReq.fields.every(f => pathExists(v, f))) {
-          return Observable.of(v);
-        } else {
-          const terminal$ = Observable.fromPromise(
-            terminal.read(readReq).then(terminalValue => {
-              if (terminalValue === null) {
-                throw new NotFoundError();
-                // return null;
-              } else {
-                return terminalValue;
-              }
-            }),
+      const preload$: Observable<ModelData> = Observable.from(hots)
+        .flatMap((s: CacheStore) => Observable.fromPromise(s.read(readReq)))
+        .defaultIfEmpty(null)
+        .flatMap(v => {
+          if (!!v && readReq.fields.every(f => pathExists(v, f))) {
+            return Observable.of(v);
+          } else {
+            const terminal$ = Observable.fromPromise(
+              terminal.read(readReq).then(terminalValue => {
+                if (terminalValue === null) {
+                  throw new NotFoundError();
+                  // return null;
+                } else {
+                  return terminalValue;
+                }
+              }),
+            );
+            // .catch(() => {
+            //   return Observable.of(this.empty(this.id, 'load error'));
+            // });
+            const cold$ = Observable.from(colds).flatMap((s: CacheStore) =>
+              Observable.fromPromise(s.read(readReq)),
+            );
+            // .startWith(undefined);
+            return Observable.merge(
+              terminal$,
+              cold$.takeUntil(terminal$),
+            ) as Observable<ModelData>;
+          }
+        });
+      const watchWrite$: Observable<ModelData> = terminal.write$
+        .filter((v: ModelDelta) => {
+          return (
+            v.type === this.type && v.id === this.id // && v.invalidate.some(i => fields.indexOf(i) >= 0)
           );
-          // .catch(() => {
-          //   return Observable.of(this.empty(this.id, 'load error'));
-          // });
-          const cold$ = Observable.from(colds).flatMap((s: CacheStore) =>
-            Observable.fromPromise(s.read(readReq)),
-          );
-          // .startWith(undefined);
-          return Observable.merge(
-            terminal$,
-            cold$.takeUntil(terminal$),
-          ) as Observable<ModelData>;
-        }
-      });
-    const watchWrite$: Observable<ModelData> = terminal.write$
-      .filter((v: ModelDelta) => {
-        return (
-          v.type === this.type && v.id === this.id // && v.invalidate.some(i => fields.indexOf(i) >= 0)
-        );
-      })
-      .flatMapTo(
-        Observable.of(terminal).flatMap((s: TerminalStore) =>
-          Observable.fromPromise(
-            s.read(Object.assign({}, readReq, { force: true })),
+        })
+        .flatMapTo(
+          Observable.of(terminal).flatMap((s: TerminalStore) =>
+            Observable.fromPromise(
+              s.read(Object.assign({}, readReq, { force: true })),
+            ),
           ),
-        ),
+        )
+        .startWith(null);
+      this.observableCache[reqKey] = Observable.combineLatest(
+        Observable.of(this.empty(this.id)),
+        preload$,
+        watchWrite$,
+        this._write$.asObservable().startWith(null) as Observable<ModelData>,
+        Scheduler.queue,
       )
-      .startWith(null);
-    return Observable.combineLatest(
-      Observable.of(this.empty(this.id)),
-      preload$,
-      watchWrite$,
-      this._write$.asObservable().startWith(null) as Observable<ModelData>,
-      Scheduler.queue,
-    )
-      .map((a: ModelData[]) => condMerge(a))
-      .map((v: ModelData) => {
-        v.relationships = Model.resolveRelationships(
-          this.dirty.relationships,
-          v.relationships,
-        );
-        return v;
-      })
-      .distinctUntilChanged(deepEqual)
-      .share() as Observable<MD>;
+        .map((a: ModelData[]) => condMerge(a))
+        .map((v: ModelData) => {
+          v.relationships = Model.resolveRelationships(
+            this.dirty.relationships,
+            v.relationships,
+          );
+          return v;
+        })
+        .distinctUntilChanged(deepEqual) //as Observable<MD>;
+        .shareReplay(1) as Observable<MD>;
+    }
+    return this.observableCache[reqKey];
   }
 
   delete() {

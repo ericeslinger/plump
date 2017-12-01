@@ -51,6 +51,7 @@ var Model = exports.Model = function () {
         this._write$ = new _rxjs.Subject();
         this._dirty$ = new _rxjs.Subject();
         this.dirty$ = this._dirty$.asObservable().startWith(false);
+        this.observableCache = {};
         this.error = null;
         if (this.type === 'BASE') {
             throw new TypeError('Cannot instantiate base plump Models, please subclass with a schema and valid type');
@@ -227,56 +228,68 @@ var Model = exports.Model = function () {
             }
         }
     }, {
+        key: 'stringifyRequest',
+        value: function stringifyRequest(opts) {
+            return [opts.view || 'default'].concat(opts.fields.sort(function (a, b) {
+                return a.localeCompare(b);
+            })).join(':');
+        }
+    }, {
         key: 'asObservable',
         value: function asObservable(opts) {
             var _this5 = this;
 
-            var hots = this.plump.caches.filter(function (s) {
-                return s.hot(_this5);
-            });
-            var colds = this.plump.caches.filter(function (s) {
-                return !s.hot(_this5);
-            });
-            var terminal = this.plump.terminal;
             var readReq = this.parseOpts(opts || { fields: ['attributes', 'relationships'] });
-            var preload$ = _rxjs.Observable.from(hots).flatMap(function (s) {
-                return _rxjs.Observable.fromPromise(s.read(readReq));
-            }).defaultIfEmpty(null).flatMap(function (v) {
-                if (!!v && readReq.fields.every(function (f) {
-                    return (0, _plump.pathExists)(v, f);
-                })) {
-                    return _rxjs.Observable.of(v);
-                } else {
-                    var terminal$ = _rxjs.Observable.fromPromise(terminal.read(readReq).then(function (terminalValue) {
-                        if (terminalValue === null) {
-                            throw new _errors.NotFoundError();
-                            // return null;
-                        } else {
-                            return terminalValue;
-                        }
-                    }));
-                    // .catch(() => {
-                    //   return Observable.of(this.empty(this.id, 'load error'));
-                    // });
-                    var cold$ = _rxjs.Observable.from(colds).flatMap(function (s) {
-                        return _rxjs.Observable.fromPromise(s.read(readReq));
-                    });
-                    // .startWith(undefined);
-                    return _rxjs.Observable.merge(terminal$, cold$.takeUntil(terminal$));
-                }
-            });
-            var watchWrite$ = terminal.write$.filter(function (v) {
-                return v.type === _this5.type && v.id === _this5.id // && v.invalidate.some(i => fields.indexOf(i) >= 0)
-                ;
-            }).flatMapTo(_rxjs.Observable.of(terminal).flatMap(function (s) {
-                return _rxjs.Observable.fromPromise(s.read(Object.assign({}, readReq, { force: true })));
-            })).startWith(null);
-            return _rxjs.Observable.combineLatest(_rxjs.Observable.of(this.empty(this.id)), preload$, watchWrite$, this._write$.asObservable().startWith(null), _rxjs.Scheduler.queue).map(function (a) {
-                return condMerge(a);
-            }).map(function (v) {
-                v.relationships = Model.resolveRelationships(_this5.dirty.relationships, v.relationships);
-                return v;
-            }).distinctUntilChanged(deepEqual).share();
+            var reqKey = this.stringifyRequest(readReq);
+            if (!this.observableCache[reqKey]) {
+                var hots = this.plump.caches.filter(function (s) {
+                    return s.hot(_this5);
+                });
+                var colds = this.plump.caches.filter(function (s) {
+                    return !s.hot(_this5);
+                });
+                var terminal = this.plump.terminal;
+                var preload$ = _rxjs.Observable.from(hots).flatMap(function (s) {
+                    return _rxjs.Observable.fromPromise(s.read(readReq));
+                }).defaultIfEmpty(null).flatMap(function (v) {
+                    if (!!v && readReq.fields.every(function (f) {
+                        return (0, _plump.pathExists)(v, f);
+                    })) {
+                        return _rxjs.Observable.of(v);
+                    } else {
+                        var terminal$ = _rxjs.Observable.fromPromise(terminal.read(readReq).then(function (terminalValue) {
+                            if (terminalValue === null) {
+                                throw new _errors.NotFoundError();
+                                // return null;
+                            } else {
+                                return terminalValue;
+                            }
+                        }));
+                        // .catch(() => {
+                        //   return Observable.of(this.empty(this.id, 'load error'));
+                        // });
+                        var cold$ = _rxjs.Observable.from(colds).flatMap(function (s) {
+                            return _rxjs.Observable.fromPromise(s.read(readReq));
+                        });
+                        // .startWith(undefined);
+                        return _rxjs.Observable.merge(terminal$, cold$.takeUntil(terminal$));
+                    }
+                });
+                var watchWrite$ = terminal.write$.filter(function (v) {
+                    return v.type === _this5.type && v.id === _this5.id // && v.invalidate.some(i => fields.indexOf(i) >= 0)
+                    ;
+                }).flatMapTo(_rxjs.Observable.of(terminal).flatMap(function (s) {
+                    return _rxjs.Observable.fromPromise(s.read(Object.assign({}, readReq, { force: true })));
+                })).startWith(null);
+                this.observableCache[reqKey] = _rxjs.Observable.combineLatest(_rxjs.Observable.of(this.empty(this.id)), preload$, watchWrite$, this._write$.asObservable().startWith(null), _rxjs.Scheduler.queue).map(function (a) {
+                    return condMerge(a);
+                }).map(function (v) {
+                    v.relationships = Model.resolveRelationships(_this5.dirty.relationships, v.relationships);
+                    return v;
+                }).distinctUntilChanged(deepEqual) //as Observable<MD>;
+                .shareReplay(1);
+            }
+            return this.observableCache[reqKey];
         }
     }, {
         key: 'delete',

@@ -12,6 +12,9 @@ export declare class Model<MD extends ModelData> {
     dirty: DirtyValues;
     _dirty$: Subject<boolean>;
     dirty$: Observable<boolean>;
+    observableCache: {
+        [k: string]: Observable<MD>;
+    };
     readonly type: any;
     readonly schema: any;
     static empty(id: number | string, error?: string): {
@@ -33,6 +36,7 @@ export declare class Model<MD extends ModelData> {
     save(opts?: any): Promise<MD>;
     set(update: any): this;
     parseOpts(opts: ReadRequest | string | string[]): StorageReadRequest;
+    stringifyRequest(opts: ReadRequest): string;
     asObservable(opts?: ReadRequest | string | string[]): Observable<MD>;
     delete(): Promise<void>;
     add(key: string, item: UntypedRelationshipItem): this;
