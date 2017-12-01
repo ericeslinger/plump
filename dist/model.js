@@ -271,12 +271,12 @@ var Model = exports.Model = function () {
             }).flatMapTo(_rxjs.Observable.of(terminal).flatMap(function (s) {
                 return _rxjs.Observable.fromPromise(s.read(Object.assign({}, readReq, { force: true })));
             })).startWith(null);
-            return _rxjs.Observable.combineLatest(_rxjs.Observable.of(this.empty(this.id)), preload$, watchWrite$, this._write$.asObservable().startWith(null)).map(function (a) {
+            return _rxjs.Observable.combineLatest(_rxjs.Observable.of(this.empty(this.id)), preload$, watchWrite$, this._write$.asObservable().startWith(null), _rxjs.Scheduler.queue).map(function (a) {
                 return condMerge(a);
             }).map(function (v) {
                 v.relationships = Model.resolveRelationships(_this5.dirty.relationships, v.relationships);
                 return v;
-            }).distinctUntilChanged(deepEqual);
+            }).distinctUntilChanged(deepEqual).share();
         }
     }, {
         key: 'delete',
