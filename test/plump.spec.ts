@@ -28,7 +28,7 @@ describe('Plump', () => {
         if (['read', 'write', 'add', 'remove'].indexOf(name) >= 0) {
           return (...args) => {
             return new Promise(resolve => setTimeout(resolve, 200)).then(() =>
-              target[name](...args),
+              target[name](...args)
             );
           };
         } else {
@@ -49,7 +49,7 @@ describe('Plump', () => {
       .then(() => {
         const invalidated = new TestType(
           { attributes: { name: 'foo' } },
-          otherPlump,
+          otherPlump
         );
         invalidated
           .save()
@@ -133,7 +133,7 @@ describe('Plump', () => {
         if (['read', 'write', 'add', 'remove'].indexOf(name) >= 0) {
           return (...args) => {
             return new Promise(resolve => setTimeout(resolve, 200)).then(() =>
-              target[name](...args),
+              target[name](...args)
             );
           };
         } else {
@@ -152,7 +152,7 @@ describe('Plump', () => {
       .then(() => {
         const testItem = new TestType(
           { attributes: { name: 'potato' } },
-          otherPlump,
+          otherPlump
         );
         return testItem.save();
       })
@@ -162,18 +162,18 @@ describe('Plump', () => {
           .add('children', { type: 'tests', id: 101 })
           .save()
           .then(() =>
-            savedItem.get({ fields: ['attributes', 'relationships'] }),
+            savedItem.get({ fields: ['attributes', 'relationships'] })
           )
           .then(val => expect(val.relationships.children).to.have.length(1))
           .then(() =>
-            savedItem.add('children', { type: 'tests', id: 102 }).save(),
+            savedItem.add('children', { type: 'tests', id: 102 }).save()
           )
           .then(() =>
-            savedItem.get({ fields: ['attributes', 'relationships'] }),
+            savedItem.get({ fields: ['attributes', 'relationships'] })
           )
           .then(val => expect(val.relationships.children).to.have.length(2))
           .then(() =>
-            savedItem.get({ fields: ['attributes', 'relationships'] }),
+            savedItem.get({ fields: ['attributes', 'relationships'] })
           )
           .then(val => expect(val.relationships.children).to.have.length(2))
           .then(() => i);
@@ -186,7 +186,7 @@ describe('Plump', () => {
         if (['read', 'write', 'add', 'remove'].indexOf(name) >= 0) {
           return (...args) => {
             return new Promise(resolve => setTimeout(resolve, 200)).then(() =>
-              target[name](...args),
+              target[name](...args)
             );
           };
         } else {
@@ -203,7 +203,11 @@ describe('Plump', () => {
           retPhase = 1;
           return test(val, retPhase);
         }
-      } else if (phase === 1) {
+      } else if (
+        phase === 1 &&
+        val.attributes.name &&
+        val.attributes.name.length > 0
+      ) {
         expect(val.attributes).to.have.property('name', 'potato');
         retPhase = 2;
         return test(val, retPhase);
@@ -230,7 +234,7 @@ describe('Plump', () => {
       .then(() => {
         const testItem = new TestType(
           { attributes: { name: 'potato' } },
-          otherPlump,
+          otherPlump
         );
         return testItem.save();
       })
@@ -268,9 +272,9 @@ describe('Plump', () => {
           init.map(() => {
             return new TestType(
               { attributes: { name: 'mchammer' } },
-              plump,
+              plump
             ).save();
-          }),
+          })
         );
       })
       .then(saved => {
@@ -294,7 +298,7 @@ describe('Plump', () => {
                 meta: { perm: 3 },
               })
               .save();
-          }),
+          })
         );
       })
       .then(added => {
@@ -311,7 +315,7 @@ describe('Plump', () => {
                   { type: TestType.type, id: 1003, meta: { perm: 3 } },
                 ]);
               });
-          }),
+          })
         );
       });
   });

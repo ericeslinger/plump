@@ -28,14 +28,14 @@ import {
 
 export abstract class Storage implements BaseStore {
   terminal: boolean;
-  read$: Observable<ModelData>;
-  write$: Observable<ModelDelta>;
   inProgress: {
     [key: string]: Promise<ModelData>;
   } = {};
-  public types: { [type: string]: ModelSchema } = {};
-  public readSubject = new Subject<ModelData>();
-  public writeSubject = new Subject<ModelDelta>();
+  types: { [type: string]: ModelSchema } = {};
+  readSubject = new Subject<ModelData>();
+  writeSubject = new Subject<ModelDelta>();
+  read$ = this.readSubject.asObservable();
+  write$ = this.writeSubject.asObservable();
   // public types: Model[]; TODO: figure this out
 
   constructor(opts: StorageOptions = {}) {
@@ -48,29 +48,11 @@ export abstract class Storage implements BaseStore {
     // authorization questions, but the design may allow for authorization to be
     // cached.
     this.terminal = opts.terminal || false;
-    this.read$ = this.readSubject.asObservable();
-    this.write$ = this.writeSubject.asObservable();
   }
 
-  // Abstract - all stores must provide below:
-
-  // abstract allocateId(type: string): Promise<string | number>;
-  // abstract writeAttributes(value: IndefiniteModelData): Promise<ModelData>;
   abstract readAttributes(value: StorageReadRequest): Promise<ModelData>;
   abstract readRelationship(value: StorageReadRequest): Promise<ModelData>;
-  // abstract delete(value: ModelReference): Promise<void>;
-  // abstract writeRelationshipItem( value: ModelReference, relName: string, child: {id: string | number} ): Promise<ModelData>;
-  // abstract deleteRelationshipItem( value: ModelReference, relName: string, child: {id: string | number} ): Promise<ModelData>;
-  //
-  //
-  // query(q: any): Promise<ModelReference[]> {
-  //   // q: {type: string, query: any}
-  //   // q.query is impl defined - a string for sql (raw sql)
-  //   return Promise.reject(new Error('Query not implemented'));
-  // }
-  //
-  // convenience function used internally
-  // read a bunch of relationships and merge them together.
+
   readRelationships(req: StorageReadRequest, relationships: string[]) {
     return Promise.all(
       relationships.map(r =>

@@ -24,9 +24,9 @@ function build() {
             },
           ],
         ],
-      }),
+      })
     ),
-    tsResult.dts,
+    tsResult.dts
   ).pipe(gulp.dest(config.dest));
 }
 
