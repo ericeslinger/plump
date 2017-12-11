@@ -17,8 +17,6 @@ var deepEqual = _interopRequireWildcard(_deepEqual);
 
 var _rxjs = require('rxjs');
 
-var _plump = require('./plump');
-
 var _errors = require('./errors');
 
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
@@ -242,52 +240,40 @@ var Model = exports.Model = function () {
             var readReq = this.parseOpts(opts || { fields: ['attributes', 'relationships'] });
             var reqKey = this.stringifyRequest(readReq);
             if (!this.observableCache[reqKey]) {
-                var hots = this.plump.caches.filter(function (s) {
-                    return s.hot(_this5);
-                });
                 var colds = this.plump.caches.filter(function (s) {
                     return !s.hot(_this5);
                 });
-                var terminal = this.plump.terminal;
-                var preload$ = _rxjs.Observable.from(hots).flatMap(function (s) {
-                    return _rxjs.Observable.fromPromise(s.read(readReq));
-                }).defaultIfEmpty(null).flatMap(function (v) {
-                    if (!!v && readReq.fields.every(function (f) {
-                        return (0, _plump.pathExists)(v, f);
-                    })) {
-                        return _rxjs.Observable.of(v);
-                    } else {
-                        var terminal$ = _rxjs.Observable.fromPromise(terminal.read(readReq).then(function (terminalValue) {
-                            if (terminalValue === null) {
-                                throw new _errors.NotFoundError();
-                                // return null;
-                            } else {
-                                return terminalValue;
-                            }
-                        }));
-                        // .catch(() => {
-                        //   return Observable.of(this.empty(this.id, 'load error'));
-                        // });
-                        var cold$ = _rxjs.Observable.from(colds).flatMap(function (s) {
-                            return _rxjs.Observable.fromPromise(s.read(readReq));
-                        });
-                        // .startWith(undefined);
-                        return _rxjs.Observable.merge(terminal$, cold$.takeUntil(terminal$));
-                    }
-                });
-                var watchWrite$ = terminal.write$.filter(function (v) {
+                var read$ = this.plump.terminal.write$.filter(function (v) {
                     return v.type === _this5.type && v.id === _this5.id // && v.invalidate.some(i => fields.indexOf(i) >= 0)
                     ;
-                }).flatMapTo(_rxjs.Observable.of(terminal).flatMap(function (s) {
-                    return _rxjs.Observable.fromPromise(s.read(Object.assign({}, readReq, { force: true })));
-                })).startWith(null);
-                this.observableCache[reqKey] = _rxjs.Observable.combineLatest(_rxjs.Observable.of(this.empty(this.id)), preload$, watchWrite$, this._write$.asObservable().startWith(null), _rxjs.Scheduler.queue).map(function (a) {
-                    return condMerge(a);
-                }).map(function (v) {
-                    v.relationships = Model.resolveRelationships(_this5.dirty.relationships, v.relationships);
-                    return v;
-                }).distinctUntilChanged(deepEqual) //as Observable<MD>;
-                .shareReplay(1);
+                }).startWith({
+                    id: this.id,
+                    type: this.type,
+                    invalidate: readReq.fields
+                }).flatMap(function (v) {
+                    return _rxjs.Observable.fromPromise(_this5.get({
+                        fields: v.invalidate
+                    }).then(function (v) {
+                        if (v) {
+                            return v;
+                        } else {
+                            _this5.error = _this5.error || new _errors.NotFoundError();
+                            return _this5.empty(_this5.id, 'not found');
+                        }
+                    }));
+                }).publishReplay(1).refCount();
+                var cold$ = _rxjs.Observable.fromPromise(Promise.all(colds.map(function (h) {
+                    return h.read(readReq);
+                })).then(function (results) {
+                    return condMerge(results);
+                })).takeUntil(read$);
+                this.observableCache[reqKey] = _rxjs.Observable.merge(read$, cold$, this._write$.asObservable()).scan(function (acc, curr) {
+                    var rv = condMerge([acc, curr]);
+                    rv.relationships = Model.resolveRelationships(_this5.dirty.relationships, rv.relationships);
+                    return rv;
+                }, this.empty(this.id)).catch(function (err) {
+                    return _rxjs.Observable.of(_this5.empty(_this5.id, err));
+                }).distinctUntilChanged(deepEqual).publishReplay(1).refCount();
             }
             return this.observableCache[reqKey];
         }

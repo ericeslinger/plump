@@ -15,12 +15,12 @@ describe('model', () => {
     it('should return promises to existing data', () => {
       const one = new TestType(
         { attributes: { id: 1, name: 'potato' } },
-        plump,
+        plump
       );
       return one
         .get({ fields: ['attributes', 'relationships'] })
         .then(v =>
-          expect(v).to.have.nested.property('attributes.name', 'potato'),
+          expect(v).to.have.nested.property('attributes.name', 'potato')
         );
     });
 
@@ -30,14 +30,16 @@ describe('model', () => {
         expect(v).to.be.null; // tslint:disable-line no-unused-expression
         expect(none.error.message).to.equal('not found');
         return new Promise((resolve, reject) => {
-          none
-            .asObservable()
-            .subscribe(
-              s => reject(s),
-              (e: Error) => resolve(expect(e.message).to.equal('not found')),
-              () => false,
-            );
-        });
+          none.asObservable().subscribe(
+            s => {
+              if (s['error']) {
+                resolve(expect(s['error']).to.equal('not found'));
+              }
+            },
+            (e: Error) => resolve(expect(e.message).to.equal('not found')),
+            () => false
+          );
+        }).catch(e => console.log(e));
       });
     });
 
@@ -77,7 +79,7 @@ describe('model', () => {
             id: 101,
             type: 'smallType',
             attributes: { id: 101 },
-          }),
+          })
         )
         .then(i => {
           return new Promise((resolve, reject) => {
@@ -114,7 +116,7 @@ describe('model', () => {
           return two
             .get({ fields: ['attributes', 'relationships'] })
             .then(v =>
-              expect(v).to.have.nested.property('attributes.name', 'potato'),
+              expect(v).to.have.nested.property('attributes.name', 'potato')
             );
         });
     });
@@ -139,13 +141,13 @@ describe('model', () => {
         .then(() =>
           new TestType(
             { attributes: { name: 'potato', id: 101 } },
-            otherPlump,
-          ).save(),
+            otherPlump
+          ).save()
         )
         .then(() =>
           otherPlump
             .find({ type: TestType.type, id: 101 })
-            .get({ fields: ['attributes', 'relationships'] }),
+            .get({ fields: ['attributes', 'relationships'] })
         )
         .then(v => {
           expect(v).to.have.property('id', 101);
@@ -156,28 +158,28 @@ describe('model', () => {
     it('does not overwrite attributes on child addition', () => {
       const one = new TestType(
         { attributes: { name: 'potato', otherName: 'elephant' } },
-        plump,
+        plump
       );
       return one
         .save()
         .then(() =>
           plump
             .find({ type: TestType.type, id: one.id })
-            .get({ fields: ['attributes', 'relationships'] }),
+            .get({ fields: ['attributes', 'relationships'] })
         )
         .then(v =>
-          expect(v).to.have.nested.property('attributes.otherName', 'elephant'),
+          expect(v).to.have.nested.property('attributes.otherName', 'elephant')
         )
         .then(() =>
-          one.add('children', { type: TestType.type, id: 100 }).save(),
+          one.add('children', { type: TestType.type, id: 100 }).save()
         )
         .then(() =>
           plump
             .find({ type: TestType.type, id: one.id })
-            .get({ fields: ['attributes', 'relationships'] }),
+            .get({ fields: ['attributes', 'relationships'] })
         )
         .then(v =>
-          expect(v).to.have.nested.property('attributes.otherName', 'elephant'),
+          expect(v).to.have.nested.property('attributes.otherName', 'elephant')
         );
     });
 
@@ -188,16 +190,16 @@ describe('model', () => {
         .then(() =>
           plump
             .find({ type: TestType.type, id: one.id })
-            .get({ fields: ['attributes', 'relationships'] }),
+            .get({ fields: ['attributes', 'relationships'] })
         )
         .then(v =>
-          expect(v).to.have.nested.property('attributes.name', 'potato'),
+          expect(v).to.have.nested.property('attributes.name', 'potato')
         )
         .then(() => one.delete())
         .then(() =>
           plump
             .find({ type: TestType.type, id: one.id })
-            .get({ fields: ['attributes', 'relationships'] }),
+            .get({ fields: ['attributes', 'relationships'] })
         )
         .then(v => expect(v).to.be.null);
     });
@@ -205,20 +207,20 @@ describe('model', () => {
     it('should allow fields to be loaded', () => {
       const one = new TestType(
         { attributes: { name: 'p', otherName: 'q' } },
-        plump,
+        plump
       );
       return one
         .save()
         .then(() =>
           plump
             .find({ type: TestType.type, id: one.id })
-            .get({ fields: ['attributes', 'relationships'] }),
+            .get({ fields: ['attributes', 'relationships'] })
         )
         .then(v => expect(v).to.have.nested.property('attributes.name', 'p'))
         .then(() =>
           plump
             .find({ type: TestType.type, id: one.id })
-            .get({ fields: ['attributes', 'relationships'] }),
+            .get({ fields: ['attributes', 'relationships'] })
         )
         .then(v =>
           expect(v).to.deep.equal({
@@ -231,7 +233,7 @@ describe('model', () => {
               valenceParents: [],
               valenceChildren: [],
             },
-          }),
+          })
         );
     });
 
@@ -258,10 +260,10 @@ describe('model', () => {
           plump.get({
             item: { id: one.id, type: one.type },
             fields: ['attributes', 'relationships'],
-          }),
+          })
         )
         .then(v =>
-          expect(v).to.have.nested.property('attributes.name', 'rutabaga'),
+          expect(v).to.have.nested.property('attributes.name', 'rutabaga')
         );
     });
 
@@ -272,7 +274,7 @@ describe('model', () => {
         .then(() => one.set({ name: 'rutabaga' }))
         .then(() => one.get({ fields: ['attributes', 'relationships'] }))
         .then(v =>
-          expect(v).to.have.nested.property('attributes.name', 'rutabaga'),
+          expect(v).to.have.nested.property('attributes.name', 'rutabaga')
         );
     });
   });
@@ -291,13 +293,13 @@ describe('model', () => {
       return one
         .save()
         .then(() =>
-          one.add('children', { type: TestType.type, id: 100 }).save(),
+          one.add('children', { type: TestType.type, id: 100 }).save()
         )
         .then(() => one.get({ fields: ['relationships.children'] }))
         .then(v =>
           expect(v.relationships.children).to.deep.equal([
             { type: TestType.type, id: 100 },
-          ]),
+          ])
         );
     });
 
@@ -306,13 +308,13 @@ describe('model', () => {
       return one
         .save()
         .then(() =>
-          one.add('children', { type: TestType.type, id: 100 }).save(),
+          one.add('children', { type: TestType.type, id: 100 }).save()
         )
         .then(() => one.get({ fields: ['relationships.children'] }))
         .then(v =>
           expect(v.relationships.children).to.deep.equal([
             { type: TestType.type, id: 100 },
-          ]),
+          ])
         );
     });
 
@@ -324,13 +326,13 @@ describe('model', () => {
           one
             .add('children', { type: TestType.type, id: 100 })
             .add('children', { type: TestType.type, id: 101 })
-            .save(),
+            .save()
         )
         .then(() => one.get({ fields: ['relationships.children'] }))
         .then(v =>
           expect(v.relationships.children).to.deep.equal(
-            [100, 101].map(id => ({ type: TestType.type, id })),
-          ),
+            [100, 101].map(id => ({ type: TestType.type, id }))
+          )
         );
     });
 
@@ -339,16 +341,16 @@ describe('model', () => {
       return one
         .save()
         .then(() =>
-          one.add('children', { type: TestType.type, id: 100 }).save(),
+          one.add('children', { type: TestType.type, id: 100 }).save()
         )
         .then(() => one.get({ fields: ['relationships.children'] }))
         .then(v =>
           expect(v.relationships.children).to.deep.equal([
             { type: TestType.type, id: 100 },
-          ]),
+          ])
         )
         .then(() =>
-          one.remove('children', { type: TestType.type, id: 100 }).save(),
+          one.remove('children', { type: TestType.type, id: 100 }).save()
         )
         .then(() => one.get({ fields: ['relationships.children'] }))
         .then(v => expect(v.relationships.children).to.deep.equal([]));
@@ -365,13 +367,13 @@ describe('model', () => {
               id: 100,
               meta: { perm: 1 },
             })
-            .save(),
+            .save()
         )
         .then(() => one.get({ fields: ['relationships.valenceChildren'] }))
         .then(v =>
           expect(v.relationships.valenceChildren).to.deep.equal([
             { type: TestType.type, id: 100, meta: { perm: 1 } },
-          ]),
+          ])
         )
         .then(() =>
           one
@@ -380,13 +382,13 @@ describe('model', () => {
               id: 100,
               meta: { perm: 2 },
             })
-            .save(),
+            .save()
         )
         .then(() => one.get({ fields: ['relationships.valenceChildren'] }))
         .then(v =>
           expect(v.relationships.valenceChildren).to.deep.equal([
             { type: TestType.type, id: 100, meta: { perm: 2 } },
-          ]),
+          ])
         );
     });
   });
@@ -402,19 +404,19 @@ describe('model', () => {
           .then(() => onePrime.get({ fields: ['relationships.children'] }))
           .then(res => expect(res.relationships.children).to.deep.equal([]))
           .then(() =>
-            one.add('children', { type: TestType.type, id: 100 }).save(),
+            one.add('children', { type: TestType.type, id: 100 }).save()
           )
           .then(() => one.get({ fields: ['relationships.children'] }))
           .then(res =>
             expect(res.relationships.children).to.deep.equal([
               { type: TestType.type, id: 100 },
-            ]),
+            ])
           )
           .then(() => onePrime.get({ fields: ['relationships.children'] }))
           .then(res =>
             expect(res.relationships.children).to.deep.equal([
               { type: TestType.type, id: 100 },
-            ]),
+            ])
           );
       });
     });
@@ -426,20 +428,20 @@ describe('model', () => {
         return one
           .get({ fields: ['attributes', 'relationships'] })
           .then(res =>
-            expect(res).have.nested.property('attributes.name', 'potato'),
+            expect(res).have.nested.property('attributes.name', 'potato')
           )
           .then(() => onePrime.get({ fields: ['attributes', 'relationships'] }))
           .then(res =>
-            expect(res).have.nested.property('attributes.name', 'potato'),
+            expect(res).have.nested.property('attributes.name', 'potato')
           )
           .then(() => one.set({ attributes: { name: 'grotato' } }).save())
           .then(() => one.get({ fields: ['attributes', 'relationships'] }))
           .then(res =>
-            expect(res).have.nested.property('attributes.name', 'grotato'),
+            expect(res).have.nested.property('attributes.name', 'grotato')
           )
           .then(() => onePrime.get({ fields: ['attributes', 'relationships'] }))
           .then(res =>
-            expect(res).have.nested.property('attributes.name', 'grotato'),
+            expect(res).have.nested.property('attributes.name', 'grotato')
           );
       });
     });
@@ -459,7 +461,11 @@ describe('model', () => {
                   if (!v) {
                     return;
                   }
-                  if (phase === 0) {
+                  if (
+                    phase === 0 &&
+                    v.attributes.name &&
+                    v.attributes.name !== ''
+                  ) {
                     expect(v.attributes.name).to.equal('potato');
                     phase = 1;
                   } else if (phase === 1) {
@@ -480,7 +486,7 @@ describe('model', () => {
           .then(() => {
             setTimeout(
               () => one.set({ attributes: { name: 'not potato' } }),
-              25,
+              25
             );
             setTimeout(() => one.save(), 35);
             setTimeout(() => {
@@ -524,7 +530,7 @@ describe('model', () => {
                   if (phase === 1) {
                     expect(v).to.have.nested.property(
                       'attributes.name',
-                      'potato',
+                      'potato'
                     );
                     if (v.id !== undefined) {
                       phase = 2;
@@ -534,7 +540,7 @@ describe('model', () => {
                     if (v.attributes.name !== 'potato') {
                       expect(v).to.have.nested.property(
                         'attributes.name',
-                        'grotato',
+                        'grotato'
                       );
                       phase = 3;
                       subscription.unsubscribe();
@@ -550,48 +556,11 @@ describe('model', () => {
           .then(() =>
             setTimeout(
               () => one.set({ attributes: { name: 'grotato' } }).save(),
-              75,
-            ),
+              75
+            )
           );
       });
     });
-
-    it('should allow inflatable subscription to model sideloads');
-    // , () => {
-    //   return new Promise((resolve, reject) => {
-    //     const one = new TestType({ attributes: { name: 'potato' }}, plump);
-    //     const children = [
-    //       new TestType({ name: 'potato one' }, plump),
-    //       new TestType({ name: 'potato two' }, plump),
-    //       new TestType({ name: 'potato three' }, plump),
-    //       new TestType({ name: 'potato four' }, plump),
-    //       new TestType({ name: 'potato five' }, plump),
-    //     ];
-    //     let phase = 0;
-    //     one
-    //       .save()
-    //       .then(() => Promise.all(children.map(c => c.save())))
-    //       .then(() => Promise.all(children.map(c => one.add('children', c))))
-    //       .then(() => {
-    //         const subscription = one
-    //           .asObservable(['attributes', 'relationships'])
-    //           .inflateRelationship('children')
-    //           .subscribe(v => {
-    //             if (v.length === children.length) {
-    //               expect(v.map(i => i.attributes.name)).to.have.members([
-    //                 'potato one',
-    //                 'potato two',
-    //                 'potato three',
-    //                 'potato four',
-    //                 'potato five',
-    //               ]);
-    //               resolve();
-    //             }
-    //           });
-    //       })
-    //       .then(() => one.save());
-    //   });
-    // });
 
     it('should allow subscription to model sideloads', () => {
       return new Promise((resolve, reject) => {
@@ -600,7 +569,7 @@ describe('model', () => {
         one
           .save()
           .then(() =>
-            one.add('children', { type: TestType.type, id: 100 }).save(),
+            one.add('children', { type: TestType.type, id: 100 }).save()
           )
           .then(() => {
             const subscription = one
@@ -627,7 +596,8 @@ describe('model', () => {
                     if (
                       phase === 1 &&
                       v.relationships &&
-                      v.relationships.children
+                      v.relationships.children &&
+                      v.relationships.children.length > 0
                     ) {
                       expect(v.relationships.children).to.deep.equal([
                         { type: TestType.type, id: 100 },
@@ -712,7 +682,8 @@ describe('model', () => {
                     if (
                       phase === 1 &&
                       v.relationships &&
-                      v.relationships.children
+                      v.relationships.children &&
+                      v.relationships.children.length > 0
                     ) {
                       expect(v.relationships.children).to.deep.equal([
                         { type: TestType.type, id: 100 },
@@ -721,8 +692,9 @@ describe('model', () => {
                       setTimeout(
                         () =>
                           one.add('children', { type: TestType.type, id: 101 }),
-                        25,
+                        25
                       );
+                      console.log('added');
                     }
                     if (phase === 2) {
                       if (
@@ -740,7 +712,7 @@ describe('model', () => {
                               type: TestType.type,
                               id: 101,
                             }),
-                          25,
+                          25
                         );
                       }
                     } else if (
@@ -759,7 +731,7 @@ describe('model', () => {
                             id: 200,
                             meta: { perm: 2 },
                           }),
-                        25,
+                        25
                       );
                     } else if (
                       phase === 4 &&
@@ -787,7 +759,7 @@ describe('model', () => {
             if (['read', 'write', 'add', 'remove'].indexOf(name) >= 0) {
               return (...args) => {
                 return new Promise(r => setTimeout(r, 200)).then(() =>
-                  target[name](...args),
+                  target[name](...args)
                 );
               };
             } else {
@@ -797,7 +769,7 @@ describe('model', () => {
         };
         const delayedMemstore = new Proxy(
           new MemoryStore({ terminal: true }),
-          DelayProxy,
+          DelayProxy
         );
         const coldMemstore = new MemoryStore();
         const otherPlump = new Plump(delayedMemstore);
@@ -811,7 +783,7 @@ describe('model', () => {
           .then(() => {
             const one = new TestType(
               { attributes: { name: 'slowtato' } },
-              otherPlump,
+              otherPlump
             );
             one
               .save()

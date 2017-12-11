@@ -45,27 +45,13 @@ var Storage = exports.Storage = function () {
         this.types = {};
         this.readSubject = new _rxjs.Subject();
         this.writeSubject = new _rxjs.Subject();
+        this.read$ = this.readSubject.asObservable();
+        this.write$ = this.writeSubject.asObservable();
         // terminal facilities are also the only ones that can authoritatively answer
         // authorization questions, but the design may allow for authorization to be
         // cached.
         this.terminal = opts.terminal || false;
-        this.read$ = this.readSubject.asObservable();
-        this.write$ = this.writeSubject.asObservable();
     }
-    // abstract delete(value: ModelReference): Promise<void>;
-    // abstract writeRelationshipItem( value: ModelReference, relName: string, child: {id: string | number} ): Promise<ModelData>;
-    // abstract deleteRelationshipItem( value: ModelReference, relName: string, child: {id: string | number} ): Promise<ModelData>;
-    //
-    //
-    // query(q: any): Promise<ModelReference[]> {
-    //   // q: {type: string, query: any}
-    //   // q.query is impl defined - a string for sql (raw sql)
-    //   return Promise.reject(new Error('Query not implemented'));
-    // }
-    //
-    // convenience function used internally
-    // read a bunch of relationships and merge them together.
-
 
     _createClass(Storage, [{
         key: 'readRelationships',

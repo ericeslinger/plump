@@ -2,8 +2,6 @@ import { Subject, Observable } from 'rxjs';
 import { IndefiniteModelData, ModelData, ModelDelta, ModelSchema, ModelReference, BaseStore, StorageReadRequest, StorageOptions } from '../dataTypes';
 export declare abstract class Storage implements BaseStore {
     terminal: boolean;
-    read$: Observable<ModelData>;
-    write$: Observable<ModelDelta>;
     inProgress: {
         [key: string]: Promise<ModelData>;
     };
@@ -12,6 +10,8 @@ export declare abstract class Storage implements BaseStore {
     };
     readSubject: Subject<ModelData>;
     writeSubject: Subject<ModelDelta>;
+    read$: Observable<ModelData>;
+    write$: Observable<ModelDelta>;
     constructor(opts?: StorageOptions);
     abstract readAttributes(value: StorageReadRequest): Promise<ModelData>;
     abstract readRelationship(value: StorageReadRequest): Promise<ModelData>;
