@@ -12,6 +12,7 @@ export declare class Plump<TermType extends TerminalStore = TerminalStore> {
     terminal: TermType;
     destroy$: Observable<string>;
     caches: CacheStore[];
+    readCache: {};
     types: TypeMap;
     teardownSubject: Subject<string>;
     constructor(terminal: TermType);
