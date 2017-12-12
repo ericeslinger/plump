@@ -30,7 +30,7 @@ export interface StorageReadRequest extends ReadRequest {
 export interface UntypedRelationshipItem {
     id: number | string;
     type?: string;
-    meta?: StringIndexed<number | string | boolean>;
+    meta?: StringIndexed<number | string | boolean | Date>;
 }
 export interface TypedRelationshipItem extends UntypedRelationshipItem {
     type: string;
