@@ -243,15 +243,11 @@ var Model = exports.Model = function () {
                 var colds = this.plump.caches.filter(function (s) {
                     return !s.hot(_this5);
                 });
-                // THIS IS A MEMORY LEAK
+                // THIS IS A MEMORY LEAK - temporarily here for perf testing
                 if (!this.plump.readCache[this.type + ':' + this.id]) {
                     this.plump.readCache[this.type + ':' + this.id] = this.plump.terminal.write$.filter(function (v) {
                         return v.type === _this5.type && v.id === _this5.id // && v.invalidate.some(i => fields.indexOf(i) >= 0)
                         ;
-                    }).startWith({
-                        id: this.id,
-                        type: this.type,
-                        invalidate: readReq.fields
                     }).flatMap(function (v) {
                         return _rxjs.Observable.fromPromise(_this5.get({
                             fields: v.invalidate
@@ -265,7 +261,16 @@ var Model = exports.Model = function () {
                         }));
                     }).publishReplay(1).refCount();
                 }
-                var read$ = this.plump.readCache[this.type + ':' + this.id];
+                // don't want to fetch extra stuff if we don't want it
+                var firstRead$ = _rxjs.Observable.fromPromise(this.get(readReq).then(function (v) {
+                    if (v) {
+                        return v;
+                    } else {
+                        _this5.error = _this5.error || new _errors.NotFoundError();
+                        return _this5.empty(_this5.id, 'not found');
+                    }
+                }));
+                var read$ = _rxjs.Observable.merge(firstRead$, this.plump.readCache[this.type + ':' + this.id]);
                 var cold$ = _rxjs.Observable.fromPromise(Promise.all(colds.map(function (h) {
                     return h.read(readReq);
                 })).then(function (results) {

@@ -303,11 +303,11 @@ export class Model<MD extends ModelData> {
               v.type === this.type && v.id === this.id // && v.invalidate.some(i => fields.indexOf(i) >= 0)
             );
           })
-          .startWith({
-            id: this.id,
-            type: this.type,
-            invalidate: readReq.fields,
-          })
+          // .startWith({
+          //   id: this.id,
+          //   type: this.type,
+          //   invalidate: ['attributes', 'relationships'],
+          // })
           .flatMap(v =>
             Observable.fromPromise(
               this.get({
@@ -325,7 +325,22 @@ export class Model<MD extends ModelData> {
           .publishReplay(1)
           .refCount();
       }
-      const read$ = this.plump.readCache[`${this.type}:${this.id}`];
+      // don't want to fetch extra stuff if we don't want it
+      const firstRead$ = Observable.fromPromise(
+        this.get(readReq).then(v => {
+          if (v) {
+            return v;
+          } else {
+            this.error = this.error || new NotFoundError();
+            return this.empty(this.id, 'not found');
+          }
+        }),
+      );
+
+      const read$ = Observable.merge(
+        firstRead$,
+        this.plump.readCache[`${this.type}:${this.id}`],
+      );
 
       const cold$: Observable<ModelData> = Observable.fromPromise(
         Promise.all(colds.map(h => h.read(readReq))).then(results =>
