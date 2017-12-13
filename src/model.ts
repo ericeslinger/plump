@@ -76,14 +76,14 @@ export class Model<MD extends ModelData> {
         retVal.attributes[key] = this.schema.attributes[key].default || 0;
       } else if (this.schema.attributes[key].type === 'date') {
         retVal.attributes[key] = new Date(
-          (this.schema.attributes[key].default as any) || Date.now()
+          (this.schema.attributes[key].default as any) || Date.now(),
         );
       } else if (this.schema.attributes[key].type === 'string') {
         retVal.attributes[key] = this.schema.attributes[key].default || '';
       } else if (this.schema.attributes[key].type === 'object') {
         retVal.attributes[key] = Object.assign(
           {},
-          this.schema.attributes[key].default
+          this.schema.attributes[key].default,
         );
       } else if (this.schema.attributes[key].type === 'array') {
         retVal.attributes[key] = (
@@ -111,7 +111,7 @@ export class Model<MD extends ModelData> {
     this.error = null;
     if (this.type === 'BASE') {
       throw new TypeError(
-        'Cannot instantiate base plump Models, please subclass with a schema and valid type'
+        'Cannot instantiate base plump Models, please subclass with a schema and valid type',
       );
     }
     let initialValue = opts;
@@ -183,7 +183,7 @@ export class Model<MD extends ModelData> {
       .get(
         mergeOptions({}, req, {
           item: { id: this.id, type: this.type },
-        })
+        }),
       )
       .catch((e: PlumpError) => {
         this.error = e;
@@ -200,12 +200,12 @@ export class Model<MD extends ModelData> {
         } else {
           const resolved = Model.resolveAndOverlay(
             this.dirty,
-            self || undefined
+            self || undefined,
           );
           return mergeOptions(
             {},
             self || { id: this.id, type: this.type },
-            resolved
+            resolved,
           );
         }
       });
@@ -220,7 +220,7 @@ export class Model<MD extends ModelData> {
   save(opts: any = { stripId: true }): Promise<MD> {
     const update: DirtyModel = mergeOptions(
       { id: this.id, type: this.type },
-      this.dirty
+      this.dirty,
     );
     if (
       Object.keys(this.dirty.attributes).length +
@@ -257,7 +257,7 @@ export class Model<MD extends ModelData> {
       if (fields.indexOf('relationships') >= 0) {
         fields.splice(fields.indexOf('relationships'), 1);
         fields = fields.concat(
-          Object.keys(this.schema.relationships).map(k => `relationships.${k}`)
+          Object.keys(this.schema.relationships).map(k => `relationships.${k}`),
         );
       }
       return {
@@ -286,56 +286,78 @@ export class Model<MD extends ModelData> {
 
   asObservable(opts?: ReadRequest | string | string[]): Observable<MD> {
     const readReq = this.parseOpts(
-      opts || { fields: ['attributes', 'relationships'] }
+      opts || { fields: ['attributes', 'relationships'] },
     );
     const reqKey = this.stringifyRequest(readReq);
     if (!this.observableCache[reqKey]) {
       const colds = this.plump.caches.filter(s => !s.hot(this));
 
-      const read$ = this.plump.terminal.write$
-        .filter((v: ModelDelta) => {
-          return (
-            v.type === this.type && v.id === this.id // && v.invalidate.some(i => fields.indexOf(i) >= 0)
-          );
-        })
-        .startWith({
-          id: this.id,
-          type: this.type,
-          invalidate: readReq.fields,
-        })
-        .flatMap(v =>
-          Observable.fromPromise(
-            this.get({
-              fields: v.invalidate,
-            }).then(v => {
-              if (v) {
-                return v;
-              } else {
-                this.error = this.error || new NotFoundError();
-                return this.empty(this.id, 'not found');
-              }
-            })
+      // THIS IS A MEMORY LEAK - temporarily here for perf testing
+
+      if (!this.plump.readCache[`${this.type}:${this.id}`]) {
+        this.plump.readCache[
+          `${this.type}:${this.id}`
+        ] = this.plump.terminal.write$
+          .filter((v: ModelDelta) => {
+            return (
+              v.type === this.type && v.id === this.id // && v.invalidate.some(i => fields.indexOf(i) >= 0)
+            );
+          })
+          // .startWith({
+          //   id: this.id,
+          //   type: this.type,
+          //   invalidate: ['attributes', 'relationships'],
+          // })
+          .flatMap(v =>
+            Observable.fromPromise(
+              this.get({
+                fields: v.invalidate,
+              }).then(v => {
+                if (v) {
+                  return v;
+                } else {
+                  this.error = this.error || new NotFoundError();
+                  return this.empty(this.id, 'not found');
+                }
+              }),
+            ),
           )
-        )
-        .publishReplay(1)
-        .refCount();
+          .publishReplay(1)
+          .refCount();
+      }
+      // don't want to fetch extra stuff if we don't want it
+      const firstRead$ = Observable.fromPromise(
+        this.get(readReq).then(v => {
+          if (v) {
+            return v;
+          } else {
+            this.error = this.error || new NotFoundError();
+            return this.empty(this.id, 'not found');
+          }
+        }),
+      );
+
+      const read$ = Observable.merge(
+        firstRead$,
+        this.plump.readCache[`${this.type}:${this.id}`],
+      );
 
       const cold$: Observable<ModelData> = Observable.fromPromise(
         Promise.all(colds.map(h => h.read(readReq))).then(results =>
-          condMerge(results)
-        )
+          condMerge(results),
+        ),
       ).takeUntil(read$);
 
       this.observableCache[reqKey] = Observable.merge(
         read$,
         cold$,
-        this._write$.asObservable()
+        this._write$.asObservable(),
       )
         .scan((acc, curr) => {
           const rv = condMerge([acc, curr]);
           rv.relationships = Model.resolveRelationships(
             this.dirty.relationships,
-            rv.relationships
+            rv.relationships,
           );
           return rv;
         }, this.empty(this.id))
@@ -355,7 +377,7 @@ export class Model<MD extends ModelData> {
     const toAdd: TypedRelationshipItem = Object.assign(
       {},
       { type: this.schema.relationships[key].type.sides[key].otherType },
-      item
+      item,
     );
     if (key in this.schema.relationships) {
       if (item.id >= 1) {
@@ -381,7 +403,7 @@ export class Model<MD extends ModelData> {
     const toAdd: TypedRelationshipItem = Object.assign(
       {},
       { type: this.schema.relationships[key].type.sides[key].otherType },
-      item
+      item,
     );
     if (key in this.schema.relationships) {
       if (item.id >= 1) {
@@ -404,7 +426,7 @@ export class Model<MD extends ModelData> {
     const toAdd: TypedRelationshipItem = Object.assign(
       {},
       { type: this.schema.relationships[key].type.sides[key].otherType },
-      item
+      item,
     );
     if (key in this.schema.relationships) {
       if (item.id >= 1) {
@@ -441,25 +463,25 @@ export class Model<MD extends ModelData> {
     base: { attributes?: any; relationships?: any } = {
       attributes: {},
       relationships: {},
-    }
+    },
   ) {
     const attributes = mergeOptions({}, base.attributes, update.attributes);
     const resolvedRelationships = this.resolveRelationships(
       update.relationships,
-      base.relationships
+      base.relationships,
     );
     return { attributes, relationships: resolvedRelationships };
   }
 
   static resolveRelationships(
     deltas: StringIndexed<RelationshipDelta[]>,
-    base: StringIndexed<TypedRelationshipItem[]> = {}
+    base: StringIndexed<TypedRelationshipItem[]> = {},
   ) {
     const updates = Object.keys(deltas)
       .map(relName => {
         const resolved = this.resolveRelationship(
           deltas[relName],
-          base[relName]
+          base[relName],
         );
         return { [relName]: resolved };
       })
@@ -469,7 +491,7 @@ export class Model<MD extends ModelData> {
 
   static resolveRelationship(
     deltas: RelationshipDelta[],
-    base: TypedRelationshipItem[] = []
+    base: TypedRelationshipItem[] = [],
   ) {
     const retVal = base.concat();
     deltas.forEach(delta => {

@@ -40,6 +40,7 @@ export function pathExists(obj: any, path: string) {
 export class Plump<TermType extends TerminalStore = TerminalStore> {
   public destroy$: Observable<string>;
   public caches: CacheStore[];
+  readCache = {};
   public types: TypeMap = {};
 
   public teardownSubject: Subject<string>;

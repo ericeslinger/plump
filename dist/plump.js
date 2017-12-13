@@ -37,6 +37,7 @@ var Plump = exports.Plump = function () {
         _classCallCheck(this, Plump);
 
         this.terminal = terminal;
+        this.readCache = {};
         this.types = {};
         this.teardownSubject = new _rxjs.Subject();
         this.terminal.terminal = true;
